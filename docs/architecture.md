@@ -67,7 +67,7 @@ Each platform has its own way in. All of them speak the same protocol, except wh
 | --------- | --------------------------------------------------------- | -------------------------------------------------------- |
 | Android   | the agent, an `app_process` running as the shell user     | an abstract socket, through the adb server, with a token |
 | simulator | nothing at first: helpers on the Mac read, touch and type | helpers; the runner starts behind them at the first read |
-| iPhone    | the runner, an XCTest bundle                              | `usbmuxd`                                                |
+| iPhone    | the runner, an XCTest bundle                              | `usbmuxd`, or a tunnel once paired for Wi-Fi             |
 
 ## A window
 

@@ -4,7 +4,7 @@
 
 Host kütüphanesi cihazdaki bir ajanla tek bir bayt akışı üzerinden konuşur: Android'de ajanın adb sunucusu üzerinden açılan abstract bir unix
 soketi (`localabstract:<name>`), iOS'ta bir TCP bağlantısı
-(simulator loopback'i ya da bir telefona usbmux bağlantısı). Mesaj biçimlerinin asıl kaynağı
+(simulator loopback'i, kablosundaki bir telefona usbmux bağlantısı ya da Wi-Fi için eşlenmiş birine bir tünel). Mesaj biçimlerinin asıl kaynağı
 `packages/protocol/src/messages.ts`'tir, ekranın ağacı `tree.ts`'te, bir denetimin bulguları `audit.ts`'tedir. Host bir isteğin parametrelerini ona göre ayrıştırır, bu yüzden oradaki bir varsayılan bağlantı üzerinden giden değerdir
 ve bir ajanın kendine ait varsayılanı yoktur: eksik bir değer `INVALID_ARGUMENT` olur. `packages/protocol/fixtures` her isteği,
 sonucu ve hatayı kanonik JSON olarak tutar; protokolün testleri bunları şemalara göre denetler, Android
@@ -28,7 +28,7 @@ hata kodlarını, düğüm bayraklarını ve sürümü karşılaştırır.
 ## El sıkışma
 
 Bir bağlantıdaki ilk istek, ajanın açılışta aldığı başlatma token'ını taşıyan bir `hello` olmalıdır
-(yalnızca shell kullanıcısının okuyabildiği, ajanın okuyunca sildiği `--token-file` dosyasından; en az 16 karakter, sabit sürede karşılaştırılır). Başka her şey bağlantıyı kapatır.
+(Android'de yalnızca shell kullanıcısının okuyabildiği, ajanın okuyunca sildiği `--token-file` dosyasından, iOS'ta runner'ın başlatma ortamından; en az 16 karakter, sabit sürede karşılaştırılır). Başka her şey bağlantıyı kapatır.
 
 ```json
 { "jsonrpc": "2.0", "id": 1, "method": "hello", "params": { "token": "…", "protocol": 2 } }

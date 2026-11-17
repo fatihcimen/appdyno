@@ -67,7 +67,7 @@ Her platformun kendi giriş yolu vardır. Bir simulator'ın hiç ajana ihtiyaç 
 | --------- | ------------------------------------------------------------- | -------------------------------------------------------- |
 | Android   | ajan: shell kullanıcısı olarak çalışan bir `app_process`      | adb sunucusu üzerinden, token ile bir abstract soket     |
 | simulator | başta hiçbir şey: Mac'teki yardımcılar okur, dokunur ve yazar | yardımcılar; runner ilk okumada onların arkasında başlar |
-| iPhone    | runner, bir XCTest paketi                                     | `usbmuxd`                                                |
+| iPhone    | runner, bir XCTest paketi                                     | `usbmuxd` ya da Wi-Fi için eşlenince bir tünel           |
 
 ## Bir pencere
 

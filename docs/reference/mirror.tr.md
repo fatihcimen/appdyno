@@ -18,7 +18,7 @@ appdyno mirror close | status | stats
   --seconds N  --takeover  --record file.mp4  --focus  --allow-devices RE
 ```
 
-`--detach` ile pencere `--quality` ve `--wifi` seçeneklerini alır; bu komutun yanında kaldığı bir pencere için olan `--codec`, `--no-input`, `--headless`, `--seconds`, `--record` ve `--focus` seçeneklerinin hiçbirini almaz. `--pair` tam iki `--device` ister ve `--detach` ile kullanılmaz.
+`--detach` ile pencere `--quality` ve `--wifi` seçeneklerini alır; bu komutun yanında kaldığı bir pencere için olan `--codec`, `--no-input`, `--headless`, `--seconds`, `--record` ve `--focus` seçeneklerinin hiçbirini almaz. `--pair` tam iki `--device` ister ve `--detach` ile kullanılmaz. `--headless` görüntüleyiciyi penceresiz çalıştırır, `--seconds N` her pencereyi N saniye sonra kapatır, `--record file.mp4` ise akışın gönderdiğini ilk resminden başlayarak bir filme kaydeder.
 
 `show_mirror` aracında `open`, `close`, `status` ve `stats` vardır. MCP üzerinden hiçbir kare geçmez: bir ajanın `take_screenshot`
 ve `record_session` araçları vardır. `ask_person`, bir ajanın yapamadığını bir kişiden ister.
@@ -80,6 +80,7 @@ Pencere en çok basılanları gösterir; geri kalanı **Diğer Denetimler** içi
 | Yeniden Bağlan                                                                    | ⇧⌘R             | yeni bir yayın                                                                                                                    |
 | Denetçiyi Göster, Performansı Göster, Cihaz Çerçevesini Göster                    | ⌥⌘I, ⌥⌘P, ⌥⌘F   | yalnızca pencere                                                                                                                  |
 | Yapıştır                                                                          | ⌘V              | Mac'teki metin, cihaza yazılır                                                                                                    |
+| İsteklerde Bul                                                                    | ⌘F              | Ağ panelinin filtresi                                                                                                             |
 
 Bir ajan yönetirken ekranın çevresinde mor bir halka döner, kapsül bunu söyler, istemci kim olduğunu söylüyorsa onun adını verir, her dokunuşun indiği yerde de bir nokta solar. Bir kişiye yöneltilen bir istek halkayı turuncuya çevirir.
 
@@ -125,7 +126,7 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 - Yalnızca bu cihazın sahip olduğu yolları sunar: simulator'da uygulamayı yeniden başlatan, bu yüzden bir kayıt ya da ölçüm sürerken reddedilen sonda; Android'de baytlar ve build'in kaydettiği yerlerde Android 14'ten itibaren paketler; ikisi de adres olmadan sayar.
 - Proxy yalnızca cihaz zaten birinden geçiyorsa sunulur ve listesi, bu araç proxy'nin kendi dışa aktarımını okuyabiliyorsa okunur. Hiçbir pencere, hiçbir cihazda proxy ayarlamaz.
 - Hiçbir yolun istekleri listelemediği yerde, bir iPhone'da ya da proxy'si olmayan bir Android'de, panel kişinin neye ihtiyacı olduğunu söyler.
-- Sondanın listesi panel görünürken 3 s'de bir, diğerleri Yeniden Oku ile okunur. Burada başlatılan bir yakalama pencere kapanınca durur.
+- Sondanın listesi panel görünürken 3 s'de bir, diğerleri Yeniden Oku ile okunur. Burada başlatılan bir yakalama pencere kapanınca durur. Sonda varken panel, eşleştiği istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallarını ve hız sınırını da tutar; bunlar bir ajanın ayarladıklarıyla aynıdır. **İsteklerde Bul** (⌘F) paneli filtresinde açar.
 
 #### Erişilebilirlik
 
@@ -209,7 +210,7 @@ Kayıt, `run_flow`'un tuttuğu kayıttır, cihaz başına bir dosya. Bu yüzden 
 
 ## Hub
 
-`appdyno hub` tek bir penceredir: bu Mac'in ulaşabildiği her cihaz bir kenar çubuğunda, önce telefonlar, sonra çalışanlar, kapalı olanlar katlanmış halde; seçilen cihaz da yanında canlıdır ve orada denetlenir. Yalnızca pencerede duran yayın yapar ve bir telefon yalnızca bir kişi onu seçtiğinde başlar: zaten çalışan bir simulator ya da emulator hemen görünebilir ve hiçbir seçim bir açılıştan diğerine saklanmaz. Araç çubuğu sistemin kendi araç çubuğudur; kendi penceresindekiyle aynı denetimleri taşır ve yalnızca o cihazda olanları. Denetçi bir tık uzaklıktadır, önce Performans. Arama katlanmış olanları da kapsar. Hub sanal olanları başlatır ve durdurur, bu Mac'te kurulu olandan yeni bir simulator ya da emulator oluşturur. Gösterilecek bir şey olmayan yerde sıradaki adımı söyler.
+`appdyno hub`, `--focus` ve `--allow-devices` bayraklarını `mirror` gibi alan tek bir penceredir: bu Mac'in ulaşabildiği her cihaz bir kenar çubuğunda, önce telefonlar, sonra çalışanlar, kapalı olanlar katlanmış halde; seçilen cihaz da yanında canlıdır ve orada denetlenir. Yalnızca pencerede duran yayın yapar ve bir telefon yalnızca bir kişi onu seçtiğinde başlar: zaten çalışan bir simulator ya da emulator hemen görünebilir ve hiçbir seçim bir açılıştan diğerine saklanmaz. Araç çubuğu sistemin kendi araç çubuğudur; kendi penceresindekiyle aynı denetimleri taşır ve yalnızca o cihazda olanları. Denetçi bir tık uzaklıktadır, önce Performans. Arama katlanmış olanları da kapsar. Hub sanal olanları başlatır ve durdurur, bu Mac'te kurulu olandan yeni bir simulator ya da emulator oluşturur. Gösterilecek bir şey olmayan yerde sıradaki adımı söyler.
 
 Cihazların altındaki **Yapay Zekâ İstemcileri**, `appdyno install`'ın bildiği her MCP istemcisini gerçek durumuyla listeler. Bağlı sözünü yalnızca gerçek bir çağrı kazandırır: sunucu her istemcinin adını, sürümünü, giriş yolunu ve son çağrısını tutar, gönderdiği hiçbir şeyi tutmaz. Ekle ve Kaldır önce satırların tam halini gösterir ve ikinci bir tıklama ister; Geri Al da o tek girdiyi geri alır. Test Et, bir girdinin çalıştırdığını araç listesine kadar çalıştırır ve başarısız olursa ne yapılacağını söyler; hiçbir araç çağırmaz. Tarayıcıdaki bir istemci için `appdyno mcp --http`'yi, hub ile biten bir süreçte, token istenene kadar gizli olarak başlatır ve durdurur. Bkz. [İstemci bağlamak](../guides/clients.tr.md).
 

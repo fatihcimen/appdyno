@@ -124,7 +124,7 @@ Ayrıntılar: [Önce kişiye sorulanlar](#önce-kişiye-sorulanlar), [Push bildi
 | `check_screen` | Ekranın tümünü denetler: erişilebilirlik sorunları ya da ekranın kaydedilmiş bir görüntüyle karşılaştırması | **`check`**: `accessibility`, `visual`, `visual_baseline`; `name`; `dir`; `tolerance`: `0.1` (varsayılan); `masks`; `types`: `contrast`, `elementDetection`, `hitRegion`, `sufficientElementDescription`, `dynamicType`, `textClipped`, `trait`, `imageContrast`, `duplicateLabel`; `maxIssues`: `50` (varsayılan) |
 | `read_logs`    | Uygulamanın logu, gizli değerler saklanmış olarak; `source: crashes` ile crash, ANR ve çıkış raporları      | `source`: `app` (varsayılan), `crashes`; `app`; `since`; `level`: `verbose`, `debug`, `info` (varsayılan), `warn`, `error`; `contains`; `limit`; `symbols`                                                                                                                                                         |
 
-Ayrıntılar: [Loglar ve crash'ler](#loglar-ve-crashler).
+Ayrıntılar: [Loglar ve crash'ler](#loglar-ve-crashler), ve `check_screen` için [Kanıt](../guides/evidence.tr.md) rehberi.
 
 ### Kanıt
 
@@ -133,7 +133,7 @@ Ayrıntılar: [Loglar ve crash'ler](#loglar-ve-crashler).
 | `record_session`  | Kanıt saklar: ekranın videosu, tek bir HTML dosyasında bir test raporu, bir zaman çizelgesi ya da bir uygulamanın bir crash'te ya da takılmada saklanan son saniyeleri | **`kind`**: `video`, `report`, `timeline`, `flight`; **`action`**: `start`, `stop`, `write`; `file`; `overwrite`; `maxSeconds`: `1800` (varsayılan); `dir`                                                                                                                                                                                                                        |
 | `capture_network` | Uygulamanın HTTP trafiği                                                                                                                                               | **`action`**: `paths`, `start`, `read`, `stop`, `mock`, `throttle`, `check`; `via`: `proxy`, `probe`, `packets`, `bytes`; `proxy`; `app`; `bodies`; `har`; `id`; `path`; `shape`; `diff`; `after`; `contains`; `method`; `status`; `limit`: `50` (varsayılan); `save`; `overwrite`; `rules`; `add`; `has`; `timeoutMs`; `from`; `unmatched`: `pass`, `fail`; `strict`; `throttle` |
 
-Ayrıntılar: [Simulator'da ağ](#simulatorda-ağ).
+Ayrıntılar: [Simulator'da ağ](#simulatorda-ağ), ve `record_session` ile `inspect_app` için [Kanıt](../guides/evidence.tr.md) rehberi: bir `video` yalnızca `start` ve `stop` alır.
 
 ### Uygulamanın içi
 
@@ -197,6 +197,35 @@ Bir yanıt, uygulama önden kendiliğinden çıktığında önde olmadığını 
 
 **Kilitli bir telefon `DEVICE_LOCKED` ile reddedilir**; okumalar da dokunuşlar da. Android'de bu, bir uyandırma ve bir kapatmadan sonra yerinde kalan bir keyguard'dır. Parolası olmayan bir iPhone kilit ekranını ana ekran düğmesiyle geçer: karanlık bir ekranda ilk basış yalnızca onu uyandırır, kilit ekranı hâlâ açıktır, bu yüzden üç kereye kadar basar ve uygulama geri gelir. Parolası olan bir iPhone okumayı `devicectl device info lockState` ile reddeder. Neyin çalıştırıldığı [Araçlar nasıl test edildi](tools-tested.tr.md#kilitli-bir-telefon) sayfasındadır.
 
+### Ret kodları
+
+Reddedilen bir çağrının `code` değeri bunlardan biridir ve `hint` sonra ne yapılacağını söyler. `TIMEOUT`, `DEVICE_GONE` ve `AGENT_UNAVAILABLE` bir kez daha denemeye değer, çünkü cihaz bir sonraki sefer yanıt verebilir; ötekiler bir şey değişene kadar aynı biçimde başarısız olur. Kütüphane bunları `ErrorCode` olarak dışa verir; her birinin hattaki numarası [Protokol](protocol.tr.md#hatalar) sayfasındadır.
+
+| kod                      | anlamı                                                                                                                                                        | ne yapılır                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `TIMEOUT`                | cihaz zamanında yanıt vermedi ya da çağrı cihazdaki sırasını 5 dakika bekledi                                                                                 | dokunuş gitmiş olabileceği için ekranı okuyun, sonra bir kez daha deneyin                                       |
+| `CANCELLED`              | istemci çağrıyı iptal etti                                                                                                                                    | ekranı okuyun: dokunuş gitmiş olabilir                                                                          |
+| `DEVICE_GONE`            | cihazın bağlantısı kesildi ya da cihaz yanıt vermeyi bıraktı                                                                                                  | bir kez daha deneyin; hâlâ orada olup olmadığını `list_devices` söyler                                          |
+| `AGENT_UNAVAILABLE`      | appdyno'nun cihazdaki yardımcısına, ajana ya da runner'a ulaşılamadı                                                                                          | bir kez daha deneyin                                                                                            |
+| `AGENT_CONFLICT`         | bir Android cihazı başka bir UI otomasyon aracı tutuyor ya da onun ajanını başka bir süreç kullanıyor                                                         | yanıt onu ve nasıl durdurulacağını söyler; `--takeover` ile başlatılan bir sunucu onu kendisi durdurur          |
+| `AGENT_VERSION_MISMATCH` | cihazdaki yardımcı başka bir sürümün ve onu başka bir süreç kullanıyor                                                                                        | o süreci güncelleyin ya da kapatın                                                                              |
+| `UNSUPPORTED`            | bu cihaz ya da platform bunu yapamaz                                                                                                                          | yerine kullanılabilecek bir şey varsa ipucu onu söyler                                                          |
+| `PERMISSION_REQUIRED`    | bir kişiyi bekler: veri kaybettiren bir işlem, güç kontrolleri, bir derleme, soran bir bağlantı ya da cihazda yalnızca bir kişinin yanıtlayabileceği bir soru | bir kişi yanıtlar ya da önceden izin verir: [Önce kişiye sorulanlar](#önce-kişiye-sorulanlar)                   |
+| `NOT_FOUND`              | hedefle hiçbir şey eşleşmiyor ya da o adda bir uygulama ya da dosya yok                                                                                       | bir dokunuşun yanıtı ekranı şimdiki haliyle gösterir; uygulamaları `manage_app` `list` adlandırır               |
+| `NO_FOCUS`               | yazılacak bir metin var ama hiçbir alan odakta değil                                                                                                          | alanı hedef olarak verin                                                                                        |
+| `APP_NOT_RUNNING`        | uygulama çalışmıyor ya da işlemin altında öldü                                                                                                                | yanıt neden öldüğünü son log satırlarıyla söyler; `launch_app` onu yeniden başlatır                             |
+| `POLICY_DENIED`          | sunucunun izin verdiklerinin dışında: cihazları, uygulamaları, bağlantıları ve klasörleri ya da `--no-home`                                                   | bunu yalnızca sunucuyu başlatan kişi, seçenekleriyle değiştirir                                                 |
+| `INVALID_ARGUMENT`       | argümanlar yanlış                                                                                                                                             | hangisi olduğunu ve ne aldığını ipucu söyler                                                                    |
+| `STALE`                  | hedef, o zamandan beri yerine başkası gelmiş bir ekranda okundu                                                                                               | ekranı yeniden okuyun, sonra işlemi yapın                                                                       |
+| `SCREEN_OFF`             | ekran karanlık, bu yüzden bir dokunuş hiçbir pencereye ulaşmaz                                                                                                | telefonu uyandırın, sonra yeniden deneyin                                                                       |
+| `INTERNAL`               | appdyno beklemediği bir biçimde başarısız oldu                                                                                                                | ekranı okuyun; yeniden olursa mesajıyla birlikte bildirin                                                       |
+| `AMBIGUOUS`              | seçiciyle birden çok öğe eşleşiyor                                                                                                                            | seçiciyi daraltın ya da bir ref kullanın: [Eşleşme yoksa ya da birden çoksa](#eşleşme-yoksa-ya-da-birden-çoksa) |
+| `CHECK_FAILED`           | bir kontrol tutmuyor ya da onu bekleme süresi doldu                                                                                                           | yanıt ne bulduğunu söyler                                                                                       |
+| `BUILD_FAILED`           | projenin kendi derlemesi başarısız oldu                                                                                                                       | yanıt derlemenin ne dediğini aktarır                                                                            |
+| `DEVICE_CLAIMED`         | cihazı çalışan başka bir süreç tutuyor                                                                                                                        | onu durdurun ya da cihazı paylaşın: [Bir cihazı paylaşmak](#bir-cihazı-paylaşmak)                               |
+| `DEVICE_LOCKED`          | telefon, appdyno'nun yanıtlayamadığı bir kilidin, örneğin bir parolanın ardında                                                                               | kilidini açın                                                                                                   |
+| `OFFLINE`                | paket registry'sine ya da sabitlenmiş bir aracın sürümüne ulaşılamıyor                                                                                        | çevrimiçi olunca yeniden deneyin                                                                                |
+
 ## Hedefler
 
 Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce yeni bir okumada çözülür.
@@ -211,7 +240,7 @@ Metin, `selector` ile `read_screen`'deki gibi büyük-küçük harfe ve aksanlar
 
 ### Eşleşme yoksa ya da birden çoksa
 
-Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir, son eşleşmenin ötesindeki bir index de kaç eşleşme olduğunu söyler; eşleşme yoksa bir an beklenir, sonra en yakın etiketlerle reddedilir; önde başka bir uygulama varsa ve uygulama bilerek ayrılmadıysa, bunun yerine uygulamanın önde olmadığı söylenir. Süresi dolan `timeoutMs` ile bir `check_element` de aynısını ve yeniden çağırmanın daha uzun beklediğini söyler.
+Birden çok eşleşmede işlem `AMBIGUOUS` ile reddedilir ve eşleşmeler ref'leriyle listelenir, son eşleşmenin ötesindeki bir index de kaç eşleşme olduğunu söyler; eşleşme yoksa bir an beklenir, sonra en yakın etiketlerle reddedilir; önde başka bir uygulama varsa ve uygulama bilerek ayrılmadıysa, bunun yerine uygulamanın önde olmadığı söylenir. Süresi dolan `timeoutMs` ile bir `check_element` de aynısını ve yeniden çağırmanın daha uzun beklediğini söyler.
 
 `NOT_FOUND` ya da `STALE` ile reddedilen bir dokunuş, bir yanıtın yaptığı gibi ekranı şimdiki haliyle içerir: son gösterilen ekrandan farkını, `read` `full` ise ya da önde başka bir uygulama varsa tamamını, `read` `none` ise hiçbirini. Bir sonraki denemeden önce ekranı okumak gerekmez.
 
@@ -282,7 +311,7 @@ Görünümler uygulamanın kendisinindir: önlerinde bir sistem uyarısı olduğ
 
 Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyler: x ve y'si, dokunuş birimine ölçeğiyle çarpılır; bu bir tam sayıya bölmeyse bölme olarak söylenir, bir iPhone'un tam boyutlu resmi için `x/3`. Ölçek ve `width`, döndürülmüş olsun ya da olmasın ekranın şu anki duruşuna göredir; bir simulator'ın resmi öndeki uygulamasının durduğu gibi dikleştirilir. Ekrandan hâlâ başka türlü duran bir resim ölçek almaz ve yanıt ekranın dokunuş birimindeki boyutunu söyler.
 
-`file` ile resmi tam boyutta, ya da `width` ne kadar genişlik isterse o genişlikte kaydeder ve yanında görüntüyü bir ekran görüntüsünün yaptığı gibi gösterir, yanıt onun boyutunu ve ölçeğini verir; böylece dosyanın geri okunması gerekmez; `inline: false` yalnızca dosyayı kaydeder.
+`file` ile resmi tam boyutta, ya da `width` ne kadar genişlik isterse o genişlikte kaydeder ve yanında görüntüyü bir ekran görüntüsünün yaptığı gibi gösterir, yanıt onun boyutunu ve ölçeğini verir; böylece dosyanın geri okunması gerekmez; `inline: false` yalnızca dosyayı kaydeder. `file` olmadan görüntü, `width` ya da `points` başka bir şey istemedikçe uzun kenarında en fazla 800 px'tir; değişmemiş bir ekranın ikinci görüntüsü, son görüntü hâlâ geçerli olduğu için `INVALID_ARGUMENT` ile reddedilir. `watchMs` görüntü vermez, o kadar ms içinde neyin hareket ettiğini verir; `strip` buna zamanlı kareler ekler.
 
 ## Adımlar, hareketler, uygulamalar ve ayarlar
 
@@ -302,17 +331,17 @@ Bir saniyeden uzun süren bir işlemde uygulamanın süreci izlenir ve süreç g
 
 ### Beklemeler ve seçiciler
 
-`check_element`, açıklamasının söylediği gibi, bir çağrıda en fazla 15000 ms bekler; bir argümanın sınırını aşan bir sayı, ipucunda sınırıyla reddedilir.
+`check_element`, açıklamasının söylediği gibi, bir çağrıda en fazla 15000 ms bekler; bir argümanın sınırını aşan bir sayı, ipucunda sınırıyla reddedilir. `check` `moves`, öğeyi ya da öğe verilmezse bütün ekranı `timeoutMs` boyunca, verilmezse 2000 ms, izler ve `expect: false` ile yalnızca kıpırdamadığında geçer; `equals`, bir `text` denetiminin beklediği metindir, `expect: false` ise her denetimin tersini ister.
 
 Bir seçici, onu alan her araçta ve adımda, aralarında `read_screen` ve `check_element` de olmak üzere, `selector`'a girer, `{"tool":"tap_screen","selector":{"text":"OK"}}` gibi: sözcükleri en üstte verildiğinde, ipucunda çağrı bu biçimde gösterilerek reddedilir.
 
 ### Her araç neleri içerir
 
-- `tap_screen`; `count: 2` ile çift dokunuşu ve `holdMs` ile uzun basışı, `swipe_screen`; `to` ile sürüklemeyi, `scale` ile kıstırmayı ve `pointers` ile serbest yolları içerir.
-- `press_key`; düğmeleri (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), bir klavyenin tuşlarını (`enter`, `delete`, `tab`, `escape`, `space`, `arrow_up`, `arrow_down`, `arrow_left` ve `arrow_right` ok tuşları ve önce basılı tutulan tuşlarla bir harf ya da rakam, `command+a` gibi; Android'de `command` Ctrl'dir) ve `home`'un kapattığı `control_center`, `notification_center` ile `spotlight`'ı içerir. Bir tuşun adı büyük küçük harf fark etmeksizin okunur; `return` `enter`, `esc` `escape`, `backspace` de `delete`'tir. Bir harf küçük harftir, çünkü büyük bir harf aynı zamanda bir shift olurdu.
+- `tap_screen`; `count: 2` ile çift dokunuşu ve `holdMs` ile uzun basışı, `swipe_screen`; `to` ile sürüklemeyi, `scale` ile kıstırmayı ve `pointers` ile serbest yolları içerir; bir çağrı bunlardan yalnızca birini alır, ikisi reddedilir. Bir kaydırmanın `direction`'ı içeriğin gittiği yöndür, `up` içeriği yukarı taşır; `until`, verilmezse 10 olan `maxSwipes` kadar kaydırır.
+- `press_key`; düğmeleri (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), bir klavyenin tuşlarını (`enter`, `delete`, `tab`, `escape`, `space`, `arrow_up`, `arrow_down`, `arrow_left` ve `arrow_right` ok tuşları ve önce basılı tutulan tuşlarla bir harf ya da rakam, `command+a` gibi; Android'de `command` Ctrl'dir) ve `home`'un kapattığı `control_center`, `notification_center` ile `spotlight`'ı içerir. Bir tuşun adı büyük küçük harf fark etmeksizin okunur; `return` `enter`, `esc` `escape`, `backspace` de `delete`'tir. Bir harf küçük harftir, çünkü büyük bir harf aynı zamanda bir shift olurdu. `count` tuşa 100 kereye kadar yeniden basar; `type_text` de metnini alandakinin yerine koymak için `replace`, ardından bir `enter` için `submit` alır.
 - `manage_app`; `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`, `stop` ve bu Mac'teki bir projeden `build_and_run` içerir: `scheme` ve `configuration` ile bir Xcode projesi ya da modülü `scheme`, varyantı `configuration` olan bir Gradle klasörü. `install` tek bir dosyayı `path` olarak, ya da bir Android uygulamasının APK'sını `.dm` dosyaları ya da split APK'larıyla birlikte `files` olarak alır.
 - `transfer_files`; bir uygulamanın verisini yeni ya da boş bir klasöre alan `pull`, bir klasörden koyan `push` (uygulamayı durdurur ve klasörde olmayanı kaldırır) ve `media` içerir.
-- `set_device`; `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` ve `fold`'u; tek seferlik `biometric`, `call`, `sms`, `keychain`, `memory_warning` ve `shake`'i; ve değiştirileni geri koyan `restore`'u içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`.
+- `set_device`; `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` ve `fold`'u; tek seferlik `biometric`, `call`, `sms`, `keychain`, `memory_warning` ve `shake`'i; ve değiştirileni geri koyan `restore`'u içerir. `dark_mode` iki platformda da ayarlandığı gibi okunur, `on` ya da `off`. `call` bir telefon numarası alır, `end` ve numara ile çağrıyı kapatır; `sms` metni alır ve `title`'daki numaradan gelir, verilmezse 5551234.
 
 ### Bir uygulamayı başlatmak
 
@@ -359,7 +388,7 @@ Bir iPhone'da `inspect_app` `ax_press` her basışta sorar: bir öğeye yalnızc
 
 Sunucu, istemcinin bunu yapabildiğini bildirdiği yerde istemcinin kendi sorusuyla, yani MCP elicitation ile sorar; istemci bunu bir 2025 revizyonunda `initialize`'da, 2026-07-28'de ise her istekte bildirir; soru cihazı, uygulamayı ve neyin kaybolacağını söyler. Model onu yanıtlayamaz.
 
-Hayır yanıtında ya da kapatılan bir soruda hiçbir şey yapılmaz; yanıt, sorusuna evet gelmediğini söyler, asla bir kişinin reddettiğini değil: bir istemci kendi kendine yanıt verebilir; arayüzü olmadan çalışan biri, soruyu hiçbir kişiye göstermeden 9 ms'de hayır dedi. Her reddin ipucu, bir hayırınki de, bir kişinin buna önceden nasıl izin vereceğini aşağıdaki seçeneklerle söyler.
+Hayır yanıtında ya da kapatılan bir soruda hiçbir şey yapılmaz; yanıt `PERMISSION_REQUIRED` ile sorusuna evet gelmediğini söyler, asla bir kişinin reddettiğini değil: bir istemci kendi kendine yanıt verebilir; arayüzü olmadan çalışan biri, soruyu hiçbir kişiye göstermeden 9 ms'de hayır dedi. Her reddin ipucu, bir hayırınki de, bir kişinin buna önceden nasıl izin vereceğini aşağıdaki seçeneklerle söyler.
 
 2026-07-28'de hiçbir istek istemciye geri gitmez, bu yüzden çağrı turunu soruyla bitirir ve istemci yanıtı çağrıyla geri getirir: çağrı durduğu yerde bekler, böylece aynı `run_steps` içinde ondan önceki bir adım yeniden yapılmaz; 5 dakika içinde gelmeyen bir yanıt hayır sayılır.
 
@@ -375,7 +404,7 @@ Sunucunun komut satırındaki `--allow-data-loss virtual`, bunların simulator'l
 
 `manage_app install` bunlardan biri değildir: önce bir uygulamayı kaldırmaz.
 
-`manage_app build_and_run` da sorar; her seferinde ve her cihazda, çünkü bir projenin derlemesi kendi Gradle ya da Xcode betiklerini bu Mac'te çalıştırır: soru projenin adını verir. Sormadan derlemesine yalnızca sunucunun komut satırındaki `--allow-build` izin verir, `--allow-data-loss` asla; bu seçenek yokken istemci soramıyorsa reddedilir, projeyi bir kişi derler ve `manage_app install` derlemenin ürettiğini kurar. `path`, bu seçenek verilse de, sunucunun yazdığı klasörlerin içindeki bir projedir.
+`manage_app build_and_run` da sorar; her seferinde ve her cihazda, çünkü bir projenin derlemesi kendi Gradle ya da Xcode betiklerini bu Mac'te çalıştırır: soru projenin adını verir. Sormadan derlemesine yalnızca sunucunun komut satırındaki `--allow-build` izin verir, `--allow-data-loss` asla; bu seçenek yokken istemci soramıyorsa reddedilir, projeyi bir kişi derler ve `manage_app install` derlemenin ürettiğini kurar. `path`, bu seçenek verilse de, sunucunun yazdığı klasörlerin içindeki bir projedir. Başarısız bir derleme, derlemenin söyledikleriyle birlikte `BUILD_FAILED` ile reddedilir.
 
 `manage_app install`, kurduğu uygulamayı dosyanın tuttuğu kimlikle adlandırır. `--allow-apps` ile `manage_app install` yalnızca listenin adlandırdığı bir uygulamayı, dosyanın tuttuğu kimlikle, cihaza bir şey ulaşmadan okuyarak kurar, başkasını da adlandırarak reddeder; `build_and_run` reddedilir, çünkü bir projenin ne derlediği derlenmeden bilinmez.
 
@@ -510,7 +539,7 @@ Başka bir soru bırakılır ve yanıt o zaman uyarının sözcükleri ve düğm
 
 ### Sistem uyarıları
 
-Ekranı okuyan her yanıt, üstündeki bir sistem uyarısını böyle adlandırır, bir Android uygulamasının crash penceresini ("keeps stopping") de, yanıtlamak için `answer_alert` ile; yataydaki bir iOS cihazında uyarı, onu çizen ana ekran uygulaması pencerelerini dik tutsa da ekranın onu gösterdiği yerde okunur. `answer_alert`'in bir uygulamanın üstündeki bir iOS uyarısına yanıtı ve böyle bir uyarıyı kapatan bir `tap_screen`, `count: 2` ya da `holdMs` ile de, o uygulamayı yeniden öne gelince okur: uyarı giderken ana ekran uygulaması bir an önde durur ve yalnızca uygulamanın kartını gösterir.
+Ekranı okuyan her yanıt, üstündeki bir sistem uyarısını böyle adlandırır, bir Android uygulamasının crash penceresini ("keeps stopping") de, yanıtlamak için `answer_alert` ile; yataydaki bir iOS cihazında uyarı, onu çizen ana ekran uygulaması pencerelerini dik tutsa da ekranın onu gösterdiği yerde okunur. `answer_alert`'in bir uygulamanın üstündeki bir iOS uyarısına yanıtı ve böyle bir uyarıyı kapatan bir `tap_screen`, `count: 2` ya da `holdMs` ile de, o uygulamayı yeniden öne gelince okur: uyarı giderken ana ekran uygulaması bir an önde durur ve yalnızca uygulamanın kartını gösterir. `answer` bir düğmenin etiketidir ya da herhangi bir dilde `allow` veya `deny`; `allow` uyarının sunduğu en azı seçer: önce bir kezlik izni, yoksa kullanırken iznini. Açık bir uyarı yoksa `NOT_FOUND`, birkaç düğmeye uyan bir etiket de `AMBIGUOUS` ile reddedilir.
 
 ### Ayarlar sayfaları
 
@@ -518,7 +547,7 @@ Ekranı okuyan her yanıt, üstündeki bir sistem uyarısını böyle adlandır�
 
 ## Simulator'da ağ
 
-Simulator'da `capture_network` probe üzerinden çalışır.
+Simulator'da `capture_network` probe üzerinden çalışır. `paths` her yolun bu cihazda neyi gördüğünü ya da neden reddedildiğini söyler: `proxy`, `proxy` ile verilen host:port'ta sizin çalıştırdığınız bir proxy üzerinden; `probe`, simulator'da; Android'de ise `bytes` ve Android 14'ten itibaren `packets`, ikisi de gövdesiz.
 
 ### Bir yakalama başlatmak
 
@@ -714,7 +743,7 @@ Bir simulator'da, bir uygulama verildiğinde ya da seçiliyken `locale`, bu arac
 
 ## Bir cihazı paylaşmak
 
-Bir cihazı yöneten süreç onu tutar: durum klasöründe pid'ini ve başlangıç zamanını taşıyan bir dosya. Ölü bir sahibin talebi geçersizdir. İkinci bir süreç, paylaşmak istemedikçe sahibin pid'i ve adıyla reddedilir: `share: true` ile `use_device`, iki komut satırından birinde `--share` ya da `APPDYNO_SHARE=1`.
+Bir cihazı yöneten süreç onu tutar: durum klasöründe pid'ini ve başlangıç zamanını taşıyan bir dosya. Ölü bir sahibin talebi geçersizdir. İkinci bir süreç, paylaşmak istemedikçe sahibin pid'i ve adıyla `DEVICE_CLAIMED` olarak reddedilir: `share: true` ile `use_device`, iki komut satırından birinde `--share` ya da `APPDYNO_SHARE=1`.
 
 `list_devices` kimin neyi tuttuğunu gösterir. Daemon yoktur. Bitmiş bir sunucunun bıraktığını geri koyan süreç, bunu yaparken cihazı `appdyno put-back` olarak tutar; bu arada başlayan bir oturum onu en çok 40 s bekler, oysa başka her tutucu onu hemen reddettirir.
 

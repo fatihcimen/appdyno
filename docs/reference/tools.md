@@ -124,7 +124,7 @@ More: [What asks the person first](#what-asks-the-person-first), [Push notificat
 | `check_screen` | Checks the whole screen: its accessibility issues, or the screen against a saved image       | **`check`**: `accessibility`, `visual`, `visual_baseline`; `name`; `dir`; `tolerance`: `0.1` (default); `masks`; `types`: `contrast`, `elementDetection`, `hitRegion`, `sufficientElementDescription`, `dynamicType`, `textClipped`, `trait`, `imageContrast`, `duplicateLabel`; `maxIssues`: `50` (default) |
 | `read_logs`    | The app's log with secrets hidden, or with `source: crashes` its crash, ANR and exit reports | `source`: `app` (default), `crashes`; `app`; `since`; `level`: `verbose`, `debug`, `info` (default), `warn`, `error`; `contains`; `limit`; `symbols`                                                                                                                                                         |
 
-More: [Logs and crashes](#logs-and-crashes).
+More: [Logs and crashes](#logs-and-crashes), and for `check_screen` the guide [Evidence](../guides/evidence.md).
 
 ### Evidence
 
@@ -133,7 +133,7 @@ More: [Logs and crashes](#logs-and-crashes).
 | `record_session`  | Keeps evidence: a video of the screen, a test report in one HTML file, a timeline, or an app's last seconds, kept on a crash or a stall | **`kind`**: `video`, `report`, `timeline`, `flight`; **`action`**: `start`, `stop`, `write`; `file`; `overwrite`; `maxSeconds`: `1800` (default); `dir`                                                                                                                                                                                                                        |
 | `capture_network` | The app's HTTP traffic                                                                                                                  | **`action`**: `paths`, `start`, `read`, `stop`, `mock`, `throttle`, `check`; `via`: `proxy`, `probe`, `packets`, `bytes`; `proxy`; `app`; `bodies`; `har`; `id`; `path`; `shape`; `diff`; `after`; `contains`; `method`; `status`; `limit`: `50` (default); `save`; `overwrite`; `rules`; `add`; `has`; `timeoutMs`; `from`; `unmatched`: `pass`, `fail`; `strict`; `throttle` |
 
-More: [Network on a simulator](#network-on-a-simulator).
+More: [Network on a simulator](#network-on-a-simulator), and the guide [Evidence](../guides/evidence.md), for `record_session` and `inspect_app`: a `video` takes `start` and `stop` alone.
 
 ### Inside an app
 
@@ -197,6 +197,35 @@ An answer warns that the app is not in front when it left by itself, naming the 
 
 **A locked phone is refused with `DEVICE_LOCKED`**, reads and touches alike. On Android that is a keyguard that stays after a wake and a dismissal. An iPhone with no passcode gets past its lock screen with the home button: on a dark screen the first press only wakes it, with the lock screen still up, so it presses up to three times, and the app comes back. An iPhone with a passcode refuses the read, by `devicectl device info lockState`. What was run is in [How the tools were tested](tools-tested.md#a-locked-phone).
 
+### Refusal codes
+
+A refused call's `code` is one of these, and its `hint` says what to do next. `TIMEOUT`, `DEVICE_GONE` and `AGENT_UNAVAILABLE` are worth one more try, as the device may answer the next time; the others fail the same way until something changes. The library exports them as `ErrorCode`, and [Protocol](protocol.md#errors) has each one's number on the wire.
+
+| code                     | what it means                                                                                                                               | what to do                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `TIMEOUT`                | the device did not answer in time, or the call waited 5 minutes for its turn on it                                                          | read the screen, as the touch may have gone, then try once more                                         |
+| `CANCELLED`              | the client cancelled the call                                                                                                               | read the screen: the touch may have gone                                                                |
+| `DEVICE_GONE`            | the device was disconnected, or stopped answering                                                                                           | try once more; `list_devices` says whether it is still there                                            |
+| `AGENT_UNAVAILABLE`      | appdyno's helper on the device, the agent or the runner, could not be reached                                                               | try once more                                                                                           |
+| `AGENT_CONFLICT`         | another UI automation tool holds an Android device, or another process uses its agent                                                       | the answer names it and how to stop it; a server started with `--takeover` stops it itself              |
+| `AGENT_VERSION_MISMATCH` | the helper on the device is another version's, and another process uses it                                                                  | update that process, or close it                                                                        |
+| `UNSUPPORTED`            | this device or platform cannot do it                                                                                                        | the hint says what to use instead, where there is something                                             |
+| `PERMISSION_REQUIRED`    | it waits for a person: what loses data, the power controls, a build, a link that asks, or a prompt on the device that only a person answers | a person answers, or allows it ahead of time: [What asks the person first](#what-asks-the-person-first) |
+| `NOT_FOUND`              | nothing matches the target, or no app or file has that name                                                                                 | a touch's answer shows the screen as it is now; `manage_app` `list` names the apps                      |
+| `NO_FOCUS`               | there is text to type and no field has the focus                                                                                            | give the field as the target                                                                            |
+| `APP_NOT_RUNNING`        | the app is not running, or died under the action                                                                                            | the answer says why it died, with its last log lines; `launch_app` starts it again                      |
+| `POLICY_DENIED`          | it is outside what the server allows: its devices, apps, links and folders, or `--no-home`                                                  | only the person who starts the server changes that, by its flags                                        |
+| `INVALID_ARGUMENT`       | the arguments are wrong                                                                                                                     | the hint says which one, and what it takes                                                              |
+| `STALE`                  | the target was read on a screen that has since been replaced                                                                                | read the screen again, then act                                                                         |
+| `SCREEN_OFF`             | the screen is dark, so a touch would reach no window                                                                                        | wake the phone, then try again                                                                          |
+| `INTERNAL`               | appdyno failed in a way it did not expect                                                                                                   | read the screen; if it comes again, report it with its message                                          |
+| `AMBIGUOUS`              | more than one element matches the selector                                                                                                  | narrow the selector, or use a ref: [No match, or several](#no-match-or-several)                         |
+| `CHECK_FAILED`           | a check does not hold, or a wait for one ran out                                                                                            | the answer says what it found                                                                           |
+| `BUILD_FAILED`           | the project's own build failed                                                                                                              | the answer quotes what the build said                                                                   |
+| `DEVICE_CLAIMED`         | another live process holds the device                                                                                                       | stop it, or share the device: [Sharing a device](#sharing-a-device)                                     |
+| `DEVICE_LOCKED`          | the phone is locked behind what appdyno cannot answer, as a passcode                                                                        | unlock it                                                                                               |
+| `OFFLINE`                | the package registry, or a pinned tool's release, cannot be reached                                                                         | try again when online                                                                                   |
+
 ## Targets
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read just before the action.
@@ -211,7 +240,7 @@ A `swipe_screen` with `until` that finds its element cut by the edge its swipes 
 
 ### No match, or several
 
-Several matches refuse and list them with their refs, and an index past the last match says how many there are; no match waits a moment, then refuses with the nearest labels, or, where another app is in front and the app did not leave on purpose, says that the app is not; a `check_element` with `timeoutMs` that runs out says the same, and that calling again waits longer.
+Several matches refuse with `AMBIGUOUS` and list them with their refs, and an index past the last match says how many there are; no match waits a moment, then refuses with the nearest labels, or, where another app is in front and the app did not leave on purpose, says that the app is not; a `check_element` with `timeoutMs` that runs out says the same, and that calling again waits longer.
 
 A touch refused as `NOT_FOUND` or `STALE` holds the screen as it is now, as an answer does: what differs from the screen shown last, or all of it with `read` `full` or another app in front, and none with `read` `none`. No read of the screen is needed before the next try.
 
@@ -282,7 +311,7 @@ The views are the app's own: when a system alert is in front of them, the answer
 
 A screenshot's answer says where its pixel is tapped: its x and y times its scale to tap units, said as a division where that is a whole one, `x/3` for an iPhone's picture at full size. The scale and `width` are of the screen as it stands now, turned or not, and a simulator's picture is stood up as its app in front stands; a picture that still stands otherwise than the screen gets no scale, and the answer says the screen's size in tap units.
 
-With `file` it saves the picture at full size, or as wide as `width` asks, and shows the image as a screenshot does beside it, whose size and scale the answer gives, so that the file need not be read back; `inline: false` saves the file alone.
+With `file` it saves the picture at full size, or as wide as `width` asks, and shows the image as a screenshot does beside it, whose size and scale the answer gives, so that the file need not be read back; `inline: false` saves the file alone. Without `file` the image is at most 800 px on its long side, unless `width` or `points` asks otherwise, and a second image of a screen that has not changed is refused `INVALID_ARGUMENT`, as the last one still holds. `watchMs` gives no image but what moved in that many ms, and `strip` adds timed frames of it.
 
 ## Steps, gestures, apps and settings
 
@@ -302,17 +331,17 @@ An action still running after a second has its app's process watched, and is ref
 
 ### Waits and selectors
 
-`check_element` waits 15000 ms at most a call, as its description says, and a number past an argument's limit is refused with the limit in the hint.
+`check_element` waits 15000 ms at most a call, as its description says, and a number past an argument's limit is refused with the limit in the hint. `check` `moves` watches the element, or the whole screen, for `timeoutMs`, 2000 ms unless given, and with `expect: false` passes only where it keeps still; `equals` is the text a `text` check wants, and `expect: false` asks the opposite of any check.
 
 A selector goes in `selector` in every tool and step that takes one, `read_screen` and `check_element` among them, as `{"tool":"tap_screen","selector":{"text":"OK"}}`: its words given at the top are refused, with the call in that shape in the hint.
 
 ### What each tool holds
 
-- `tap_screen` holds a double tap, as `count: 2`, and a long press, as `holdMs`; `swipe_screen` holds a drag, as `to`, a pinch, as `scale`, and free paths, as `pointers`.
-- `press_key` holds the buttons (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), a keyboard's keys (`enter`, `delete`, `tab`, `escape`, `space`, the arrows `arrow_up`, `arrow_down`, `arrow_left` and `arrow_right`, and a letter or digit with the keys held first, as `command+a`, where `command` is Ctrl on Android), and `control_center`, `notification_center` and `spotlight`, which `home` closes. A key's name is read whatever its case, and `return` is `enter`, `esc` `escape` and `backspace` `delete`; a letter is a small one, as a capital would be a shift too.
+- `tap_screen` holds a double tap, as `count: 2`, and a long press, as `holdMs`; `swipe_screen` holds a drag, as `to`, a pinch, as `scale`, and free paths, as `pointers`, one way a call: two are refused. A swipe's `direction` is the way the content moves, `up` moving it up, and `until` swipes up to `maxSwipes` times, 10 unless given.
+- `press_key` holds the buttons (`back`, `home`, `app_switch`, `volume_up`, `volume_down`, `mute`, `siri`, `power`, `lock`), a keyboard's keys (`enter`, `delete`, `tab`, `escape`, `space`, the arrows `arrow_up`, `arrow_down`, `arrow_left` and `arrow_right`, and a letter or digit with the keys held first, as `command+a`, where `command` is Ctrl on Android), and `control_center`, `notification_center` and `spotlight`, which `home` closes. A key's name is read whatever its case, and `return` is `enter`, `esc` `escape` and `backspace` `delete`; a letter is a small one, as a capital would be a shift too. `count` presses it again, up to 100 times, and `type_text` takes `replace`, for its text in place of the field's, and `submit`, for an `enter` after it.
 - `manage_app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`, `stop` and `build_and_run` from a project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gradle folder with `scheme` as its module and `configuration` as its variant. `install` takes one file as `path`, or as `files` an Android app's APK with its `.dm` files or split APKs.
 - `transfer_files` holds `pull`, an app's data into a new or empty folder, `push` from one, which stops the app and takes away what the folder does not hold, and `media`.
-- `set_device` holds `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` and `fold`; the one-shot `biometric`, `call`, `sms`, `keychain`, `memory_warning` and `shake`; and `restore`, which puts back what was changed. `dark_mode` reads as it is set, `on` or `off`, on both platforms.
+- `set_device` holds `orientation`, `location`, `clipboard`, `dark_mode`, `text_size`, `reduce_motion`, `increase_contrast`, `reduce_transparency`, `animations`, `locale`, `network`, `thermal`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data` and `fold`; the one-shot `biometric`, `call`, `sms`, `keychain`, `memory_warning` and `shake`; and `restore`, which puts back what was changed. `dark_mode` reads as it is set, `on` or `off`, on both platforms. `call` takes a phone number, and `end` with the number hangs up; `sms` takes the text, from the number in `title`, 5551234 unless given.
 
 ### Launching an app
 
@@ -359,7 +388,7 @@ Putting Settings, or the whole device, in a language other than English or Turki
 
 The server asks by the client's own prompt, MCP elicitation, where the client declared it can, at `initialize` on a 2025 revision and on each request on 2026-07-28, and names the device, the app and what is lost. The model cannot answer it.
 
-A no or a closed prompt does nothing, and the answer says its question got no yes, never that a person declined: a client may answer by itself, as one run headless answered no in 9 ms, with no person shown the question. Each refusal's hint, a no's too, says how a person allows it ahead of time, by the flags below.
+A no or a closed prompt does nothing, and the answer, `PERMISSION_REQUIRED`, says its question got no yes, never that a person declined: a client may answer by itself, as one run headless answered no in 9 ms, with no person shown the question. Each refusal's hint, a no's too, says how a person allows it ahead of time, by the flags below.
 
 On 2026-07-28 no request goes back to a client, so the call ends its round with the question and the client brings the answer back with the call: the call waits where it stopped, so a step before it in the same `run_steps` is not done again, and an answer that does not come in 5 minutes is a no.
 
@@ -375,7 +404,7 @@ A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person 
 
 `manage_app install` is not among them: it removes no app first.
 
-`manage_app build_and_run` asks too, each time and on any device, as a project's build runs its own Gradle or Xcode scripts on this Mac: the question names the project. Only `--allow-build` on the server's command line lets it build with nothing asked, never `--allow-data-loss`; without it, where the client cannot ask, it is refused, and a person builds the project and `manage_app install` takes what the build made. Its `path` is a project inside the folders the server writes in, with the flag too.
+`manage_app build_and_run` asks too, each time and on any device, as a project's build runs its own Gradle or Xcode scripts on this Mac: the question names the project. Only `--allow-build` on the server's command line lets it build with nothing asked, never `--allow-data-loss`; without it, where the client cannot ask, it is refused, and a person builds the project and `manage_app install` takes what the build made. Its `path` is a project inside the folders the server writes in, with the flag too. A build that fails is refused `BUILD_FAILED`, with what the build said.
 
 `manage_app install` names the app it installed by the id the file holds. Under `--allow-apps`, `manage_app install` installs only an app the list names, by the id the file holds, read before anything reaches the device, and refuses another, naming it; `build_and_run` is refused, as what a project builds is not known before it is built.
 
@@ -510,7 +539,7 @@ Any other prompt is left, and the answer then says `sent`, with the alert's word
 
 ### System alerts
 
-Every answer that reads the screen names a system alert over it so, an Android app's crash dialog ("keeps stopping") among them, with `answer_alert` to answer it; on an iOS device in landscape the alert is read where the screen shows it, though the home screen app that draws it keeps its windows upright. `answer_alert`'s answer to an iOS alert over an app, and a `tap_screen`, with `count: 2` or `holdMs` too, that closes one, read that app once it is in front again: as the alert goes, the home screen app is in front a moment, showing only the app's card.
+Every answer that reads the screen names a system alert over it so, an Android app's crash dialog ("keeps stopping") among them, with `answer_alert` to answer it; on an iOS device in landscape the alert is read where the screen shows it, though the home screen app that draws it keeps its windows upright. `answer_alert`'s answer to an iOS alert over an app, and a `tap_screen`, with `count: 2` or `holdMs` too, that closes one, read that app once it is in front again: as the alert goes, the home screen app is in front a moment, showing only the app's card. `answer` is a button's label, or `allow` or `deny` in any language, where `allow` takes the least the alert offers, once, else while using; with no alert open it is refused `NOT_FOUND`, and a label that several buttons match `AMBIGUOUS`.
 
 ### Settings pages
 
@@ -518,7 +547,7 @@ Every answer that reads the screen names a system alert over it so, an Android a
 
 ## Network on a simulator
 
-`capture_network` on a simulator works through the probe.
+`capture_network` on a simulator works through the probe. `paths` says what each way sees on this device, or why it is refused: `proxy`, through a proxy you run at `proxy` host:port; `probe`, on a simulator; and on Android `bytes`, and `packets` from Android 14, both with no bodies.
 
 ### Starting a capture
 
@@ -714,7 +743,7 @@ On a simulator, with an app given or selected, `locale` holds that app in a lang
 
 ## Sharing a device
 
-A process that drives a device holds it: a file in the state directory with its pid and start time. A dead owner's claim is free. A second process is refused with the owner's pid and name unless it asks to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
+A process that drives a device holds it: a file in the state directory with its pid and start time. A dead owner's claim is free. A second process is refused `DEVICE_CLAIMED`, with the owner's pid and name, unless it asks to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
 
 `list_devices` shows who holds what. There is no daemon. The process that puts back what an ended server left holds the device as `appdyno put-back` while it does, and a session that starts meanwhile waits for it, up to 40 s, where it is refused at once by any other holder.
 

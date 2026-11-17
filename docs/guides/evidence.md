@@ -21,8 +21,8 @@ index). The answer gives how long the file plays, its frames and size.
 
 ## Report
 
-`record_session` `report` `start` (`dir`) keeps every call from then on: its arguments, its answer and, after anything that is not a plain read,
-the screen and an image of it. `stop` writes `index.html` in that folder, with the video recorded meanwhile, the app's log, its
+`record_session` `report` `start` (`dir`, a folder with no `index.html` in it yet) keeps every call from then on: its arguments, its answer and, after anything that is not a plain read,
+the screen and an image of it (not while a timeline runs: its video holds every screen). `stop` writes `index.html` in that folder, with the video recorded meanwhile, the app's log, its
 crashes and the measurements taken. So does the end of a session. `write` writes it at any moment, and with no `start` it is a report
 of the screen as it is.
 
@@ -32,7 +32,7 @@ element holds a secret or is a password field, and left out if it cannot be pain
 
 ## Timeline
 
-`record_session` `timeline` `start`, then the journey, then `record_session` `timeline` `stop` writes `timeline.html` beside the report: the video, touches, frames, requests, the log and memory on one clock, in one file to send. `record_session` `flight` `start` keeps the last seconds of an app and saves them on a crash or a stall. From a terminal: `appdyno timeline` and `appdyno flight`. See [One timeline](../reference/perf.md#one-timeline) in the performance reference, which also says what the file holds before you send it.
+`record_session` `timeline` `start`, then the journey, then `record_session` `timeline` `stop` writes `timeline.html` beside the report: the video, touches, frames, requests, the log and memory on one clock, in one file to send. `record_session` `flight` `start` keeps the last seconds of an app and saves them on a crash or a stall. From a terminal: `appdyno timeline` and `appdyno flight`, where `--dir` names the folder they write in. See [One timeline](../reference/perf.md#one-timeline) in the performance reference, which also says what the file holds before you send it.
 
 ## Dashboard
 
@@ -72,7 +72,7 @@ The proxy is one you run. `read` lists what it saw: by the proxy's own export wh
 `har`, its session exported as HAR. A list holds what went through the proxy from any client, since `start`. No
 certificate is ever installed: to see HTTPS through a proxy, install its certificate yourself. An iPhone has only `read` with `har`: its proxy is in its Wi-Fi settings.
 
-The probe does more than list. A `read` of all its requests is folded: the failed ones first, each host once, a path asked several times in one line, pictures counted; `contains`, `method` or `status` gives each request its own line, `after` what is new since an id, and `id` one request whole with what the session measured of it. A request that has started and not ended stands after the list as `in flight`. `save` writes the capture as HAR 1.2, cleaned as an answer is. `mock` sets rules that answer, fail, delay or send elsewhere the requests they take, and `throttle` slows the app's requests; both end with the capture. While the probe is in, the app's own check of a server's certificate (pinning) is not asked, so a server the app would refuse is let through.
+The probe does more than list. A `read` of all its requests is folded: the failed ones first, each host once, a path asked several times in one line, pictures counted; `contains`, `method` or `status` gives each request its own line, `after` what is new since an id, and `id` one request whole with what the session measured of it. A request that has started and not ended stands after the list as `in flight`. `save` writes the capture as HAR 1.2, cleaned as an answer is. `mock` sets rules that answer, fail, delay or send elsewhere the requests they take, and `throttle` slows the app's requests; both end with the capture. `check` waits for a request that fits, as a flow's `request` step does. While the probe is in, the app's own check of a server's certificate (pinning) is not asked, so a server the app would refuse is let through.
 
 ## Web views
 
@@ -101,5 +101,5 @@ component tree and JS profiles. On Android, a device reaches Metro through your 
 
 `check_screen` `visual_baseline` saves the screen as `name` under `dir` (default `./appdyno-baselines`, to commit with your project). `visual` refuses
 with `CHECK_FAILED` past `tolerance` (percent of pixels, default 0.1; a pixel counts if a channel differs by more than 16), and writes
-`name.diff.png` (what differs in red, masks in blue) and `name.actual.png`. `masks` are `x,y,w,h` in tap units or `text`, `id`, `role`; the status bar is always left out.
+`name.diff.png` (what differs in red, masks in blue) and `name.actual.png`. `masks` are `x,y,w,h` in tap units or `text`, `id`, `role`, refused `NOT_FOUND` where they name no element; the status bar is always left out.
 A baseline holds for one size of screen, and the refusal says so.

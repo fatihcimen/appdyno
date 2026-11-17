@@ -4,7 +4,7 @@
 
 The host library talks to an on-device agent over one byte stream: on Android an abstract unix socket
 of the agent opened through the adb server (`localabstract:<name>`), on iOS a TCP connection
-(simulator loopback, or a usbmux connection to a phone). The source of truth for message shapes is
+(simulator loopback, a usbmux connection to a phone on its cable, or a tunnel to one paired for Wi-Fi). The source of truth for message shapes is
 `packages/protocol/src/messages.ts`, with the screen's tree in `tree.ts` and an audit's findings in `audit.ts`. The host parses a request's params by it, so a default there is what goes on
 the wire and an agent has none of its own: a value missing is `INVALID_ARGUMENT`. `packages/protocol/fixtures` has
 every request, result and error as canonical JSON, which the protocol's tests hold to the schemas and the Android
@@ -28,7 +28,7 @@ A frame larger than 64 MiB, an unknown type or a JSON frame that does not parse 
 ## Handshake
 
 The first request on a connection must be `hello` with the launch token the agent was started with
-(from `--token-file`, a file only the shell user reads, which the agent deletes once read; at least 16 characters, compared in constant time). Anything else closes the connection.
+(on Android from `--token-file`, a file only the shell user reads, which the agent deletes once read, and on iOS from the runner's launch environment; at least 16 characters, compared in constant time). Anything else closes the connection.
 
 ```json
 { "jsonrpc": "2.0", "id": 1, "method": "hello", "params": { "token": "…", "protocol": 2 } }

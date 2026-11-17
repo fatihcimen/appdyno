@@ -18,7 +18,7 @@ appdyno mirror close | status | stats
   --seconds N  --takeover  --record file.mp4  --focus  --allow-devices RE
 ```
 
-With `--detach` the window takes `--quality` and `--wifi`, and none of `--codec`, `--no-input`, `--headless`, `--seconds`, `--record` and `--focus`, which are for a window this command stays with. `--pair` takes exactly two `--device` and no `--detach`.
+With `--detach` the window takes `--quality` and `--wifi`, and none of `--codec`, `--no-input`, `--headless`, `--seconds`, `--record` and `--focus`, which are for a window this command stays with. `--pair` takes exactly two `--device` and no `--detach`. `--headless` runs the viewer with no window, `--seconds N` closes every window after N seconds, and `--record file.mp4` keeps a movie of what the stream sends, from its first picture.
 
 The `show_mirror` tool has `open`, `close`, `status` and `stats`. No frames pass over MCP: an agent has `take_screenshot`
 and `record_session`. `ask_person` asks a person for what an agent cannot do.
@@ -80,6 +80,7 @@ The window shows what is pressed most, and the rest is a click away in **More Co
 | Reconnect                                                                        | ⇧⌘R             | a new stream                                                                                                                                       |
 | Show Inspector, Show Performance, Show Device Frame                              | ⌥⌘I, ⌥⌘P, ⌥⌘F   | the window only                                                                                                                                    |
 | Paste                                                                            | ⌘V              | the Mac's text, typed into the device                                                                                                              |
+| Find in Requests                                                                 | ⌘F              | the Network pane's filter                                                                                                                          |
 
 While an agent drives, a purple ring runs around the screen, the capsule says so, naming the client where it says who it is, and a dot fades where each tap landed. A request for a person turns the ring orange.
 
@@ -125,7 +126,7 @@ The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, a
 - It offers only the ways this device has: on a simulator the probe, which restarts the app and so is refused while a recording or a measure runs; on Android bytes, and packets from Android 14 where the build registers them, both counting with no addresses.
 - A proxy is offered only where the device already goes through one, and its list is read where this tool can read the proxy's own export. No window sets a proxy, on any device.
 - Where nothing lists requests, on an iPhone or an Android with no proxy, the pane says what a person needs.
-- A probe's list is read every 3 s while the pane shows, and any other on Read Again. A capture started here stops as the window closes.
+- A probe's list is read every 3 s while the pane shows, and any other on Read Again. A capture started here stops as the window closes. With the probe, the pane also holds its rules, which answer, fail, delay or send elsewhere the requests they match, and its throttle, the same ones an agent sets; **Find in Requests** (⌘F) opens the pane at its filter.
 
 #### Accessibility
 
@@ -209,7 +210,7 @@ The recording is the one `run_flow` keeps, a file per device. So `run_flow recor
 
 ## The hub
 
-`appdyno hub` is one window: every device this Mac can reach in a sidebar, phones first, then what runs, with what is shut down folded away, and the one chosen live beside it, controlled right there. Only what stands in the window streams, and a phone starts only when a person chooses it: a simulator or emulator already running may show at once, and no choice is kept from one launch to the next. The toolbar is the system's, with the same controls as a window of its own, and only what that device has. The Inspector is a click away, Performance first. Search takes what is folded too. The hub starts and stops what is virtual, and makes a new simulator or emulator from what this Mac has installed. Where nothing can be shown, it says what to do next.
+`appdyno hub`, which takes `--focus` and `--allow-devices` as `mirror` does, is one window: every device this Mac can reach in a sidebar, phones first, then what runs, with what is shut down folded away, and the one chosen live beside it, controlled right there. Only what stands in the window streams, and a phone starts only when a person chooses it: a simulator or emulator already running may show at once, and no choice is kept from one launch to the next. The toolbar is the system's, with the same controls as a window of its own, and only what that device has. The Inspector is a click away, Performance first. Search takes what is folded too. The hub starts and stops what is virtual, and makes a new simulator or emulator from what this Mac has installed. Where nothing can be shown, it says what to do next.
 
 **AI Clients**, under the devices, lists every MCP client `appdyno install` knows, each as it truly stands. Connected is earned only by a real call: the server keeps each client's name, version, way in and last call, and nothing it sent. Add and Remove show the exact lines first and take a second click, and Undo takes back that one entry. Test runs what an entry runs, as far as its list of tools, and says what to do when it fails; it calls no tool. For a client in a browser it starts and stops `appdyno mcp --http`, in a process that ends with the hub, with the token hidden until asked. See [Connecting a client](../guides/clients.md).
 

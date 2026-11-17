@@ -21,8 +21,8 @@ index bırakmaz). Yanıt dosyanın ne kadar oynadığını, karelerini ve boyutu
 
 ## Rapor
 
-`record_session` `report` `start` (`dir`) o andan itibaren her çağrıyı saklar: argümanlarını, yanıtını ve düz bir okuma olmayan her şeyden sonra
-ekranı ve onun bir görüntüsünü. `stop` o klasöre, bu arada kaydedilen videoyla, uygulamanın loguyla, crash'leriyle
+`record_session` `report` `start` (`dir`, henüz `index.html` tutmayan bir klasör) o andan itibaren her çağrıyı saklar: argümanlarını, yanıtını ve düz bir okuma olmayan her şeyden sonra
+ekranı ve onun bir görüntüsünü (bir zaman çizelgesi çalışırken değil: onun videosu her ekranı tutar). `stop` o klasöre, bu arada kaydedilen videoyla, uygulamanın loguyla, crash'leriyle
 ve alınan ölçümlerle birlikte `index.html` yazar. Bir oturumun sonu da yazar. `write` onu herhangi bir anda yazar; `start` olmadan ise ekranın
 o anki halinin raporudur.
 
@@ -32,7 +32,7 @@ parola alanı olduğu yerde görüntünün üstü boyanır; üstü boyanamıyors
 
 ## Zaman çizelgesi
 
-`record_session` `timeline` `start`, ardından yolculuk, ardından `record_session` `timeline` `stop`, raporun yanına `timeline.html` yazar: video, dokunuşlar, kareler, istekler, log ve bellek tek bir saatte, gönderilebilecek tek bir dosyada. `record_session` `flight` `start`, bir uygulamanın son saniyelerini tutar ve bir crash'te ya da takılmada kaydeder. Terminalden: `appdyno timeline` ve `appdyno flight`. Bkz. performans başvurusunda [Tek bir zaman çizelgesi](../reference/perf.tr.md#tek-bir-zaman-çizelgesi); dosyayı göndermeden önce içinde ne olduğunu da orada söyler.
+`record_session` `timeline` `start`, ardından yolculuk, ardından `record_session` `timeline` `stop`, raporun yanına `timeline.html` yazar: video, dokunuşlar, kareler, istekler, log ve bellek tek bir saatte, gönderilebilecek tek bir dosyada. `record_session` `flight` `start`, bir uygulamanın son saniyelerini tutar ve bir crash'te ya da takılmada kaydeder. Terminalden: `appdyno timeline` ve `appdyno flight`; `--dir` yazdıkları klasörü adlandırır. Bkz. performans başvurusunda [Tek bir zaman çizelgesi](../reference/perf.tr.md#tek-bir-zaman-çizelgesi); dosyayı göndermeden önce içinde ne olduğunu da orada söyler.
 
 ## Dashboard
 
@@ -72,7 +72,7 @@ Proxy sizin çalıştırdığınız bir proxy'dir. `read` onun gördüklerini li
 `har`, yani HAR olarak dışa aktarılmış oturumuyla. Bir liste, `start`'tan bu yana herhangi bir istemciden proxy'den geçeni tutar. Hiçbir
 sertifika asla kurulmaz: HTTPS'i bir proxy üzerinden görmek için onun sertifikasını kendiniz kurun. Bir iPhone'da yalnızca `har` ile `read` vardır: proxy'si Wi-Fi ayarlarındadır.
 
-Sonda listelemekten fazlasını yapar. Bütün isteklerinin bir `read` çağrısı katlanmış gelir: önce başarısız olanlar, her ana makine bir kez, birkaç kez istenen bir yol tek satırda, görseller sayılmış olarak; `contains`, `method` ya da `status` her isteğe kendi satırını verir, `after` bir kimlikten sonra yeni olanı, `id` ise oturumun ölçtükleriyle birlikte tek bir isteğin tamamını. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur. `save` yakalamayı, bir yanıt gibi temizlenmiş olarak HAR 1.2 biçiminde yazar. `mock`, aldığı istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallar koyar; `throttle` ise uygulamanın isteklerini yavaşlatır; ikisi de yakalamayla birlikte biter. Sonda içindeyken uygulamanın bir sunucunun sertifikasına ilişkin kendi denetimi (pinning) sorulmaz, bu yüzden uygulamanın reddedeceği bir sunucu geçirilir.
+Sonda listelemekten fazlasını yapar. Bütün isteklerinin bir `read` çağrısı katlanmış gelir: önce başarısız olanlar, her ana makine bir kez, birkaç kez istenen bir yol tek satırda, görseller sayılmış olarak; `contains`, `method` ya da `status` her isteğe kendi satırını verir, `after` bir kimlikten sonra yeni olanı, `id` ise oturumun ölçtükleriyle birlikte tek bir isteğin tamamını. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur. `save` yakalamayı, bir yanıt gibi temizlenmiş olarak HAR 1.2 biçiminde yazar. `mock`, aldığı istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallar koyar; `throttle` ise uygulamanın isteklerini yavaşlatır; ikisi de yakalamayla birlikte biter. `check`, bir flow'un `request` adımı gibi, uyan bir isteği bekler. Sonda içindeyken uygulamanın bir sunucunun sertifikasına ilişkin kendi denetimi (pinning) sorulmaz, bu yüzden uygulamanın reddedeceği bir sunucu geçirilir.
 
 ## Web görünümleri
 
@@ -101,5 +101,5 @@ bileşen ağacı ve JS profilleri. Android'de bir cihaz Metro'ya sizin kendi `ad
 
 `check_screen` `visual_baseline` ekranı `dir` altında `name` olarak kaydeder (varsayılan `./appdyno-baselines`, projenizle commit etmek için). `visual`,
 `tolerance` aşılınca `CHECK_FAILED` ile reddeder (piksellerin yüzdesi, varsayılan 0,1; bir kanal 16'dan fazla farklıysa piksel sayılır) ve
-`name.diff.png` (farklı olan kırmızı, maskeler mavi) ile `name.actual.png` yazar. `masks`, dokunma birimlerinde `x,y,w,h` ya da `text`, `id`, `role`'dür; durum çubuğu her zaman dışarıda bırakılır.
+`name.diff.png` (farklı olan kırmızı, maskeler mavi) ile `name.actual.png` yazar. `masks`, dokunma birimlerinde `x,y,w,h` ya da `text`, `id`, `role`'dür ve hiçbir öğeyi adlandırmazlarsa `NOT_FOUND` ile reddedilir; durum çubuğu her zaman dışarıda bırakılır.
 Bir baseline tek bir ekran boyutu için geçerlidir ve ret bunu söyler.
