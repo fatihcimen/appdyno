@@ -13,7 +13,7 @@ import { SimulatorApps } from './simulator-manage.js';
 import { SimulatorEvents } from './sim-events.js';
 import { SimulatorSettings } from './sim-settings.js';
 import { modelOf } from './simulators.js';
-import { typeByKeys, typesByKeys } from './sim-keys.js';
+import { typesByKeys } from './sim-keys.js';
 import {
   type Hello,
   type Tree,
@@ -34,7 +34,7 @@ import { SimulatorWeb } from './webinspector.js';
 import { DirectSim, turnedBy } from './simdirect.js';
 import { SimulatorLock } from './sim-lock.js';
 import { SimulatorLifecycle } from './sim-lifecycle.js';
-import { type Capture, nodesBusy, settleAfter } from './simsettle.js';
+import { type Capture, nodesBusy } from './simsettle.js';
 import { HelperActs } from './sim-act.js';
 import { afterHelper, HelperReads } from './sim-read.js';
 import { helperSeesFront, looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
@@ -393,16 +393,8 @@ export class IosSimulatorDevice extends IosDevice {
   override async typeText(text: string, opts: Parameters<IosDevice['typeText']>[1] = {}) {
     if (this.direct.reads && this.helperInput && typesByKeys(text)) {
       await this.wake();
-      const typed = await this.queue.run(async () => {
-        const r = await typeByKeys(text, opts, {
-          read: () => this.reads.front().then((x) => ('refused' in x ? undefined : x.tree)),
-          send: (a) => this.direct.send(a),
-          keyboardOpen: (t) => this.platformScreen.keyboardOpen(t),
-        });
-        const key = { kind: 'key', key: 'a' } as const; // the settle tells touches apart, and keys are none
-        if (!r || typeof r === 'string') return r;
-        return { ...r, ...(await settleAfter(this.acts.settleOn(), key, opts)).result };
-      });
+      const open = (t: Tree) => this.platformScreen.keyboardOpen(t);
+      const typed = await this.queue.run(() => this.acts.keys(text, opts, open));
       if (typed === 'retype') return super.typeText(text, { ...opts, replace: true });
       if (typed === 'append') return super.typeText(text, opts);
       if (typed) return typed;

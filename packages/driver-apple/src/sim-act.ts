@@ -8,6 +8,7 @@ import {
 } from '@appdyno/core';
 import type { ActParams, ActResult, Tree } from '@appdyno/protocol';
 import type { HelperReads } from './sim-read.js';
+import { typeByKeys } from './sim-keys.js';
 import type { DirectSim } from './simdirect.js';
 import { Cycling, OWN_MS } from './simcycling.js';
 import { type Capture, settleAfter } from './simsettle.js';
@@ -72,6 +73,26 @@ export class HelperActs {
       clock: () => Date.now() - this.startingMs,
       handled: () => this.p.direct.touchHandled().catch(() => undefined),
     };
+  }
+
+  /**
+   * A US keyboard's text by the helper's keys (`typeByKeys`) and the settle after them, in the device's queue: what
+   * `typeByKeys` answers where the runner is to type it.
+   */
+  async keys(
+    text: string,
+    opts: Parameters<typeof typeByKeys>[1] & ActOptions,
+    keyboardOpen: (t: Tree) => boolean,
+  ) {
+    const { direct, reads } = this.p;
+    const r = await typeByKeys(text, opts, {
+      read: () => reads.front().then((x) => ('refused' in x ? undefined : x.tree)),
+      send: (a) => direct.send(a),
+      keyboardOpen,
+    });
+    const key = { kind: 'key', key: 'a' } as const; // the settle tells touches apart, and keys are none
+    if (!r || typeof r === 'string') return r;
+    return { ...r, ...(await settleAfter(this.settleOn(), key, opts)).result };
   }
 
   /** One action, in the device's queue. */
