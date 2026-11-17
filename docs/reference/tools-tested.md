@@ -8,14 +8,15 @@ What [the tools](tools.md) were run on, and what each run showed. The device sui
 
 Each device, OS and Xcode that a run on this page names whole, newest first. The simulator smoke of [CI and releases](ci.md) writes the same four columns at the top of its `device-summary.md`, which each release holds as a file: a row there that is not here names a pair that only the smoke's suites ran on. The smoke ran 18 cases in its rows here; from 1.3.0 it runs 21, the keys with a modifier among them, and no run of the 21 on GitHub's runner is recorded yet.
 
-| device              | OS                                      | Xcode         | date       | what ran                                                                                                                                                                              |
-| ------------------- | --------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| iPhone 13 Pro Max   | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | 13 suites on its cable, the cases that stay in the fixture: 61 passed, none failed: [An iPhone on iOS 27.2](#an-iphone-on-ios-272)                                                    |
-| Xiaomi REDMI 15C    | Android 16, API 36, HyperOS 3.0.301.0   | none          | 2026-11-17 | 15 suites on its cable, the cases that stay in the fixture: 130 passed, none failed: [A Xiaomi on HyperOS 3](#a-xiaomi-on-hyperos-3)                                                  |
-| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | the simulator smoke on GitHub's hosted macOS runner: its 18 cases passed by the runner alone, as the host has no simulator HID service, in 417 s of suites (15 min for the whole job) |
-| iPhone 17 simulator | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | the simulator smoke on a Mac: its 18 cases passed by the simulator's helpers in 189 s, and by the runner alone in 219 s, at host load 40 to 329 on 10 cores                           |
-| iPhone 17 simulator | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | the simulator suites, one file at a time: [Xcode 27.2](#xcode-272)                                                                                                                    |
-| Android emulator    | Android 17, API 37 (CE2A.260420.051.A3) | none          | 2026-11-08 | every Android suite: [Android 17](#android-17)                                                                                                                                        |
+| device               | OS                                      | Xcode         | date       | what ran                                                                                                                                                                              |
+| -------------------- | --------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iPhone 13 Pro Max    | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | 13 suites on its cable, the cases that stay in the fixture: 61 passed, none failed: [An iPhone on iOS 27.2](#an-iphone-on-ios-272)                                                    |
+| Xiaomi REDMI 15C     | Android 16, API 36, HyperOS 3.0.301.0   | none          | 2026-11-17 | 15 suites on its cable, the cases that stay in the fixture: 130 passed, none failed: [A Xiaomi on HyperOS 3](#a-xiaomi-on-hyperos-3)                                                  |
+| iPhone 17 simulator  | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | the simulator smoke on GitHub's hosted macOS runner: its 18 cases passed by the runner alone, as the host has no simulator HID service, in 417 s of suites (15 min for the whole job) |
+| iPhone 17 simulator  | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | the simulator smoke on a Mac: its 18 cases passed by the simulator's helpers in 189 s, and by the runner alone in 219 s, at host load 40 to 329 on 10 cores                           |
+| iPhone 17 simulator  | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | the simulator suites, one file at a time: [Xcode 27.2](#xcode-272)                                                                                                                    |
+| iPhone Duo simulator | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-15 | a trial outside the tools, before 1.3.0: its hinge event folded and unfolded it, and appdyno 1.2.0 read it open: [A fold](#a-fold)                                                    |
+| Android emulator     | Android 17, API 37 (CE2A.260420.051.A3) | none          | 2026-11-08 | every Android suite: [Android 17](#android-17)                                                                                                                                        |
 
 ## Android 17
 
@@ -65,7 +66,7 @@ Request shapes are tested against the requests recorded for each type, and the s
 
 ## What could not be done on a simulator
 
-A simulator's animations stay as they are, as no way to slow them was found. UIKit's `UIAnimationDragCoefficient` set to 10, in `com.apple.UIKit`, in the global domain or as a launch argument, left the fixture's 300 ms slide over within 0.7 s on an iPhone 17 Pro simulator with iOS 27.2, as it was with none. An iPhone Duo simulator with iOS 27.1 shows its app on the outer screen. With that screen powered off by `simctl io screenConfig`, Settings started again showed nothing on the inner one, so a fold of it is not that either.
+A simulator's animations stay as they are, as no way to slow them was found. UIKit's `UIAnimationDragCoefficient` set to 10, in `com.apple.UIKit`, in the global domain or as a launch argument, left the fixture's 300 ms slide over within 0.7 s on an iPhone 17 Pro simulator with iOS 27.2, as it was with none. An iPhone Duo simulator folds by its hinge event, as [A fold](#a-fold) says, and not by its screens: with its outer screen powered off by `simctl io screenConfig`, on iOS 27.1, Settings started again showed nothing on the inner one.
 
 ## An iPhone's own conditions
 
@@ -75,9 +76,17 @@ Run on an iPhone 13 Pro Max over its cable: the fixture's data went from 4 files
 
 On an API 34 emulator a megabyte from this Mac took 778 ms, 11.2 s under a cap of 100,000, and the cap was gone after `restore`.
 
+## Network on a simulator
+
+`device-tests/network.simulator.test.ts` holds the network probe on a simulator: headers and bodies kept and hidden, a HAR read back, each kind of rule, the throttle, and nothing left once a capture or a session ends. It was written on an iOS simulator on 2026-11-16, where it found that the probe could hand an app the end of a mocked answer before its body, which was fixed. On the fixture there, a session whose configuration adds headers and gives up after 2 s still sent its headers, which the probe listed, and still ended at 2.0 s; a delegate that trusts no server failed without the probe and got its answer with it, as the probe does not ask an app's own certificate check; and an upload of 100 kB by a stream arrived whole, its body not kept. On the first start of a feed reader with 39 requests, a read of them all went from 2,313 characters to 1,319 once each host was said once. No whole run of the suite, with its count, is recorded here yet, and it is not among the simulator smoke's cases.
+
 ## A fold
 
 `fold` was run on a 7.6" foldable emulator with API 34, where the device read `CLOSED` from the request and nothing after `restore`.
+
+On an iPhone Duo simulator a fold is the hinge event that the simulator's own hinge slider sends, which is private. Before 1.3.0 was built on it, a trial outside the tools sent that event on 2026-11-15, to a Duo with iOS 27.2 (24B91016s) under Xcode 27.2 (27B52): the simulator folded and unfolded, `devicectl` said which display it showed, and an app kept its process while its scene moved between 466 x 678 points closed and 951 x 669 open. appdyno 1.2.0 read its screen open, by the runner, and its taps reached nothing on the inner display.
+
+`device-tests/fold.test.ts` holds each pose against the fixture's own window, over a restart of the app, `restore` and the session's end, on a foldable emulator and on a Duo simulator. Its cases were written on 2026-11-16 for a Pixel 9 Pro Fold emulator with API 35 and a Duo simulator. No whole run of it, with its count, is recorded here yet.
 
 ## Languages
 

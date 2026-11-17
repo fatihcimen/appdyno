@@ -8,14 +8,15 @@
 
 Bu sayfadaki bir çalıştırmanın eksiksiz adlandırdığı her cihaz, işletim sistemi ve Xcode, en yeniden eskiye. [CI ve sürümler](ci.tr.md) sayfasındaki simulator smoke'u aynı dört sütunu, her sürümün bir dosya olarak taşıdığı `device-summary.md` dosyasının başına yazar: orada olup burada olmayan bir satır, yalnızca smoke'un suite'lerinin çalıştığı bir ikiliyi adlandırır. Smoke buradaki satırlarında 18 durum çalıştırdı; 1.3.0'dan bu yana değiştirici tuşlu tuşlar da içinde olmak üzere 21 durum çalıştırır ve 21 durumun GitHub'ın runner'ında bir çalıştırması henüz kayıtlı değildir.
 
-| cihaz                 | işletim sistemi                         | Xcode         | tarih      | ne çalıştı                                                                                                                                                                   |
-| --------------------- | --------------------------------------- | ------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| iPhone 13 Pro Max     | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | kablosuyla 13 suite, fixture'ın içinde kalan durumlar: 61 geçti, hiçbiri kalmadı: [iOS 27.2'li bir iPhone](#ios-272li-bir-iphone)                                            |
-| Xiaomi REDMI 15C      | Android 16, API 36, HyperOS 3.0.301.0   | yok           | 2026-11-17 | kablosuyla 15 suite, fixture'ın içinde kalan durumlar: 130 geçti, hiçbiri kalmadı: [HyperOS 3'lü bir Xiaomi](#hyperos-3lü-bir-xiaomi)                                        |
-| iPhone 17 simulator'ı | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | GitHub'ın barındırılan macOS runner'ında simulator smoke'u: 18 durumu yalnızca runner ile geçti, çünkü makinede simulator HID servisi yok; suite'ler 417 s (bütün job 15 dk) |
-| iPhone 17 simulator   | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | bir Mac'te simulator smoke'u: 18 durumu simulator'ın yardımcılarıyla 189 s'de, yalnızca runner ile 219 s'de geçti, 10 çekirdekte host yükü 40 ile 329 arasında               |
-| iPhone 17 simulator   | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | simulator suite'leri, her seferinde bir dosya: [Xcode 27.2](#xcode-272)                                                                                                      |
-| Android emulator      | Android 17, API 37 (CE2A.260420.051.A3) | yok           | 2026-11-08 | her Android suite'i: [Android 17](#android-17)                                                                                                                               |
+| cihaz                  | işletim sistemi                         | Xcode         | tarih      | ne çalıştı                                                                                                                                                                   |
+| ---------------------- | --------------------------------------- | ------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iPhone 13 Pro Max      | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | kablosuyla 13 suite, fixture'ın içinde kalan durumlar: 61 geçti, hiçbiri kalmadı: [iOS 27.2'li bir iPhone](#ios-272li-bir-iphone)                                            |
+| Xiaomi REDMI 15C       | Android 16, API 36, HyperOS 3.0.301.0   | yok           | 2026-11-17 | kablosuyla 15 suite, fixture'ın içinde kalan durumlar: 130 geçti, hiçbiri kalmadı: [HyperOS 3'lü bir Xiaomi](#hyperos-3lü-bir-xiaomi)                                        |
+| iPhone 17 simulator'ı  | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | GitHub'ın barındırılan macOS runner'ında simulator smoke'u: 18 durumu yalnızca runner ile geçti, çünkü makinede simulator HID servisi yok; suite'ler 417 s (bütün job 15 dk) |
+| iPhone 17 simulator    | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | bir Mac'te simulator smoke'u: 18 durumu simulator'ın yardımcılarıyla 189 s'de, yalnızca runner ile 219 s'de geçti, 10 çekirdekte host yükü 40 ile 329 arasında               |
+| iPhone 17 simulator    | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | simulator suite'leri, her seferinde bir dosya: [Xcode 27.2](#xcode-272)                                                                                                      |
+| iPhone Duo simulator'ı | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-15 | 1.3.0'dan önce, araçların dışında bir deneme: menteşe olayı onu katlayıp açtı, appdyno 1.2.0 da açıkken onu okudu: [Katlanma](#katlanma)                                     |
+| Android emulator       | Android 17, API 37 (CE2A.260420.051.A3) | yok           | 2026-11-08 | her Android suite'i: [Android 17](#android-17)                                                                                                                               |
 
 ## Android 17
 
@@ -65,7 +66,7 @@ FCM isteği, Firebase'in tek bir cihaza giden bir mesaj için belgelediği ve bu
 
 ## Bir simulator'da yapılamayanlar
 
-Bir simulator'ın animasyonları olduğu gibi kalır, çünkü onları yavaşlatmanın bir yolu bulunamadı. UIKit'in `UIAnimationDragCoefficient`'ı `com.apple.UIKit` içinde, global domain'de ya da bir başlatma argümanı olarak 10'a ayarlandığında da iOS 27.2'li bir iPhone 17 Pro simulator'ında fixture'ın 300 ms'lik kayması, hiç ayar yokken olduğu gibi, 0,7 s içinde bitti. iOS 27.1'li bir iPhone Duo simulator'ı uygulamasını dış ekranda gösterir. O ekran `simctl io screenConfig` ile kapatıldığında, yeniden başlatılan Ayarlar iç ekranda hiçbir şey göstermedi; yani bu da onu katlamak değil.
+Bir simulator'ın animasyonları olduğu gibi kalır, çünkü onları yavaşlatmanın bir yolu bulunamadı. UIKit'in `UIAnimationDragCoefficient`'ı `com.apple.UIKit` içinde, global domain'de ya da bir başlatma argümanı olarak 10'a ayarlandığında da iOS 27.2'li bir iPhone 17 Pro simulator'ında fixture'ın 300 ms'lik kayması, hiç ayar yokken olduğu gibi, 0,7 s içinde bitti. Bir iPhone Duo simulator'ı, [Katlanma](#katlanma) bölümünün dediği gibi menteşe olayıyla katlanır, ekranlarıyla değil: iOS 27.1'de dış ekranı `simctl io screenConfig` ile kapatıldığında, yeniden başlatılan Ayarlar iç ekranda hiçbir şey göstermedi.
 
 ## Bir iPhone'un kendi koşulları
 
@@ -75,9 +76,17 @@ Kablosuyla bağlı bir iPhone 13 Pro Max'te çalıştırıldı: fixture'ın veri
 
 Bir API 34 emulator'ında bu Mac'ten bir megabayt 778 ms sürdü, 100.000'lik bir sınır altında 11,2 s; `restore`'dan sonra sınır kalkmıştı.
 
+## Bir simulator'da ağ
+
+`device-tests/network.simulator.test.ts` bir simulator'da ağ probe'unu sınar: saklanan ve gizlenen başlıklar ve gövdeler, geri okunan bir HAR, her kural türü, throttle ve bir capture ya da oturum bittiğinde geride hiçbir şey kalmaması. 2026-11-16'da bir iOS simulator'ında yazıldı; orada probe'un, mock'lanmış bir yanıtın sonunu gövdesinden önce uygulamaya verebildiğini buldu, bu da düzeltildi. Oradaki fixture'da, yapılandırması başlık ekleyen ve 2 s sonra vazgeçen bir oturum başlıklarını yine gönderdi, probe da onları listeledi, ve yine 2,0 s'de bitti; hiçbir sunucuya güvenmeyen bir delegate probe olmadan başarısız oldu, probe ile yanıtını aldı, çünkü probe bir uygulamanın kendi sertifika denetimine sormaz; bir stream ile yapılan 100 kB'lık bir yükleme de gövdesi saklanmadan bütün olarak ulaştı. 39 isteği olan bir feed okuyucusunun ilk açılışında, hepsinin bir okuması, her host bir kez söylenince 2.313 karakterden 1.319'a indi. Suite'in sayısıyla birlikte bütün bir çalıştırması burada henüz kayıtlı değildir; simulator smoke'unun durumları arasında da yoktur.
+
 ## Katlanma
 
 `fold`, API 34'lü 7,6" katlanabilir bir emulator'da çalıştırıldı; cihazın durumu istekten sonra `CLOSED` okundu, `restore`'dan sonra hiçbir şey okunmadı.
+
+Bir iPhone Duo simulator'ında katlanma, simulator'ın kendi menteşe kaydırıcısının gönderdiği menteşe olayıdır; bu olay özel API'dir. 1.3.0 bunun üzerine kurulmadan önce, araçların dışında bir deneme bu olayı 2026-11-15'te Xcode 27.2 (27B52) altında iOS 27.2 (24B91016s) yüklü bir Duo'ya gönderdi: simulator katlandı ve açıldı, `devicectl` hangi ekranı gösterdiğini söyledi, bir uygulama da sahnesi kapalıyken 466 x 678 nokta ile açıkken 951 x 669 arasında taşınırken sürecini korudu. appdyno 1.2.0 açıkken ekranını runner ile okudu, dokunuşları ise iç ekranda hiçbir şeye ulaşmadı.
+
+`device-tests/fold.test.ts` her duruşu fixture'ın kendi penceresine karşı, uygulamanın yeniden başlatılması, `restore` ve oturumun sonu boyunca, katlanabilir bir emulator'da ve bir Duo simulator'ında sınar. Durumları 2026-11-16'da API 35'li bir Pixel 9 Pro Fold emulator'ı ve bir Duo simulator'ı için yazıldı. Sayısıyla birlikte bütün bir çalıştırması burada henüz kayıtlı değildir.
 
 ## Diller
 
