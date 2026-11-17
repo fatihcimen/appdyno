@@ -8,7 +8,7 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Öne çıkanlar
 
-- Katalog 48 araçtan 28 araca indi; her biri `read_screen`, `tap_screen` ve `manage_app` gibi fiil_ad biçiminde adlandırıldı. Bir istemci 30.865 yerine 26.851 karakter okur ve `--toolsets` yalnızca adı verilen grupları listeler: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
+- Katalog 48 araçtan 28 araca indi; her biri `read_screen`, `tap_screen` ve `manage_app` gibi fiil_ad biçiminde adlandırıldı. Bir istemci 1.2.0'daki 29.451 ve 1.3.0'ın yeni parçalarıyla eski adlar altındaki 30.865 yerine 26.851 karakter okur ve `--toolsets` yalnızca adı verilen grupları listeler: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
 - iOS simulator'ında ağ: `capture_network` başlıkları ve gövdeleri tutar ve HAR 1.2 yazar, istekleri kurala göre yanıtlar (`mock`; kural yakalanmış bir yanıttan ya da bir `.har` dosyasından da yapılır), yavaşlatır (`throttle`), bir isteği bekler (`check`); bir eylemin yanıtı da o eylem sırasında başarısız olan istekleri adlandırır. Mac uygulamasının Ağ bölmesi aynı yakalama üzerinde çalışır.
 - Katlanabilir cihazlar: `set_device` `fold`, katlanabilir bir Android cihazın listelediği her duruşu alır; iPhone Duo simulator'ında da `closed`, `half` ve `open` alır ve orada okumalar, dokunuşlar, ekran görüntüleri ve kayıtlar iç ekranı izler.
 - Güvenlik: bir araç yalnızca sunucunun klasörlerinin ya da `--allow-write` ile verilenlerin içine dosya yazar; `manage_app build_and_run`, `--allow-build` verilmedikçe her seferinde kişiye sorar; bir uygulamanın yazdığı şey kendi satırında tırnak içine alınır ve kaçırılır, sunucunun talimatları da buna veri der; seçili uygulamanın almadığı bir şemayla gelen bağlantı önce sorar; listelenen bir sır, uzun bir etiket kısaltılmadan önce gizlenir.
@@ -29,7 +29,7 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 - Önce kişiye sorulanlar: `manage_app uninstall`, `manage_app clear`, `transfer_files push`, `manage_app revoke`, `manage_app grant`, `set_device keychain`.
 - `--toolsets` (`APPDYNO_TOOLSETS` ve masaüstü eklentisinin bir alanı) yalnızca adı verilen grupları listeler: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
 - Bir araç cihazın ve bu Mac'in ötesine ulaşıyorsa `openWorldHint` true olur.
-- İstemcinin okuduğu katalog 30.865 karakterden 26.851 karaktere indi.
+- İstemcinin okuduğu katalog 1.2.0'daki 29.451 karakterden, bu sürümün yeni parçalarıyla 48 eski ad altındaki 30.865 karakterden 26.851 karaktere indi.
 
 | önce                                                       | şimdi                 | argümanlar                                                                                                               |
 | ---------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |

@@ -8,7 +8,7 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Highlights
 
-- The catalog is 28 tools, from 48, each named verb_noun, as `read_screen`, `tap_screen` and `manage_app`. A client reads 26,851 characters, from 30,865, and `--toolsets` lists only the groups named: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
+- The catalog is 28 tools, from 48, each named verb_noun, as `read_screen`, `tap_screen` and `manage_app`. A client reads 26,851 characters, from 29,451 in 1.2.0 and 30,865 with 1.3.0's new parts under the old names, and `--toolsets` lists only the groups named: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
 - Network on the iOS simulator: `capture_network` keeps headers and bodies and writes HAR 1.2, answers requests by rule (`mock`, also made from a captured answer or a `.har`), slows them (`throttle`), waits for one (`check`), and an action's answer names the requests that failed under it. The Mac app's Network pane works on the same capture.
 - Foldables: `set_device` `fold` takes every pose an Android foldable lists, and `closed`, `half` and `open` on an iPhone Duo simulator, where reads, touches, screenshots and recordings follow the inner display.
 - Security: a tool writes a file only inside the server's folders or `--allow-write`'s, `manage_app build_and_run` asks the person each time unless `--allow-build` is given, what an app wrote is quoted and escaped on its own line and the server's instructions call it data, a link by a scheme the selected app does not take asks first, and a listed secret is hidden before a long label is cut.
@@ -29,7 +29,7 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 - What asks the person first: `manage_app uninstall`, `manage_app clear`, `transfer_files push`, `manage_app revoke`, `manage_app grant`, `set_device keychain`.
 - `--toolsets` (`APPDYNO_TOOLSETS`, and a field of the desktop extension) lists only the groups named: `core`, `device`, `apps`, `evidence`, `network`, `perf`.
 - `openWorldHint` is true where a tool reaches beyond the device and this Mac.
-- The catalog a client reads is 26,851 characters, from 30,865.
+- The catalog a client reads is 26,851 characters, from 29,451 in 1.2.0, and from 30,865 with this release's new parts under the 48 old names.
 
 | before                                                     | now                   | arguments                                                                                             |
 | ---------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- |
