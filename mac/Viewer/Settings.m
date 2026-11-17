@@ -2,6 +2,7 @@
 // app, its own process looks for releases and installs one, and the hub's window shows what it found; a copy run by npm
 // is updated by `appdyno update`, which the hub runs for a look.
 #import "Settings.h"
+#import "Defaults.h"
 #import "HubParts.h"
 #import "Place.h"
 #import "Updates.h"
@@ -17,20 +18,15 @@ BOOL MVInTheApp(void) {
   return NSProcessInfo.processInfo.environment[@"APPDYNO_HELPERS"] != nil;
 }
 
-/// The app's own preferences, where its process reads the choice: a window kept behind for a test keeps it here.
-static NSUserDefaults *appDefaults(void) {
-  return [[NSUserDefaults alloc] initWithSuiteName:MVAppDomain];
-}
-
 BOOL MVUpdatesByItselfOn(void) {
   if (MVPlaceIsBehind()) return gByItselfHere;
-  id kept = [appDefaults() objectForKey:MVUpdatesByItself];
+  id kept = [MVAppDefaults() objectForKey:MVUpdatesByItself];
   return kept ? [kept boolValue] : YES;
 }
 
 void MVSetUpdatesByItself(BOOL on) {
   if (MVPlaceIsBehind()) gByItselfHere = on;
-  else [appDefaults() setBool:on forKey:MVUpdatesByItself];
+  else [MVAppDefaults() setBool:on forKey:MVUpdatesByItself];
 }
 
 void MVTellApp(NSString *name, NSDictionary *_Nullable info) {

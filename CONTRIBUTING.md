@@ -97,6 +97,7 @@ What a person may set is in [the CLI reference](docs/reference/cli.md#server-opt
 | variable                     | set by                                   | for                                                                                                              |
 | ---------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `APPDYNO_HELPERS`            | the Mac app's `appdyno` command          | where the app's viewer and helpers are, built already: nothing is compiled on first use                          |
+| `APPDYNO_DEFAULTS`           | `scripts/check-app.mjs` and the tests    | a preferences domain of the run's own, for the app and its windows: a person's stay as they are                  |
 | `APPDYNO_VERSION`            | every `appdyno` command, for its windows | the version a window's About says, where a viewer compiled on first use has no bundle to read it from            |
 | `APPDYNO_NATIVE_DIR`         | the tests and `scripts/build-app.mjs`    | where the viewer and the helpers are compiled, in place of `~/Library/Caches/appdyno/native`                     |
 | `APPDYNO_RUNNER_URL`         | the tests                                | where the simulator runner's zip is asked for, in place of the release's page: its sha256 is still the package's |

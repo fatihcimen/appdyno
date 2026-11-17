@@ -14,7 +14,12 @@ const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: '
 const NAME = /(?<![A-Z0-9_])APPDYNO_[A-Z0-9_]+/g;
 const namesIn = (files: string[]) => new Set(files.flatMap((f) => read(f).match(NAME) ?? []));
 
-const named = namesIn(tracked.filter((f) => /^packages\/[^/]+\/src\/.+\.ts$/.test(f)));
+/** The TypeScript and the Mac app's own Objective-C, which a test build's checks are not. */
+const named = namesIn(
+  tracked.filter((f) =>
+    /^packages\/[^/]+\/src\/.+\.ts$|^mac\/(App|Viewer)\/(?!SelfTest)[^/]+\.[mh]$/.test(f),
+  ),
+);
 /** What a person may set: what a page of theirs names. */
 const documented = namesIn(
   tracked.filter((f) => /^(README|SECURITY)\.md$|^docs\/.+(?<!\.tr)\.md$/.test(f)),

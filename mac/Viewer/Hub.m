@@ -1,5 +1,6 @@
 // The hub: every device this Mac can reach in a sidebar, and the one chosen, live, in its room. A stage stands there by
 // the same code as in a window of its own; what a person asks goes to the parent as a message.
+#import "Defaults.h"
 #import "HubParts.h"
 #import "Settings.h"
 #import "Window.h"
@@ -88,9 +89,10 @@ static NSString *stateWords(NSDictionary *device) {
     _window.titleVisibility = NSWindowTitleHidden;
     _window.contentMinSize = NSMakeSize(kContentLeast, 520);
     _window.offscreen = how == MVShowBehind;
-    _folds = [NSMutableSet setWithArray:how == MVShowBehind ? @[] : [NSUserDefaults.standardUserDefaults stringArrayForKey:kFoldsKept] ?
-                                                                                                                                       : @[]];
-    if (how != MVShowBehind) _window.frameAutosaveName = @"hub";
+    _folds = [NSMutableSet setWithArray:how == MVShowBehind ? @[] : [MVDefaults() stringArrayForKey:kFoldsKept] ?
+                                                                                                                : @[]];
+    // a test's run keeps no frame by the app's id
+    if (how != MVShowBehind && !MVDefaultsAreATest()) _window.frameAutosaveName = @"hub";
     NSViewController *side = [NSViewController new];
     side.view = [self sidebarView];
     NSViewController *main = [NSViewController new];
@@ -309,7 +311,7 @@ static NSString *stateWords(NSDictionary *device) {
 - (void)fold:(NSString *)kind {
   if ([_folds containsObject:kind]) [_folds removeObject:kind];
   else [_folds addObject:kind];
-  if (!_window.offscreen) [NSUserDefaults.standardUserDefaults setObject:_folds.allObjects forKey:kFoldsKept];
+  if (!_window.offscreen) [MVDefaults() setObject:_folds.allObjects forKey:kFoldsKept];
   [self listDevices];
 }
 

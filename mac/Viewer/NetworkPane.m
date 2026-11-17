@@ -4,6 +4,7 @@
 // capture starts, in the card that holds Start; what failed stays at the pane's foot until it is read. The parent offers
 // only the ways this device has, a proxy only where one is set already: no window sets a proxy.
 #import "NetworkPane.h"
+#import "Defaults.h"
 #import "Place.h"
 #import "Words.h"
 
@@ -141,7 +142,7 @@ static NSString *const kBodiesKept = @"networkBodies";
   _bodies.identifier = @"networkBodies";
   _bodies.toolTip = MVWord(@"Keeps each request's headers and text bodies while the capture runs, for its detail. They are deleted when it stops.");
   // on unless a person turned it off: a request's detail is what one opens it for
-  _bodies.state = [NSUserDefaults.standardUserDefaults objectForKey:kBodiesKept] && ![NSUserDefaults.standardUserDefaults boolForKey:kBodiesKept] ? NSControlStateValueOff : NSControlStateValueOn;
+  _bodies.state = [MVDefaults() objectForKey:kBodiesKept] && ![MVDefaults() boolForKey:kBodiesKept] ? NSControlStateValueOff : NSControlStateValueOn;
   _cardRows = MVPaneStack(@[_cardTitle, _cardWords, _bodies], 8);
   _card = MVCard(_cardRows, 14);
 }

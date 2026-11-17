@@ -5,6 +5,7 @@
 //   Appdyno --behind  the same, kept off every screen, for a test on a Mac a person is using
 //   Appdyno --menu    prints what the menu lists, and ends
 //   Appdyno --said <update --check's words>   prints what a person is told of them, and ends, for a test
+#import "../Viewer/Defaults.h"
 #import "../Viewer/Updates.h"
 #import "../Viewer/Words.h"
 #import <Cocoa/Cocoa.h>
@@ -63,7 +64,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-  [NSUserDefaults.standardUserDefaults registerDefaults:@{MVUpdatesByItself: @YES}];
+  [MVDefaults() registerDefaults:@{MVUpdatesByItself: @YES}];
   NSArray<NSString *> *args = NSProcessInfo.processInfo.arguments;
   _behind = [args containsObject:@"--behind"];
   if ([args containsObject:@"--menu"]) return [self printMenu];
@@ -116,35 +117,35 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
                       object:nil
                        queue:NSOperationQueue.mainQueue
                   usingBlock:^(__unused NSNotification *note) {
-                    if (self->_offered && ![self->_update isEqual:[NSUserDefaults.standardUserDefaults stringForKey:SaidNo]]) [self tell:self->_offered inWindow:YES];
+                    if (self->_offered && ![self->_update isEqual:[MVDefaults() stringForKey:SaidNo]]) [self tell:self->_offered inWindow:YES];
                   }];
   [center addObserverForName:MVUpdateLater
                       object:nil
                        queue:NSOperationQueue.mainQueue
                   usingBlock:^(NSNotification *note) {
-                    if ([note.userInfo[@"version"] isKindOfClass:NSString.class]) [NSUserDefaults.standardUserDefaults setObject:note.userInfo[@"version"] forKey:SaidNo];
+                    if ([note.userInfo[@"version"] isKindOfClass:NSString.class]) [MVDefaults() setObject:note.userInfo[@"version"] forKey:SaidNo];
                   }];
 }
 
 - (void)lookIfDue {
-  NSDate *last = [NSUserDefaults.standardUserDefaults objectForKey:LookedAt];
+  NSDate *last = [MVDefaults() objectForKey:LookedAt];
   if (![last isKindOfClass:NSDate.class] || -last.timeIntervalSinceNow >= kDay) [self lookForUpdate];
 }
 
 /// On opening, then once a day while it runs: a newer release is offered once, and installed only on the person's word.
 /// No answer, as offline, or a build with no update key, says nothing.
 - (void)lookForUpdate {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:MVUpdatesByItself]) return;
-  [NSUserDefaults.standardUserDefaults setObject:NSDate.date forKey:LookedAt];
+  if (![MVDefaults() boolForKey:MVUpdatesByItself]) return;
+  [MVDefaults() setObject:NSDate.date forKey:LookedAt];
   Ask(@[@"update", @"--check"], ^(__unused int code, NSString *said) {
     NSDictionary *plain = MVUpdateWords(said);
     self->_update = plain[@"offer"];
     self->_offered = self->_update ? plain : nil;
     NSString *news = self->_update ?: plain[@"latest"];
-    if (!news.length || [news isEqual:[NSUserDefaults.standardUserDefaults stringForKey:SaidNo]]) return;
+    if (!news.length || [news isEqual:[MVDefaults() stringForKey:SaidNo]]) return;
     [self tell:plain inWindow:YES];
     // what cannot be installed here is said once a release, as an offer turned down is
-    if (!self->_update) [NSUserDefaults.standardUserDefaults setObject:news forKey:SaidNo];
+    if (!self->_update) [MVDefaults() setObject:news forKey:SaidNo];
   });
 }
 
@@ -164,7 +165,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 
 - (void)lookByItself:(NSMenuItem *)item {
   BOOL on = item.state != NSControlStateValueOn;
-  [NSUserDefaults.standardUserDefaults setBool:on forKey:MVUpdatesByItself];
+  [MVDefaults() setBool:on forKey:MVUpdatesByItself];
   if (on) [self lookForUpdate];
 }
 
@@ -176,7 +177,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   }
   if (!plain[@"offer"]) return [self tell:plain[@"title"] saying:plain[@"text"]];
   if ([self confirm:plain[@"title"] saying:plain[@"text"] with:MVWord(@"Install and Restart")]) return [self install];
-  [NSUserDefaults.standardUserDefaults setObject:plain[@"offer"] forKey:SaidNo];
+  [MVDefaults() setObject:plain[@"offer"] forKey:SaidNo];
 }
 
 - (void)install {
@@ -281,7 +282,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   [self add:_update ? @"Update Available…" : @"Check for Updates…" to:menu action:@selector(checkForUpdates)];
   NSMenuItem *byItself = [menu addItemWithTitle:MVWord(@"Check for Updates Automatically") action:@selector(lookByItself:) keyEquivalent:@""];
   byItself.target = self;
-  byItself.state = [NSUserDefaults.standardUserDefaults boolForKey:MVUpdatesByItself] ? NSControlStateValueOn : NSControlStateValueOff;
+  byItself.state = [MVDefaults() boolForKey:MVUpdatesByItself] ? NSControlStateValueOn : NSControlStateValueOff;
   [menu addItem:NSMenuItem.separatorItem];
   [self add:@"Quit Appdyno" to:menu action:@selector(quit)];
 }

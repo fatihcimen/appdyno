@@ -2,6 +2,7 @@
 // under it the three things a person does first, each a button that does it. Help → Welcome opens it again.
 // The dragon is welcome.mov beside these sources, which scripts/render-dragon.py draws from the site's model; the fire
 // and the word are drawn here, so the word is in the Mac's language. A person who asked for less motion gets the end.
+#import "Defaults.h"
 #import "HubParts.h"
 #import "Words.h"
 #import <AVFoundation/AVFoundation.h>
@@ -353,8 +354,8 @@ static CGImageRef spark(void) {
 @implementation MVHub (Welcome)
 
 - (void)welcomeOnce {
-  if ([NSUserDefaults.standardUserDefaults boolForKey:kWelcomed]) return;
-  [NSUserDefaults.standardUserDefaults setBool:YES forKey:kWelcomed];
+  if ([MVDefaults() boolForKey:kWelcomed]) return;
+  [MVDefaults() setBool:YES forKey:kWelcomed];
   [self openWelcome:nil];
 }
 

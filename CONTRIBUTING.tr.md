@@ -97,6 +97,7 @@ Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#su
 | değişken                     | ayarlayan                                     | ne için                                                                                                             |
 | ---------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `APPDYNO_HELPERS`            | Mac uygulamasının `appdyno` komutu            | uygulamanın hazır derlenmiş görüntüleyicisinin ve yardımcılarının yeri: ilk kullanımda hiçbir şey derlenmez         |
+| `APPDYNO_DEFAULTS`           | `scripts/check-app.mjs` ve testler            | uygulama ve pencereleri için koşunun kendi tercih alanı: kişinin tercihleri olduğu gibi kalır                       |
 | `APPDYNO_VERSION`            | her `appdyno` komutu, pencereleri için        | bir pencerenin Hakkında'sının söylediği sürüm: ilk kullanımda derlenen görüntüleyicinin okuyacağı bir paketi yoktur |
 | `APPDYNO_NATIVE_DIR`         | testler ve `scripts/build-app.mjs`            | görüntüleyicinin ve yardımcıların `~/Library/Caches/appdyno/native` yerine derlendiği yer                           |
 | `APPDYNO_RUNNER_URL`         | testler                                       | simulator runner'ının zip'inin, sürümün sayfası yerine istendiği yer: sha256'sı yine paketinkidir                   |

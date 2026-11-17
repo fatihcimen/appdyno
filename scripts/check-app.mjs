@@ -92,6 +92,8 @@ for (const name of ABSENT) {
 writeFileSync(join(tools, 'xcode-select'), '#!/bin/sh\nexit 2\n');
 chmodSync(join(tools, 'xcode-select'), 0o755);
 
+/** The run's own preferences, which it deletes as it ends. */
+const TEST_DOMAIN = `dev.appdyno.check-app.${process.pid}`;
 const env = {
   HOME: home,
   PATH: `${tools}:/bin:/usr/sbin:/sbin`,
@@ -100,9 +102,17 @@ const env = {
   LOGNAME: process.env.LOGNAME,
   // preferences follow this, not HOME
   CFFIXED_USER_HOME: home,
+  // which the windows' do not: macOS keeps a domain by the app's id, so the run keeps its own, and a person's stay
+  APPDYNO_DEFAULTS: TEST_DOMAIN,
   // a stranger's Mac holds their own devices; this one may hold other people's
   APPDYNO_ALLOW_DEVICES: `^(${phone ?? 'none'})$`,
 };
+/** A person's own choices on this Mac, as they were before the run: it may change none. */
+const REAL_DOMAINS = ['dev.appdyno.app', 'dev.appdyno.window'];
+/** @param {string} domain */
+const domainNow = (domain) =>
+  spawnSync('/usr/bin/defaults', ['export', domain, '-'], { encoding: 'utf8' }).stdout;
+const realBefore = REAL_DOMAINS.map(domainNow);
 const app = join(temp, 'Applications/Appdyno.app');
 mkdirSync(dirname(app));
 cpSync(built, app, { recursive: true, verbatimSymlinks: true });
@@ -475,7 +485,10 @@ try {
       `PATH=${env.PATH}`,
       `TMPDIR=${env.TMPDIR}`,
     ];
-    asked.push(`APPDYNO_ALLOW_DEVICES=${env.APPDYNO_ALLOW_DEVICES}`);
+    asked.push(
+      `APPDYNO_ALLOW_DEVICES=${env.APPDYNO_ALLOW_DEVICES}`,
+      `APPDYNO_DEFAULTS=${TEST_DOMAIN}`,
+    );
     // what this account's launchd holds, which a stranger's has not
     asked.push(`ANDROID_HOME=${join(home, 'no-sdk')}`, `ANDROID_SDK_ROOT=${join(home, 'no-sdk')}`);
     const words = ['-g', '-n', ...asked.flatMap((e) => ['--env', e]), app, '--args', '--behind'];
@@ -513,6 +526,12 @@ try {
   await stopAll();
   if (flags.keep) console.log(`kept ${temp}`);
   else rmSync(temp, { recursive: true, force: true });
+  spawnSync('/usr/bin/defaults', ['delete', TEST_DOMAIN]);
 }
+await step("a person's own preferences are as they were", () => {
+  const changed = REAL_DOMAINS.filter((domain, at) => domainNow(domain) !== realBefore[at]);
+  if (changed.length) throw new Error(`written: ${changed.join(', ')}`);
+  return REAL_DOMAINS.join(' and ');
+});
 console.log(failed ? 'FAILED' : 'passed');
 process.exitCode = failed;

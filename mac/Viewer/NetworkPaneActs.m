@@ -1,5 +1,6 @@
 // What a person does in the Network pane: starts and stops a capture, chooses what it keeps and shows, and acts on the
 // capture and on one request, each by the name the parent takes it by.
+#import "Defaults.h"
 #import "NetworkPane.h"
 #import "Place.h"
 #import "Words.h"
@@ -52,7 +53,7 @@ static NSString *const kBodiesKept = @"networkBodies";
 
 /// A person's choice of what a capture keeps holds for the next one too; a window kept behind for a test keeps nothing.
 - (void)bodiesChosen:(id)sender {
-  if (!MVPlaceIsBehind()) [NSUserDefaults.standardUserDefaults setBool:_bodies.state == NSControlStateValueOn forKey:kBodiesKept];
+  if (!MVPlaceIsBehind()) [MVDefaults() setBool:_bodies.state == NSControlStateValueOn forKey:kBodiesKept];
 }
 
 - (void)send:(NSString *)name {

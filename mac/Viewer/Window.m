@@ -1,5 +1,6 @@
 // The window: the device on a backdrop drawn from its own picture, full bleed, with glass floating over it: its status,
 // its controls and the Inspector. The picture's view is exactly the device's screen, so its maths never hear of a frame.
+#import "Defaults.h"
 #import "WindowParts.h"
 #import "Words.h"
 
@@ -77,7 +78,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _view.wantsLayer = YES;
     _view.layer.backgroundColor = NSColor.blackColor.CGColor;
     _frame.screen = _view;
-    _frame.showsFrame = ![NSUserDefaults.standardUserDefaults objectForKey:kFrameDefault] || [NSUserDefaults.standardUserDefaults boolForKey:kFrameDefault];
+    _frame.showsFrame = ![MVDefaults() objectForKey:kFrameDefault] || [MVDefaults() boolForKey:kFrameDefault];
     [_stage addSubview:_frame];
     [_frame addSubview:_view];
     _view.onTouched = ^{
@@ -204,8 +205,9 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   _view.picture = size;
   [self applySpec];
   if (_zoom <= 0 && !self.behind && !_hosted) {
-    _window.frameAutosaveName = _name;
-    double saved = [NSUserDefaults.standardUserDefaults doubleForKey:[self zoomKey]];
+    // a test's run keeps no frame by the app's id
+    if (!MVDefaultsAreATest()) _window.frameAutosaveName = _name;
+    double saved = [MVDefaults() doubleForKey:[self zoomKey]];
     if (saved > 0) _zoom = saved;
   }
   if (_zoom <= 0) _zoom = [self fitZoom];
@@ -251,7 +253,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 - (void)sayZoom {
   MVEmitFrom(_view, @{@"op": @"zoom", @"scale": @(_zoom)});
-  if (!self.behind) [NSUserDefaults.standardUserDefaults setDouble:_zoom forKey:[self zoomKey]];
+  if (!self.behind) [MVDefaults() setDouble:_zoom forKey:[self zoomKey]];
 }
 
 - (void)setTurns:(int)turns {
@@ -382,7 +384,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 - (void)setFrameShown:(BOOL)shown {
   if (_frame.showsFrame == shown) return;
   _frame.showsFrame = shown;
-  if (!self.behind) [NSUserDefaults.standardUserDefaults setBool:shown forKey:kFrameDefault];
+  if (!self.behind) [MVDefaults() setBool:shown forKey:kFrameDefault];
   [self setZoom:_zoom > 0 ? _zoom : 1];
 }
 
