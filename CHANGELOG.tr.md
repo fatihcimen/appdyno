@@ -149,6 +149,9 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Düzeltilenler
 
+- Android: sistem, çöken uygulamayı "sürekli olarak duruyor" penceresi için tuttuğunda flight recorder hiçbir crash'i saklamıyordu: süreç, pencere yanıtlanana kadar pid'iyle kalır ve uygulama hâlâ çalışıyor sanılıyordu. Böyle tutulan bir süreç artık crash olarak okunur ve son saniyeleri saklanır.
+- Android: crash penceresi için tutulan bir uygulamaya `send_push` `tapped`, uygulamayı açtığını söylüyordu; oysa `am start` ölü süreci 10 s beklemiş, hiçbir şey açmamıştı ve veri uygulamaya hiç ulaşmamıştı. Artık böyle bir uygulamayı, `launch_app` gibi, önce durdurur ve veriyi extras olarak vererek yeniden açar. Böyle bir uygulamaya yönelik `open_link` de aynısını yapar.
+- Android: kurulumdan önce soran bir telefonda `manage_app install`, istemi okuduğu anda ekran karardığında, karanlık bir ekranda olmayan bir odağı bekleyerek istemin 10 saniyesinin yaklaşık 5'ini kaybediyordu. Artık ekranı hemen uyandırır ve dosyanın adlarını istemden önce okur; böylece dokunuş okumanın hemen ardından gelir.
 - **Büyük gerçek uygulamalar ilk seferde doğru sürülüyor.** Android 16'da intent'lerini filtrelerine bağlayan bir uygulama artık açılıyor: `launch_app`, bir push'un dokunuşu ve ölçülen bir açılış launcher'ın action ve category'sini gönderiyor; yalın bir component "does not exist" diye reddediliyordu.
 - Android'de tepkisi durulma süresinden sonra gelen bir dokunuş, iOS'taki gibi o tepkiyle yanıtlanıyor. Hiçbir şeyi değiştirmeyen bir kontrole dokunuş 0,8 sn daha izleniyor, bu yüzden 0,8 sn geç yanıt veriyor.
 - Ekran klavyesinin altındaki bir öğeye dokunuş hiçbir zaman tuş olarak yazılmıyor. Önce klavye kapatılıyor, iOS'ta bir web formunun klavyesinin üstündeki çubuğun Done'ı ile; klavye açık kalırsa dokunuş `UNSUPPORTED` ile reddediliyor.

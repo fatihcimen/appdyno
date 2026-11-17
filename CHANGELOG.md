@@ -149,6 +149,9 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Fixed
 
+- Android: the flight recorder kept no crash when the system held the crashed app for its "keeps stopping" dialog: the process stays, with its pid, until the dialog is answered, and it was read as the app still running. A process held so is now read as a crash, and its last seconds are kept.
+- Android: `send_push` `tapped` to an app held for its crash dialog said it had opened the app, where `am start` had waited 10 s on the dead process and opened nothing, so the data never reached it. It now stops such an app first, as `launch_app` does, and opens it anew with the data as extras. `open_link` held to such an app does the same.
+- Android: `manage_app install`, on a phone that asks before an install, lost about 5 s of the prompt's 10 when the screen went dark just as it read the prompt, waiting for a focus a dark screen does not have. It now wakes the screen at once, and reads the file's names before the prompt, so that its touch follows the read.
 - **Big real apps drive right first time.** On Android 16, an app that holds its intents to their filters now starts: `launch_app`, a push's tap and a measured launch send the launcher's action and category, where a bare component was refused as "does not exist".
 - An Android tap whose reaction comes after the settle's window is answered with that reaction, as on iOS. A tap on a control that changes nothing is watched 0.8 s more, so it answers 0.8 s later.
 - A touch on an element under the on-screen keyboard is never typed as a key. The keyboard is closed first, on iOS by the Done of the bar over a web form's keyboard; where it stays open, the touch is refused as `UNSUPPORTED`.
