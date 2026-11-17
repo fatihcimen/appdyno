@@ -11,8 +11,9 @@ import { opsOn, type Call } from './helpers.js';
  *
  *   (cd android && ./gradlew :fixture:assembleDebug :fixture:assembleRelease)
  *
- * The build's folder holds a `.dm` per range of API, and one for another range installs with no word and
- * compiles nothing, where Android 17 refuses the install. The debug build goes back at the end.
+ * The build's folder holds a `.dm` per range of API, and one for another range installs and compiles nothing,
+ * where Android 17 refuses the install. The debug build goes back at the end. Each install is `manage_app install`,
+ * which answers a Xiaomi's prompt before an install over USB: no person taps it.
  */
 const APP = 'dev.appdyno.fixture';
 const SERIAL = process.env.APPDYNO_ANDROID_SERIAL ?? '';
@@ -23,33 +24,25 @@ const DM_FOR_OLDER = join(OUT, 'release/baselineProfiles/1/fixture-release.dm');
 
 const adb = (...words: string[]) =>
   execFileSync('adb', ['-s', SERIAL, ...words], { encoding: 'utf8' });
-const installed = (...files: string[]) => {
-  // before the uninstall: a build not made leaves the fixture on the device
-  const missing = files.filter((f) => !existsSync(f));
-  if (missing.length > 0)
-    throw new Error(
-      `build the fixture first, (cd android && ./gradlew :fixture:assembleDebug :fixture:assembleRelease): no ${missing.join(', ')}`,
-    );
-  // an install that failed before left none to uninstall, and the debug build still goes back at the end
-  adb('shell', `pm uninstall ${APP} >/dev/null || true`);
-  try {
-    adb(files.length > 1 ? 'install-multiple' : 'install', '-g', ...files);
-  } catch (e) {
-    const { stdout = '', stderr = '' } = e as { stdout?: string; stderr?: string };
-    // a Xiaomi asks on its screen before each install over USB, and this suite installs by adb, which answers nothing
-    if (`${stdout}${stderr}`.includes('INSTALL_FAILED_USER_RESTRICTED'))
-      throw new Error(
-        `the phone asked on its screen whether to install ${files.join(' and ')} over USB, and no one tapped Install within 10 s: this suite installs by adb, so tap it on the phone at each of its installs`,
-        { cause: e },
-      );
-    throw e;
-  }
-};
 const state = () =>
   /status=[\w-]+\] \[reason=[\w-]+/.exec(adb('shell', 'pm', 'art', 'dump', APP))?.[0];
 
 describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   let call: Call;
+  /** The fixture fresh from these files, as one install; a refusal throws its words. */
+  const installed = async (...files: string[]) => {
+    // before the uninstall: a build not made leaves the fixture on the device
+    const missing = files.filter((f) => !existsSync(f));
+    if (missing.length > 0)
+      throw new Error(
+        `build the fixture first, (cd android && ./gradlew :fixture:assembleDebug :fixture:assembleRelease): no ${missing.join(', ')}`,
+      );
+    // an install that failed before left none to uninstall, and the debug build still goes back at the end
+    adb('shell', `pm uninstall ${APP} >/dev/null || true`);
+    const r = await call('manage_app', { action: 'install', files });
+    if (r.error) throw new Error(r.text);
+    process.stderr.write(`--- install\n${r.text}\n---\n`);
+  };
   const profile = async (app = APP) => {
     const r = await call('measure_performance', {
       metric: 'launch',
@@ -67,7 +60,7 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   afterAll(() => installed(join(OUT, 'debug/fixture-debug.apk')));
 
   it('refuses a debuggable build: it stays at verify whatever is asked', async () => {
-    installed(join(OUT, 'debug/fixture-debug.apk'));
+    await installed(join(OUT, 'debug/fixture-debug.apk'));
     const r = await call('measure_performance', {
       metric: 'launch',
       baselineProfile: true,
@@ -78,7 +71,7 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   });
 
   it('reads present, not applied, and starts faster with it, as the gate calls it', async () => {
-    installed(RELEASE);
+    await installed(RELEASE);
     const before = state();
     const r = await profile();
     const b = r.data.baselineProfile;
@@ -99,7 +92,7 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   });
 
   it('reads applied from a .dm of this Android, and it survives the measure', async () => {
-    installed(RELEASE, DM_FOR_THIS_API);
+    await installed(RELEASE, DM_FOR_THIS_API);
     expect(state()).toContain('status=speed-profile');
     const r = await profile();
     const b = r.data.baselineProfile;
@@ -113,19 +106,15 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
   it('calls a .dm that compiled nothing what it is, whatever its reason says', async () => {
     if (Number(adb('shell', 'getprop', 'ro.build.version.sdk')) >= 37) {
       // Android 17 refuses the install of a .dm for another range of API, so none compiles nothing
-      expect(() => installed(RELEASE, DM_FOR_OLDER)).toThrow(/profile is in the wrong format/);
-      adb('install', '-g', RELEASE);
+      await expect(installed(RELEASE, DM_FOR_OLDER)).rejects.toThrow(
+        'was not installed: the device cannot load the profile its .dm holds ("The profile is in the wrong format")',
+      );
+      await installed(RELEASE);
       return;
     }
-    try {
-      installed(RELEASE, DM_FOR_OLDER);
-    } catch (e) {
-      // what this suite says itself, as a build not made, is no word of adb's
-      if (!(e instanceof Error && 'stdout' in e)) throw e;
-      // adb 37 exits 1 for the warning it prints of a .dm the device could not load; the app is installed all the same
-      const { stdout = '', stderr = '' } = e as { stdout?: string; stderr?: string };
-      expect(`${stdout}${stderr}`).toMatch(/Completed with warning/);
-    }
+    // the app is installed all the same, where the device may warn that it could not load the profile, which adb 37
+    // exits 1 for and appdyno quotes
+    await installed(RELEASE, DM_FOR_OLDER);
     expect(state()).toContain('reason=install-dm');
     const r = await call('measure_performance', {
       metric: 'launch',
