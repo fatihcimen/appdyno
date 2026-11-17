@@ -44,6 +44,8 @@ An `AbortSignal` stops a call: `tool` takes `{ signal }` as its third argument, 
 
 A program that needs the tree itself, rather than the folded list a model reads, asks `read_screen` with `raw: true`: its answer's `data.nodes` holds every element of the tree with its `type`, words, `rect`, `flags` and the index of its `parent`. After an action no second call is needed: `tool` with `{ raw: true }` as its third argument adds `nodes` to the answer, the same list for the screen the action left, taken from the read its answer made and cleaned the same way. After a call that read nothing, as an action with `read: 'none'`, it costs one read. Each element the screen shows carries a `ref`, and `tap_screen` takes it, at the element's middle where the list does not name it. An element has none when it is not the app's, as the keyboard and the system's bars, is marked not visible, has no size, is less than half on the screen, lies under the status bar or a navigation bar at the top on iOS, or is one of the rows a list has not placed yet, piled at one point.
 
+A tool takes here the arguments it takes over MCP and on the command line: `device.tool('manage_app', { action: 'install', files: ['app.apk', 'app.dm'] })` installs an Android app's APK with its `.dm` files or split APKs together, and answers the phone's prompts as for one file.
+
 ## The device itself
 
 `appdyno/device` is a second entry point, for a program that wants the device and not a tool's answer: it reads the screen as elements, aims by a selector or a ref, and touches a point. It exports `openDevice`, `select`, `aim` and `nameOf`, and the types of what they take and give, which stand alone as the main entry's do.

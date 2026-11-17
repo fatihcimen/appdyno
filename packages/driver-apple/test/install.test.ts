@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { installingApp } from '../src/manage.js';
 
 const plist = (platform: string) => `<?xml version="1.0" encoding="UTF-8"?>
@@ -74,5 +74,17 @@ describe('what an iOS device installs', () => {
     await expect(
       installingApp('/no/such.apk', 'iPhoneOS', () => Promise.resolve(undefined)),
     ).rejects.toThrow(/not a local .app bundle or .ipa/);
+  });
+
+  it('refuses several files, as an iOS app is one, before any is read', async () => {
+    const install = vi.fn(() => Promise.resolve(undefined));
+    const e = await installingApp(['/a.ipa', '/a.dm'], 'iPhoneOS', install).catch(
+      (x: unknown) => x,
+    );
+    expect(e).toMatchObject({
+      code: 'UNSUPPORTED',
+      message: 'an iOS app installs from one .app or .ipa, not 2 files',
+    });
+    expect(install).not.toHaveBeenCalled();
   });
 });

@@ -50,7 +50,7 @@ export class SimulatorApps implements AppManager {
     private readonly started: (app: string) => Promise<void> = () => Promise.resolve(),
   ) {}
 
-  async install(path: string, allowed?: (app: string) => void) {
+  async install(path: string | string[], allowed?: (app: string) => void) {
     await installingApp(
       path,
       'iPhoneSimulator',

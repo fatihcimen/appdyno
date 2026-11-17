@@ -60,6 +60,7 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
         ]),
         app: z.string().max(200).optional(),
         path: z.string().max(1_000).optional(),
+        files: z.array(z.string().max(1_000)).min(1).max(50).optional(),
         service: z.string().max(80).optional(),
         scheme: z.string().max(200).optional(),
         configuration: z.string().max(100).optional(),
@@ -71,7 +72,19 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
       .strict(),
     output: AppOut,
     annotations: DESTRUCTIVE,
-    run: async ({ action, app, path, service, scheme, configuration, args, env, all, read }) => {
+    run: async ({
+      action,
+      app,
+      path,
+      files,
+      service,
+      scheme,
+      configuration,
+      args,
+      env,
+      all,
+      read,
+    }) => {
       const s = await ctx.session();
       const { apps } = s.device;
       const done = (t: string, extra: Record<string, unknown> = {}) =>
@@ -98,17 +111,22 @@ function appOp(ctx: ServerContext, { changing, afterChange }: Answers) {
           return done(`${pkg}: ${state}`, { state });
         }
         case 'install': {
-          if (!path) throw new ToolError('install needs path', 'INVALID_ARGUMENT');
-          reportProgress(`installing ${path}`);
+          if (path && files)
+            throw new ToolError('install takes path or files, not both', 'INVALID_ARGUMENT');
+          // a list of one is the file by itself
+          const given = files && files.length > 1 ? files : (files?.[0] ?? path);
+          if (!given) throw new ToolError('install needs path, or files', 'INVALID_ARGUMENT');
+          const named = [given].flat().join(', ');
+          reportProgress(`installing ${named}`);
           // the driver reads the file's own id before it installs anything: the answer names it, an allowlist holds it
           let installed: string | undefined;
-          const said = await apps.install(path, (id) => {
+          const said = await apps.install(given, (id) => {
             installed = policy.apps.length > 0 ? checkApp(policy, id) : id;
           });
           if (said.length > 0) s.acted();
           // what it answered on the device is part of what happened: no read mode shortens this
           return done(
-            [`installed ${installed ? `${installed} from ` : ''}${path}`, ...said].join('\n'),
+            [`installed ${installed ? `${installed} from ` : ''}${named}`, ...said].join('\n'),
             { ...(installed && { app: installed }) },
           );
         }

@@ -50,10 +50,11 @@ export type AppManager = {
   /** A launch can put the view probe in the app: `LaunchOptions.probe`. */
   readonly viewProbe?: boolean;
   /**
-   * Installs the file; what it answered on the device along the way, for the caller to keep in its answer. `allowed`
-   * is told the id the file holds, read from it before anything reaches the device, and refuses an app by throwing.
+   * Installs the file, or several files of one app together where the device takes them (an APK with its `.dm` files
+   * or split APKs); what it answered on the device along the way, for the caller to keep in its answer. `allowed` is
+   * told the id the files hold, read from them before anything reaches the device, and refuses an app by throwing.
    */
-  install(path: string, allowed?: (app: string) => void): Promise<string[]>;
+  install(path: string | string[], allowed?: (app: string) => void): Promise<string[]>;
   /** Builds a project for this device and installs it; the app's id. */
   buildAndInstall(request: BuildRequest): Promise<string>;
   uninstall(app: string): Promise<void>;

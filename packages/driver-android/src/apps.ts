@@ -1,6 +1,6 @@
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import {
   type AppManager,
   type AppEntry,
@@ -64,6 +64,25 @@ const REFUSED: Record<string, [ErrorCode, string, string]> = {
   ],
 };
 
+/** What the device says of a `.dm` it cannot load, as a warning before Android 17 and as its refusal from it. */
+const WRONG_PROFILE = 'The profile is in the wrong format';
+
+const INSTALLED = /^(Success|Completed with warning\(s\))$/;
+
+/** What the device warned of, in its own words, where it says after it that it installed the app all the same. */
+const warningOf = (out: string) => {
+  const at = out.search(/^Warning\b/m);
+  const lines = out
+    .slice(at)
+    .split('\n')
+    .map((l) => l.trim());
+  if (at < 0 || !lines.some((l) => INSTALLED.test(l))) return undefined;
+  return lines
+    .filter((l) => l && !INSTALLED.test(l))
+    .join(' ')
+    .replace(/^Warning:?\s*/, '');
+};
+
 const PERMISSIONS: Record<string, string> = {
   camera: 'CAMERA',
   microphone: 'RECORD_AUDIO',
@@ -92,12 +111,39 @@ export class AndroidApps implements AppManager {
   private sh = (c: string, ms: number = TIMEOUTS.app) =>
     this.adb.exec(this.serial, `${c} 2>&1`, { timeoutMs: ms });
 
-  /** Installs the file; what it answered on the phone along the way, in words for the caller to keep. */
-  async install(path: string, allowed?: (app: string) => void): Promise<string[]> {
-    if (!path.endsWith('.apk') || !existsSync(path))
-      throw new DeviceError('INVALID_ARGUMENT', `not a local .apk file: ${path}`);
-    // shortcut: the file is read for its id and then installed, so one swapped in between goes in; copy it first if that matters
-    if (allowed) allowed(await apkId(path));
+  /**
+   * Installs the file, or one app's APKs and `.dm` files together; what it answered on the phone along the way, and
+   * what the device warned of, in words for the caller to keep.
+   */
+  async install(path: string | string[], allowed?: (app: string) => void): Promise<string[]> {
+    const files = [path].flat();
+    const what = files.join(' with ');
+    const apks = files.filter((f) => f.endsWith('.apk'));
+    for (const f of files)
+      if (!(files.length > 1 ? /\.(apk|dm)$/ : /\.apk$/).test(f) || !existsSync(f))
+        throw new DeviceError(
+          'INVALID_ARGUMENT',
+          `not a local .apk${files.length > 1 ? ' or .dm' : ''} file: ${f}`,
+        );
+    // the device takes a .dm only beside the APK of its name, and installs the app without it otherwise
+    const stems = new Set(apks.map((f) => basename(f, '.apk')));
+    const lone = files.find((f) => f.endsWith('.dm') && !stems.has(basename(f, '.dm')));
+    if (lone)
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `${lone} has no APK of its name among the files: the device takes a .dm only beside ${basename(lone, '.dm')}.apk, and drops it otherwise`,
+        'give it with the APK it was built for, under the names the build gave them',
+      );
+    // shortcut: the files are read for their id and then installed, so one swapped in between goes in; copy them first if that matters
+    const ids = await Promise.all(apks.map(apkId));
+    const id = must(ids[0], 'an APK');
+    if (ids.some((x) => x !== id))
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `the files are of different apps: ${apks.map((f, i) => `${f} is ${String(ids[i])}`).join(', ')}`,
+        "one install takes one app's APKs and .dm files: install each app by itself",
+      );
+    if (allowed) allowed(id);
     const { screen, answers } = this;
     if (answers.prompts) await readyForInstall(screen);
     // a Xiaomi asks on its screen, and asleep it would not say no by itself
@@ -106,14 +152,38 @@ export class AndroidApps implements AppManager {
     const stop = new AbortController();
     let pending = true;
     const installing = this.adb
-      .run(['-s', this.serial, 'install', '-r', path], 300_000, stop.signal)
+      .run(
+        [
+          '-s',
+          this.serial,
+          ...(files.length > 1 ? ['install-multiple'] : ['install']),
+          '-r',
+          ...files,
+        ],
+        300_000,
+        stop.signal,
+      )
+      // adb 37 exits 1 where the device installed the app and warned
+      .catch((e: unknown) => {
+        const { cause } = e as Error;
+        if (typeof cause === 'string' && warningOf(cause)) return cause;
+        throw e;
+      })
+      .then((out) => {
+        const warned = warningOf(out);
+        if (warned) said.push(`the device installed it and warned: ${warned}`);
+      })
       .finally(() => (pending = false));
     // settles only by refusing: an install that ends waits for no last look at the phone
     const refusal = new Promise<never>((_, refuse) => {
       if (answers.prompts)
         answerInstallPrompts(
           screen,
-          () => apkNames(path),
+          // a split APK has no label of its own: the base one's is among these
+          async () => {
+            const all = await Promise.all(apks.map(apkNames));
+            return { id, names: [...new Set(all.flatMap((n) => n.names))] };
+          },
           answers.warnings,
           () => pending,
           said,
@@ -144,8 +214,15 @@ export class AndroidApps implements AppManager {
       if (refused)
         throw new DeviceError(
           refused[0],
-          `${path} was not installed: ${refused[1]} (${reason})${also}`,
+          `${what} was not installed: ${refused[1]} (${reason})${also}`,
           refused[2],
+        );
+      // Android 17 refuses a .dm for another range of API, where an older one installs the app and compiles nothing
+      if (adbSaid.includes(WRONG_PROFILE))
+        throw new DeviceError(
+          'INVALID_ARGUMENT',
+          `${what} was not installed: the device cannot load the profile its .dm holds ("${WRONG_PROFILE}"), as one made for another range of API${also}`,
+          "install the .dm made for this device's API: a build's baselineProfiles folder holds one for each range",
         );
       if (e instanceof DeviceError) throw new DeviceError(e.code, `${e.message}${also}`, e.hint);
       throw e;

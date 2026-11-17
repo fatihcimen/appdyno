@@ -1,10 +1,10 @@
 import { must } from '@appdyno/core';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Point, Tree } from '@appdyno/protocol';
 import { DeviceError } from '@appdyno/protocol';
-import { assert, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, describe, expect, it, vi } from 'vitest';
 import { Adb } from '../src/adb.js';
 import { AndroidApps } from '../src/apps.js';
 import {
@@ -602,5 +602,123 @@ describe('install', () => {
     expect(stopped).toBe(true);
     expect((e as DeviceError).code).toBe('PERMISSION_REQUIRED');
     expect((e as DeviceError).hint).toContain('--accept-install-warnings');
+  });
+});
+
+describe('install of several files', () => {
+  const work = mkdtempSync(join(tmpdir(), 'appdyno-multi-'));
+  const file = (name: string, from?: string) => {
+    const f = join(work, name);
+    if (from) copyFileSync(from, f);
+    else writeFileSync(f, '');
+    return f;
+  };
+  // a split is an APK of the same package; what a .dm holds is the device's to read
+  const BASE = file('app.apk', APK);
+  const SPLIT = file('split_config.arm64_v8a.apk', APK);
+  const DM = file('app.dm');
+  const OTHER = file('other.apk', join(dir, 'names.apk'));
+  const LONE = file('other.dm');
+  const NOTES = join(work, 'notes.txt');
+  afterAll(() => rmSync(work, { recursive: true }));
+  /** A real adb client, this script, that says `out` and exits with `code`, and keeps what it was asked. */
+  const fakeAdb = (out: string, code = 0) => {
+    const bin = join(work, `adb-${code}-${out.length}`);
+    writeFileSync(
+      bin,
+      `#!/bin/sh\necho "$@" > "${bin}.args"\ncat <<'SAID'\n${out}\nSAID\nexit ${code}\n`,
+    );
+    chmodSync(bin, 0o755);
+    const real = Object.assign(new Adb({ bin }), { exec: () => Promise.resolve('') });
+    return { adb: real, args: () => readFileSync(`${bin}.args`, 'utf8').trim() };
+  };
+  const off = { prompts: false, warnings: false };
+
+  it(
+    "installs an APK with its split and .dm as one session, answering the phone's prompt as for one file",
+    fakeTimed(async () => {
+      const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }], {
+        opensLater: true,
+      });
+      const ran: string[][] = [];
+      // the session commits once the prompt is answered
+      const run = async (a: string[]) => {
+        ran.push(a);
+        while (screen.presses.length === 0) await new Promise((r) => setTimeout(r, 100));
+        return 'Success\n';
+      };
+      const adb = { exec: () => Promise.resolve(''), run } as unknown as Adb;
+      const asked: string[] = [];
+      const said = await new AndroidApps(adb, 'phone', screen).install([BASE, SPLIT, DM], (id) =>
+        asked.push(id),
+      );
+      expect(ran).toEqual([['-s', 'phone', 'install-multiple', '-r', BASE, SPLIT, DM]]);
+      expect(asked).toEqual([FIXTURE]);
+      expect(screen.presses).toHaveLength(1);
+      expect(said).toEqual([`tapped "Yükle" on the phone's USB install prompt for ${FIXTURE}`]);
+    }),
+  );
+
+  it('installs one file by itself as before', async () => {
+    const { adb, args } = fakeAdb('Performing Streamed Install\nSuccess');
+    expect(await new AndroidApps(adb, 'phone', phone([]), off).install([BASE])).toEqual([]);
+    expect(args()).toBe(`-s phone install -r ${BASE}`);
+  });
+
+  it('takes an install the device made with a warning, which adb 37 exits 1 for, and says the warning', async () => {
+    // as an API 36 emulator said it for a .dm made for another range of API, with the app installed
+    const { adb } = fakeAdb(
+      [
+        'adb: failed to finalize session',
+        'Warning: Error occurred during dexopt when processing external profiles:',
+        "  Failed to load profile '/data/app/~~a==/dev.appdyno.fixture-b==/base.dm': The profile is in the wrong format or an I/O error has occurred",
+        'Completed with warning(s)',
+      ].join('\n'),
+      1,
+    );
+    expect(await new AndroidApps(adb, 'phone', phone([]), off).install([BASE, DM])).toEqual([
+      "the device installed it and warned: Error occurred during dexopt when processing external profiles: Failed to load profile '/data/app/~~a==/dev.appdyno.fixture-b==/base.dm': The profile is in the wrong format or an I/O error has occurred",
+    ]);
+  });
+
+  it("refuses with the device's reason a .dm it cannot load, however far into what adb said", async () => {
+    // hand-written: Android 17's refusal with the words its suite saw, behind a long path
+    const deep = `/data/app/${'x'.repeat(300)}/base.dm`;
+    const { adb } = fakeAdb(
+      `adb: failed to finalize session\nFailure [INSTALL_FAILED_INTERNAL_ERROR: Failed to load profile '${deep}': The profile is in the wrong format]`,
+      1,
+    );
+    const e = (await new AndroidApps(adb, 'phone', phone([]), off)
+      .install([BASE, DM])
+      .catch((x: unknown) => x)) as DeviceError;
+    expect(e.code).toBe('INVALID_ARGUMENT');
+    expect(e.message).toBe(
+      `${BASE} with ${DM} was not installed: the device cannot load the profile its .dm holds ("The profile is in the wrong format"), as one made for another range of API`,
+    );
+    expect(e.hint).toContain('baselineProfiles');
+  });
+
+  it.each([
+    [
+      [BASE, OTHER],
+      `the files are of different apps: ${BASE} is ${FIXTURE}, ${OTHER} is dev.appdyno.names`,
+    ],
+    [[BASE, LONE], `${LONE} has no APK of its name among the files`],
+    [[DM, LONE], `${DM} has no APK of its name among the files`],
+    [[BASE, NOTES], `not a local .apk or .dm file: ${NOTES}`],
+  ])('refuses %j before anything is asked or reaches the phone', async (files, words) => {
+    const run = vi.fn(() => Promise.resolve('Success'));
+    const allowed = vi.fn();
+    const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }]);
+    const apps = new AndroidApps(
+      { exec: () => Promise.resolve(''), run } as unknown as Adb,
+      'phone',
+      screen,
+    );
+    const e = (await apps.install(files, allowed).catch((x: unknown) => x)) as DeviceError;
+    expect(e.code).toBe('INVALID_ARGUMENT');
+    expect(e.message).toContain(words);
+    expect([run, allowed].map((f) => f.mock.calls.length)).toEqual([0, 0]);
+    expect(screen.presses).toEqual([]);
   });
 });

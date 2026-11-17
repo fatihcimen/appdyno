@@ -139,6 +139,25 @@ describe('app management', () => {
     }
   });
 
+  it('installs several files of one app together, a list of one as the file itself, and refuses path beside files', async () => {
+    const apps = manager();
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    const r = await call('manage_app', { action: 'install', files: ['/tmp/a.apk', '/tmp/a.dm'] });
+    expect(r.done).toBe('installed /tmp/a.apk, /tmp/a.dm');
+    await call('manage_app', { action: 'install', files: ['/tmp/b.apk'] });
+    expect(apps.log).toEqual([
+      ['install', ['/tmp/a.apk', '/tmp/a.dm']],
+      ['install', '/tmp/b.apk'],
+    ]);
+    const both = await call('manage_app', {
+      action: 'install',
+      path: '/tmp/a.apk',
+      files: ['/tmp/a.dm'],
+    });
+    expect(both.text).toBe('INVALID_ARGUMENT: install takes path or files, not both');
+    expect(apps.log).toHaveLength(2);
+  });
+
   it('names the app it installed, by the id the file holds', async () => {
     const apps = manager({
       install: (_path: string, named?: (app: string) => void) => {

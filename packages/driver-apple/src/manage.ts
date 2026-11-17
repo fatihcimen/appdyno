@@ -21,11 +21,18 @@ const platformsOf = async (app: string) =>
  * device cannot run is refused before it is tried, as the tools' own words say nothing of why.
  */
 export async function installingApp(
-  path: string,
+  given: string | string[],
   platform: 'iPhoneOS' | 'iPhoneSimulator',
   install: (app: string) => Promise<unknown>,
   allowed?: (app: string) => void,
 ) {
+  const [path = '', ...more] = [given].flat();
+  if (more.length > 0)
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `an iOS app installs from one .app or .ipa, not ${more.length + 1} files`,
+      'give path the one .app or .ipa',
+    );
   if (!/\.(app|ipa)$/.test(path) || !existsSync(path))
     throw new DeviceError('INVALID_ARGUMENT', `not a local .app bundle or .ipa: ${path}`);
   const dir = path.endsWith('.ipa') ? mkdtempSync(join(tmpdir(), 'appdyno-ipa-')) : undefined;

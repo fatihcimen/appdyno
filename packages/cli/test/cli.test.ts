@@ -157,6 +157,19 @@ describe('commands from the operations', () => {
     ).toContain('needs JSON');
   });
 
+  it("takes an install's files as a JSON list", async () => {
+    const given: unknown[] = [];
+    device.apps = {
+      install: (path: string | string[]) => {
+        given.push(path);
+        return Promise.resolve([]);
+      },
+    } as unknown as typeof device.apps;
+    const r = await run('manage-app', 'install', '--files', '["/tmp/a.apk","/tmp/a.dm"]');
+    expect([r.code, r.out]).toEqual([0, ['installed /tmp/a.apk, /tmp/a.dm']]);
+    expect(given).toEqual([['/tmp/a.apk', '/tmp/a.dm']]);
+  });
+
   it('takes the arguments as JSON', async () => {
     const r = await run('run-steps', '--json', '{"steps":[{"tool":"tap_screen","x":100,"y":350}]}');
     expect(r.code).toBe(0);

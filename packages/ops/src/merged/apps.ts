@@ -8,7 +8,7 @@ export const manageApp = ({ app, terminate_app: stop }: Pick<Pieces, 'app' | 'te
     name: 'manage_app',
     title: 'Manage apps',
     description:
-      'Install and manage apps: list (all: system apps too), state, install (path: .apk, .app, .ipa), uninstall, stop (background: as the system ends it, state kept), clear (data), grant, revoke (service: location, photos…; a wrong word lists them), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant; args, env). Starting one: launch_app; its files: transfer_files. Returns what was done.',
+      'Install and manage apps: list (all: system apps too), state, install (path: .apk, .app, .ipa; files: an .apk with its .dm or split APKs), uninstall, stop (background: as the system ends it, state kept), clear (data), grant, revoke (service: location, photos…; a wrong word lists them), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant; args, env). Starting one: launch_app; its data: transfer_files. Returns what was done.',
     input: z
       .object({
         action: z.enum(
