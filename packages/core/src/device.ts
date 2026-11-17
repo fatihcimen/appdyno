@@ -1,3 +1,4 @@
+import { must } from './must.js';
 import type { PhoneLook, PhoneSteps } from './usb.js';
 import type {
   SettleInput,
@@ -78,6 +79,16 @@ export function rotationOf(
   const wideAsItStands =
     TURNS_FROM_OWN_SHAPE[platform] && !!own && own.w > own.h !== (own.rotation % 2 === 1);
   return ((ORIENTATIONS.indexOf(orientation) + (wideAsItStands ? 3 : 0)) % 4) as 0 | 1 | 2 | 3;
+}
+
+/** The named orientation a rotation is, as `rotationOf` turns one into the other. */
+export function orientationOf(
+  rotation: number,
+  platform: Platform,
+  own: Hello['screen'] | undefined,
+) {
+  const named = ORIENTATIONS.find((o) => rotationOf(o, platform, own) === ((rotation % 4) + 4) % 4);
+  return must(named, 'an orientation of a quarter turn');
 }
 
 /** The system's Settings, an app of its own, at whatever page it opens. */

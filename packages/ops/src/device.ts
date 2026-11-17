@@ -3,6 +3,7 @@ import {
   must,
   osName,
   ORIENTATIONS as ROTATIONS,
+  orientationOf,
   rotationOf,
   type ListedDevice,
   type Screen,
@@ -12,11 +13,22 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
 import { deviceNamed } from './device-names.js';
-import { endLocation, fixLocation, turning } from './settings.js';
+import { endLocation, fixLocation, locationNow, placeOf, turning } from './settings.js';
+import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, definePart, READ, reply, ToolError } from './tool.js';
 
 /** Shapes, a quarter turn each, in the order of a phone's own rotations, which a tablet wide as it stands has at others. */
+
+/** The orientation the screen stands in: by its quarter turns where the device says them, else by its shape. */
+async function orientationNow(s: Session) {
+  const now = await s.standing();
+  if (now.rotation !== undefined)
+    return `orientation: ${orientationOf(now.rotation, s.device.platform, s.device.hello?.screen)}`;
+  return now.w > now.h
+    ? 'orientation: landscape_left or landscape_right: the screen is wide, and this device does not say which way'
+    : 'orientation: portrait or upside_down: the screen is tall, and this device does not say which way';
+}
 
 /** The app's window as a turn leaves it: wide in landscape, tall else, with something on it. */
 const turnedTo = (wide: boolean) => (x: Screen) =>
@@ -125,11 +137,15 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
     }),
     definePart({
       name: 'set_orientation',
-      input: z.object({ orientation: z.enum(ROTATIONS), read: Read }).strict(),
+      input: z.object({ orientation: z.enum(ROTATIONS).optional(), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
+        if (orientation === undefined) {
+          const done = await orientationNow(s);
+          return reply(done, { done, screen: 'none' as const, warnings: [] });
+        }
         const named = ROTATIONS.indexOf(orientation);
         const rotation = rotationOf(orientation, s.device.platform, s.device.hello?.screen);
         const wide = named % 2 === 1;
@@ -174,6 +190,10 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
       annotations: ACT,
       run: async ({ lat, lon, clear }) => {
         const s = await ctx.session();
+        if (!clear && lat === undefined && lon === undefined) {
+          const done = locationNow(s);
+          return reply(done, { done });
+        }
         if (clear) {
           await endLocation(s);
           return reply('the location is the real one', { done: 'the location is the real one' });
@@ -182,7 +202,7 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
           throw new ToolError('give lat and lon, or clear: true', 'INVALID_ARGUMENT');
         // written down as a condition: it ends with the session, and at restore
         await fixLocation(s, lat, lon);
-        const done = `location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        const done = `location: ${placeOf(lat, lon)}`;
         return reply(done, { done });
       },
     }),

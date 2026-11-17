@@ -46,7 +46,7 @@ export const setDevice = ({
           .max(2_000)
           .optional()
           .describe(
-            `orientation: ${turn.input.shape.orientation.options.join(', ')}; location: lat,lon, none; clipboard: its text. ${String(setting.input.shape.value.unwrap().description)}`,
+            `orientation: ${turn.input.shape.orientation.unwrap().options.join(', ')}; location: lat,lon, none; clipboard: its text. ${String(setting.input.shape.value.unwrap().description)}`,
           ),
         ...setting.input.omit({ name: true, value: true }).shape,
         read: turn.input.shape.read,
@@ -62,8 +62,10 @@ export const setDevice = ({
         case 'clipboard':
           return [clipboard, { ...a, text: value }, { text: 'value' }];
         case 'location': {
+          // no value reads what this tool fixed, as a device does not tell its location back
+          if (value === undefined) return [place, a];
           if (value === 'none') return [place, { ...a, clear: true }];
-          const at = PLACE.exec(value ?? '');
+          const at = PLACE.exec(value);
           if (!at)
             throw new ToolError(
               'location takes value lat,lon, as 41.01,28.98, or none',

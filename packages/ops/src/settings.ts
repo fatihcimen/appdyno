@@ -22,7 +22,13 @@ import { definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 const Changes = z.record(
   z.string(),
-  z.object({ was: z.string(), app: z.string().optional(), owner: Owner.optional() }),
+  z.object({
+    was: z.string(),
+    app: z.string().optional(),
+    owner: Owner.optional(),
+    /** What it was set to, where the device does not tell it back: a fixed location. */
+    now: z.string().optional(),
+  }),
 );
 
 export const conditions = deviceState('conditions', Changes);
@@ -155,13 +161,28 @@ export async function turning(s: Session, turn: (kept: boolean) => Promise<void>
 const LOCATION = 'location';
 const REAL_PLACE = 'the real one';
 
+/** A place as an answer says it. */
+export const placeOf = (lat: number, lon: number) => `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+
 export function fixLocation(s: Session, lat: number, lon: number) {
   return s.conditions.run(async () => {
     conditions.update(s.device.serial, (now = {}) =>
       now[LOCATION] ? now : { ...now, [LOCATION]: { was: REAL_PLACE, owner: s.owner } },
     );
     await s.device.setLocation(lat, lon);
+    conditions.update(s.device.serial, (now = {}) => {
+      const held = now[LOCATION];
+      return held ? { ...now, [LOCATION]: { ...held, now: placeOf(lat, lon) } } : now;
+    });
   });
+}
+
+/** A read of the location: the place this tool fixed, as a device does not tell its location back, or that it fixed none. */
+export function locationNow(s: Session) {
+  const held = conditions.read(s.device.serial)?.[LOCATION];
+  if (!held)
+    return 'location: the real one: none is fixed here, and a device does not tell where it is';
+  return `location: ${held.now ?? 'fixed, at a place not kept'}; none puts back the real one`;
 }
 
 export function endLocation(s: Session) {
