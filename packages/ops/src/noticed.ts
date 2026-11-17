@@ -1,5 +1,14 @@
-import { onLine, personNeeded, PICTURE_TEXT, type Screen, type SystemAlert } from '@appdyno/core';
-import type { Point } from '@appdyno/protocol';
+import {
+  actionable,
+  diffScreens,
+  onLine,
+  personNeeded,
+  PICTURE_TEXT,
+  type Screen,
+  type ScreenElement,
+  type SystemAlert,
+} from '@appdyno/core';
+import { SETTLE_DEFAULT, type Point } from '@appdyno/protocol';
 import { inAlert } from './power.js';
 import type { Session } from './session.js';
 
@@ -78,4 +87,37 @@ export async function noticed(s: Session, screen: Screen, lookFurther = true) {
   const words = await s.device.systemWords().catch(() => []);
   const person = personNeeded({ texts: words, buttons: [] });
   return person ? needsPerson(person) : '';
+}
+
+/** How long an actionable tap that changed nothing is watched for a late reaction, as an iOS device watches itself. */
+const LATE_WATCH_MS = 800;
+
+/** Where a tap went, once its device call is over. */
+export type TappedAt = () => Point | undefined;
+
+/**
+ * An actionable tap at `at` that left the screen as `base` had it may be answered late, by an app that moves only once
+ * its keyboard has gone or by a system alert: where the device did not watch for that itself (`idleMs` is what it
+ * watched), it is watched for here for LATE_WATCH_MS, and the screen settled again from a change.
+ */
+export async function lateReaction(
+  s: Session,
+  base: ScreenElement[] | undefined,
+  aimedAt: Screen | undefined,
+  at: Point | undefined,
+  screen: Screen,
+  idleMs: number | undefined,
+): Promise<{ screen: Screen; settled?: boolean; idleMs?: number | undefined }> {
+  const unchanged = (x: Screen) => {
+    const d = base && diffScreens(base, x.list);
+    return !!d && d.added.length + d.removed.length + d.changed.length === 0;
+  };
+  const watched = s.device.platformScreen.watchesTaps || idleMs !== undefined;
+  if (!at || watched || !actionable(aimedAt?.tree.nodes, at.x, at.y) || !unchanged(screen))
+    return { screen, idleMs };
+  const from = Date.now();
+  const moved = await s.until((x) => !unchanged(x), LATE_WATCH_MS);
+  const waited = Date.now() - from;
+  if (!moved.met) return { screen, idleMs: waited };
+  return { ...(await s.settle(SETTLE_DEFAULT.quietMs, SETTLE_DEFAULT.maxMs)), idleMs: waited };
 }

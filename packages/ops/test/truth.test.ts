@@ -1,5 +1,5 @@
-import { must, noteInAnswer, reportProgress } from '@appdyno/core';
-import { DeviceError } from '@appdyno/protocol';
+import { must, noteInAnswer, reportProgress, type ActOptions } from '@appdyno/core';
+import { DeviceError, type ActParams } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { busyReasons } from '../src/answers.js';
@@ -37,6 +37,21 @@ describe('changed', () => {
     await call('read_screen');
     const r = await call('tap_screen', { x: 5, y: 2390 });
     expect(r.text).toMatch(/no change seen in \d+ ms, and no system alert in 0\.9 s; if a slow/);
+  });
+
+  it('sees a reaction that comes after the settle, to a tap on what reacts, where the device watched for none', async () => {
+    // an app that moves only once its keyboard has gone: the device's answer still shows the screen before
+    class Late extends FakeDevice {
+      override act(action: ActParams, opts: ActOptions = {}) {
+        const was = this.current();
+        return super.act(action, opts).then((r) => (r.tree ? { ...r, tree: was } : r));
+      }
+    }
+    const { call } = await connect(new Late());
+    const home = await call('read_screen');
+    const r = await call('tap_screen', { ref: refOf(home.text, 'Form') });
+    expect(r.structuredContent).toMatchObject({ changed: true });
+    expect(r.text).not.toContain('no change seen');
   });
 
   it('is false with its plain sentence when nothing changed', async () => {

@@ -163,6 +163,9 @@ export const iosScreen: PlatformScreen = {
 
   typesBlind: true,
 
+  // its runner and a simulator's settle watch 0.8 s for an alert after a tap that changed nothing
+  watchesTaps: true,
+
   /** The navigation bars across the screen that begin where the status bar ends, at most as tall as it gets. */
   topBars(elements) {
     return elements.flatMap((e, i) =>

@@ -51,6 +51,8 @@ export type PlatformScreen = {
    * for a focused field or a keyboard, where the platform's own typing would not say that nothing took it.
    */
   readonly typesBlind?: boolean;
+  /** An actionable tap that changed nothing is watched for a late reaction by the device itself: else by the host. */
+  readonly watchesTaps?: boolean;
 };
 
 /** What makes a tree a screen: its platform's rules, and the app it is read for. */

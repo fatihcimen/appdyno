@@ -74,13 +74,14 @@ async function onTheScreen(s: Session, points: Partial<Point>[]) {
 
 /**
  * What a step did: the device's answer, said in words, and whether a scroll to an element found what it looked for; `back`: what
- * the screen after a touch that closed a system alert waits for (`backFromAlert`).
+ * the screen after a touch that closed a system alert waits for (`backFromAlert`); `at`: where a tap went.
  */
 type Done = {
   r: ActResult | TextResult;
   done: string;
   found?: boolean;
   back?: ((x: Screen) => boolean) | undefined;
+  at?: Point;
 };
 
 /** A touch's options, compared with the read a selector found each of its targets on. */
@@ -221,7 +222,12 @@ async function call(
       const screen = s.device.hello?.screen;
       if (screen) noteTouch(t.point.x / screen.w, t.point.y / screen.h);
       const back = await closes(s, t.point);
-      return { r: await s.device.tap(t.point, aimedOn(opts, t)), done: `tapped ${t.name}`, back };
+      return {
+        r: await s.device.tap(t.point, aimedOn(opts, t)),
+        done: `tapped ${t.name}`,
+        back,
+        at: t.point,
+      };
     }
     case 'long_press': {
       const t = await target(s, st, patient);
@@ -374,6 +380,7 @@ export function stepsFor(
     let done = '';
     let found = false;
     let back: Done['back'];
+    let at: Done['at'];
     return act(
       s,
       read,
@@ -382,11 +389,13 @@ export function stepsFor(
         done = x.done;
         found = x.found === true;
         back = x.back;
+        at = x.at;
         return x.r;
       },
       () => done,
       () => found,
       (x) => back?.(x) ?? true,
+      () => at,
     ).catch(async (e: unknown) => {
       throw await withScreen(s, e, read);
     });

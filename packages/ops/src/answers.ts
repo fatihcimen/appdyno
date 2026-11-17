@@ -23,7 +23,7 @@ import {
 } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { failedSince } from './network-watch.js';
-import { broughtUp, noticed } from './noticed.js';
+import { broughtUp, lateReaction, noticed, type TappedAt } from './noticed.js';
 import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
@@ -244,6 +244,7 @@ async function act(
   done: string | ((r: ActResult | TextResult) => string),
   found: () => boolean = () => false,
   ready?: (x: Screen) => boolean,
+  tappedAt?: TappedAt,
 ) {
   const started = Date.now();
   const before = s.shown;
@@ -305,8 +306,11 @@ async function act(
   if (read === 'none' || !r.tree)
     return reply(said, summaryOf(clean, said, undefined, { found: isFound }));
   const seen = await s.seen(r.tree);
-  const screen =
+  const shown =
     ready && !ready(seen) ? ((await s.until(ready, SETTLE.maxMs)).screen ?? seen) : seen;
+  // an actionable tap that changed nothing may be answered late, where the device did not watch for that itself
+  const late = await lateReaction(s, base, aimedAt, tappedAt?.(), shown, r.settle?.idleMs);
+  const screen = late.screen;
   return afterAction(clean, cleanLog, s, said, read, screen, {
     app,
     pid,
@@ -314,10 +318,10 @@ async function act(
     pidNow: pidInAnswer(pidOf, r),
     before,
     base,
-    settled: r.settle?.settled,
+    settled: late.settled ?? r.settle?.settled,
     moving: r.settle?.moving,
     ms: r.settle?.ms ?? Date.now() - started,
-    idleMs: r.settle?.idleMs,
+    idleMs: late.idleMs,
     busy: busyReasons(r, screen),
     started,
     settleMs: r.settle?.ms,
@@ -420,7 +424,8 @@ export function answersFor(ctx: ServerContext) {
       done: string | ((r: ActResult | TextResult) => string),
       found?: () => boolean,
       ready?: (x: Screen) => boolean,
-    ) => act(clean, cleanLog, s, read, run, done, found, ready),
+      tappedAt?: TappedAt,
+    ) => act(clean, cleanLog, s, read, run, done, found, ready, tappedAt),
     settleRead,
     changing,
     afterChange: (

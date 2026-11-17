@@ -407,6 +407,8 @@ describe('an input on them', () => {
 
   it('is judged on the read the touch was aimed by, with no read of its own, in well under a millisecond', async () => {
     const { call, device } = await onDevice('android-system-en');
+    // the recording does not move on a tap: a device that watched for its late reaction itself leaves the host none to read
+    device.idleMs = 800;
     const t = recorded('android-system-en');
     await call('read_screen', {});
     for (const args of [middle(t, 'Languages'), { selector: { text: 'Languages' } }]) {

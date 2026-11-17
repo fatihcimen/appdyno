@@ -1,5 +1,6 @@
 import { reportProgress, throwIfCancelled, type ActOptions, type Screen } from '@appdyno/core';
 import { z } from 'zod';
+import type { Point } from '@appdyno/protocol';
 import { SETTLE, type Answers, type ReadMode } from './answers.js';
 import {
   aimedApp,
@@ -206,6 +207,7 @@ export function stepsOp(
           // a step that only looked, or found what it scrolled to, is no action whose change is to be seen
           let said = LOOKS_ONLY.has(st.action);
           let back: ((x: Screen) => boolean) | undefined;
+          let at: Point | undefined;
           const r = await act(
             s,
             reads,
@@ -214,11 +216,13 @@ export function stepsOp(
               stepDone = x.done;
               said ||= x.found === true;
               back = x.back;
+              at = x.at;
               return x.r;
             },
             () => stepDone,
             () => said,
             (x) => back?.(x) ?? true,
+            () => at,
           );
           done.push(`${i + 1}. ${answerText(r)}`);
           if (last) ending = r;

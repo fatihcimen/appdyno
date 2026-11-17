@@ -282,7 +282,10 @@ geç tepkiler 10 seferin 10'unda kaçırıldı). İlk okuma, `before` ajanın ya
 (değilse ilk okuma bir değişiklik sayılır), bu yüzden hiçbir şeyi değiştirmeyen bir işlem döndükten
 `quietMs` sonra biter. iOS'ta hiçbir şeyi değiştirmeyen, işlem yapılabilir bir dokunuş sonra en çok 0,8 s boyunca bir
 sistem uyarısı gelip gelmediğini izler ve ekran bu izlemeden sonra yeniden okunur: bu bekleme ajanın kendisinindir, ayrı tutulup `idleMs` olarak söylenir
-ve hiçbir `ms`'e girmez, böylece bir adım iki platformda da aynı okunur; bir dokunuşun yanıtı da hiçbir uyarı gelmediğini söyler. Bir kontrolün kopyası olan
+ve hiçbir `ms`'e girmez, böylece bir adım iki platformda da aynı okunur; bir dokunuşun yanıtı da hiçbir uyarı gelmediğini söyler. Ajanın böyle bir izleme
+yapmadığı yerde, Android'deki gibi, yanıt geldikten sonra aynısını host yapar: ekranı değişmemiş bulduğu işlem yapılabilir bir dokunuş 0,8 s izlenir ve bir
+değişiklikten itibaren yeniden durulanır;
+klavyesi kapanınca hareket eden bir uygulama dokunuştan 300 ms kadar sonra değişmiş ve "no change seen" ile yanıtlanmıştı. Bir kontrolün kopyası olan
 bir ekran, `before` gönderildiği gibi, gizli kopyaları dışarıda bırakılarak karşılaştırılır. Durulma işlemden sonra
 `maxMs` dolunca durur; sonuç `settled`'ı, süreyi, okuma sayısını ve kullanılan bekleme süresini söyler.
 

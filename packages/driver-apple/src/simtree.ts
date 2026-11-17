@@ -134,21 +134,6 @@ export function sameContent(a: Node[], b: Node[]): boolean {
   });
 }
 
-/** Can a tap at (x, y) start a reaction the screen does not show yet (RunnerCore's `actionable`)? */
-export function actionable(nodes: Node[] | undefined, x: number, y: number): boolean {
-  if (!nodes) return true;
-  let hit = false;
-  for (const n of nodes) {
-    if (!shown(n) || x < n.b[0] || x >= n.b[2] || y < n.b[1] || y >= n.b[3]) continue;
-    hit = true;
-    for (let a: Node | undefined = n; a; a = a.p >= 0 ? nodes[a.p] : undefined) {
-      if ((a.f & (F.clickable | F.longClickable | F.editable | F.checkable)) !== 0) return true;
-      if (a.c.includes('WebView') || a.c.includes('Map')) return true;
-    }
-  }
-  return !hit;
-}
-
 /** A scroll view's bars: told by their shape (RunnerCore's `scrollIndicators`). */
 export function scrollIndicators(nodes: Node[]): number[] {
   const named = nodes.map(() => false);
@@ -405,4 +390,4 @@ export function onKeyboard(nodes: Node[], x: number, y: number): boolean {
   );
 }
 
-export { hasAlert } from '@appdyno/core';
+export { actionable, hasAlert } from '@appdyno/core';
