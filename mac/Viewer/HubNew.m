@@ -11,9 +11,12 @@
   __weak NSWindow *_owner;
 }
 
-static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
+/// A row a menu item: by the menu, as the button's own add drops an item of the same title, and two runtimes may share
+/// one (iOS 27.2 and the iOS 27.2 of a single model), which left an index past the items and Create doing nothing.
+static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows, NSString *name) {
   NSPopUpButton *button = [NSPopUpButton new];
-  for (NSDictionary *row in rows) [button addItemWithTitle:row[@"name"]];
+  button.identifier = name;
+  for (NSDictionary *row in rows) [button.menu addItemWithTitle:row[@"name"] action:nil keyEquivalent:@""];
   return button;
 }
 
@@ -47,8 +50,8 @@ NSString *MVSystemName(NSDictionary *row) {
   _systems = choices[@"systems"] ?: @[];
   _name = [NSTextField textFieldWithString:@""];
   _name.placeholderString = [kind isEqual:@"simulator"] ? MVWord(@"The model's name") : @"appdyno_emulator";
-  _model = popUp(_models);
-  _os = popUp(_systems);
+  _model = popUp(_models, @"model");
+  _os = popUp(_systems, @"system");
   for (NSInteger i = 0; i < _os.numberOfItems; i++) [_os itemAtIndex:i].title = MVSystemName(_systems[(NSUInteger)i]);
   // the newest comes last, and is the one a newest model runs on
   [_os selectItemAtIndex:_systems.count - 1];

@@ -354,6 +354,16 @@ static void checkWays(MVHub *hub) {
   MVCheck(@"started: a sheet that can make none says why, whole, and cannot be sent", [refused.stringValue isEqual:MVWord(why)] && !refused.hidden && NSHeight(refused.frame) > 20 && !create.enabled, refused.stringValue);
   if (window.attachedSheet) [window endSheet:window.attachedSheet];
   MVPump(0.3);
+  // two runtimes of one name, as iOS 27.2 and the iOS 27.2 of one model: each a row, and the newest chosen
+  NSArray *twins = @[@{@"name": @"iOS 26.5", @"id": @"a"}, @{@"name": @"iOS 27.2", @"id": @"b"}, @{@"name": @"iOS 27.2", @"id": @"c"}];
+  [hub show:@{@"devices": @[],
+              @"choices": @{@"simulator": @{@"models": kinds[@"models"], @"systems": twins}}}];
+  [hub pokeClick:@"newSimulator"];
+  MVPump(0.3);
+  NSPopUpButton *system = (NSPopUpButton *)viewNamed(window.attachedSheet.contentView, @"system");
+  MVCheck(@"started: a system of a name another has is a row of its own, and the last is chosen", system.numberOfItems == 3 && system.indexOfSelectedItem == 2, [NSString stringWithFormat:@"%ld rows, %ld chosen", (long)system.numberOfItems, (long)system.indexOfSelectedItem]);
+  if (window.attachedSheet) [window endSheet:window.attachedSheet];
+  MVPump(0.3);
 }
 
 /// A phone's row said its model's code and the name it is sold as beneath: 25078RA3EY over REDMI 15C.
