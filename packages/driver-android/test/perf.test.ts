@@ -727,6 +727,46 @@ describe('a launch in a compile state', () => {
   });
 });
 
+describe('a hot launch', () => {
+  it('starts the app only once the system has stopped it, as a start of one still paused is timed as none', async () => {
+    vi.useFakeTimers();
+    try {
+      let reads = 0;
+      let stopped = false;
+      const d = {
+        readyToMeasure: () => Promise.resolve(),
+        ensureAwake: () => Promise.resolve({ woke: false, unlocked: false, locked: false }),
+        shell: (command: string) => {
+          if (command.includes('resolve-activity')) return Promise.resolve('dev.app/.Main\n');
+          if (command.includes('KEYCODE_HOME')) {
+            reads = 0;
+            stopped = false;
+          }
+          // two reads after home it is still on its way out
+          if (command.includes('dumpsys activity -p dev.app activities')) {
+            stopped = ++reads > 2;
+            return Promise.resolve(
+              `* Hist  #0\n  state=${stopped ? 'STOPPED' : 'PAUSED'} delayedResume=false`,
+            );
+          }
+          if (/am start -W .*-n 'dev\.app\/\.Main'$/.test(command))
+            return Promise.resolve(
+              stopped ? 'LaunchState: HOT\nTotalTime: 40\n' : 'LaunchState: UNKNOWN (0)\n',
+            );
+          return Promise.resolve('');
+        },
+      } as unknown as PerfDevice;
+      const measured = launch(d, 'dev.app', { mode: 'hot', repeats: 2 });
+      await vi.runAllTimersAsync();
+      const { value } = await measured;
+      expect(value.samples.map((s) => s.state)).toEqual(['HOT', 'HOT']);
+      expect(value.medianMs).toBe(40);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('memory the system did not say', () => {
   it('is a timeout to ask again, with what the system said, and no bare parse error', async () => {
     const d = {

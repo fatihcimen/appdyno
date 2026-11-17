@@ -35,6 +35,11 @@ const FULLY_DRAWN_WAIT_MS = 5_000;
 /** `am start -f`: NEW_TASK | CLEAR_TASK, the activity made anew in a live process (as Macrobenchmark's warm). */
 const RECREATE_ACTIVITY = '0x10008000';
 
+/** How long a warm or hot start waits for the app sent home to stop. */
+const STOP_WAIT_MS = 5_000;
+/** An activity of the app on the screen, or still on its way off it. */
+const NOT_STOPPED = /\bstate=(RESUMED|PAUSING|PAUSED|STOPPING)\b/;
+
 const startupConfig = (pkg: string) => [
   'buffers { size_kb: 65536 fill_policy: RING_BUFFER }',
   `data_sources { config { name: "linux.ftrace" ftrace_config { ftrace_events: "sched/sched_switch" ftrace_events: "sched/sched_waking" ftrace_events: "sched/sched_blocked_reason" ${NAME_NEW_PROCESSES} atrace_categories: "am" atrace_categories: "view" atrace_categories: "gfx" atrace_categories: "dalvik" atrace_categories: "res" atrace_categories: "binder_driver" atrace_apps: "${pkg}" } } }`,
@@ -102,6 +107,14 @@ export async function launch(
     else {
       await sh(d, 'input keyevent KEYCODE_HOME');
       await sleep(800);
+      // a start is timed only from an app the system has stopped: one still paused on its way home is brought back
+      // with none timed (LaunchState UNKNOWN), as on an API 36 emulator that took 1 to 2 s to stop it
+      const end = Date.now() + STOP_WAIT_MS;
+      while (
+        Date.now() < end &&
+        NOT_STOPPED.test(await sh(d, `dumpsys activity -p ${pkg} activities`))
+      )
+        await sleep(200);
     }
   };
   const raws: string[] = [];
