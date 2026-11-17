@@ -44,14 +44,32 @@ const asRun = (words: string[]) => {
 
 const one = (words: string[]) => (words.length === 1 ? words[0] : undefined);
 
+/** Words parsed by a command's flags, or undefined where they are wrong: a usage error, said with what was wrong. */
+function wordsOf<T>(
+  name: Parameters<typeof usage>[0],
+  parse: () => T,
+  err: (line: string) => void,
+) {
+  try {
+    return parse();
+  } catch (e) {
+    if (!String((e as { code?: unknown }).code).startsWith('ERR_PARSE_ARGS')) throw e;
+    err(`${(e as Error).message}\n${usage(name)}`);
+    return undefined;
+  }
+}
+
 /** `test merge|share|comment`: what is made of runs that are already there, with no device. */
 const OF_RUNS: Record<string, (rest: string[], err: (line: string) => void) => number> = {
   merge: (rest, err) => {
-    const { values, positionals } = parseArgs({
-      args: rest,
-      allowPositionals: true,
-      options: COMMANDS['test merge'].flags,
-    });
+    const words = wordsOf(
+      'test merge',
+      () =>
+        parseArgs({ args: rest, allowPositionals: true, options: COMMANDS['test merge'].flags }),
+      err,
+    );
+    if (!words) return 2;
+    const { values, positionals } = words;
     if (positionals.length === 0 || !values.out) {
       err(usage('test merge'));
       return 2;
@@ -66,11 +84,14 @@ const OF_RUNS: Record<string, (rest: string[], err: (line: string) => void) => n
     return record.verdict === 'PASS' ? 0 : 1;
   },
   share: (rest, err) => {
-    const { values, positionals } = parseArgs({
-      args: rest,
-      allowPositionals: true,
-      options: COMMANDS['test share'].flags,
-    });
+    const words = wordsOf(
+      'test share',
+      () =>
+        parseArgs({ args: rest, allowPositionals: true, options: COMMANDS['test share'].flags }),
+      err,
+    );
+    if (!words) return 2;
+    const { values, positionals } = words;
     const dir = one(positionals);
     if (!dir) {
       err(usage('test share'));
@@ -89,11 +110,14 @@ const OF_RUNS: Record<string, (rest: string[], err: (line: string) => void) => n
     return 0;
   },
   comment: (rest, err) => {
-    const { values, positionals } = parseArgs({
-      args: rest,
-      allowPositionals: true,
-      options: COMMANDS['test comment'].flags,
-    });
+    const words = wordsOf(
+      'test comment',
+      () =>
+        parseArgs({ args: rest, allowPositionals: true, options: COMMANDS['test comment'].flags }),
+      err,
+    );
+    if (!words) return 2;
+    const { values, positionals } = words;
     const dir = one(positionals);
     if (!dir) {
       err(usage('test comment'));
@@ -122,11 +146,13 @@ function ofRuns(run: (typeof OF_RUNS)[string], rest: string[], err: (line: strin
 export async function testCommand(rest: string[], open: Opens, err: (line: string) => void) {
   const ofRun = Object.hasOwn(OF_RUNS, rest[0] ?? '') ? OF_RUNS[rest[0] ?? ''] : undefined;
   if (ofRun) return ofRuns(ofRun, rest.slice(1), err);
-  const { values, positionals } = parseArgs({
-    args: rest,
-    allowPositionals: true,
-    options: COMMANDS.test.flags,
-  });
+  const words = wordsOf(
+    'test',
+    () => parseArgs({ args: rest, allowPositionals: true, options: COMMANDS.test.flags }),
+    err,
+  );
+  if (!words) return 2;
+  const { values, positionals } = words;
   const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
   const retries = Number(values.retries ?? 0);
   const shard = values.shard === undefined ? undefined : shardOf(values.shard);
@@ -139,6 +165,12 @@ export async function testCommand(rest: string[], open: Opens, err: (line: strin
     retries < 0
   ) {
     err(usage('test'));
+    return 2;
+  }
+  if (values.measure && retries > 0) {
+    err(
+      `--measure takes no --retries: the gate would compare what a failed go left with what a later one read\n${usage('test')}`,
+    );
     return 2;
   }
   const artifacts = values.artifacts ?? 'appdyno-artifacts';
