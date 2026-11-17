@@ -217,7 +217,7 @@ Birden çok eşleşmede işlem reddedilir ve eşleşmeler ref'leriyle listelenir
 
 ### Klavyenin altındaki bir hedef
 
-Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir flow'un adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir. iOS'ta bir web formunun üstündeki klavye, üstündeki çubuğun Done'ı ile kapatılır. Uygulamanın yine de açık tuttuğu bir klavyeye yazılmaz: dokunuş `UNSUPPORTED` ile reddedilir ve öğenin klavyenin altında olduğunu söyler.
+Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da klavye pencereyi küçülttüğü için bir seçici hiçbir şey bulamıyorsa, klavye kapatılır ve hedef, onu bekleme başlamadan bir kez daha aranır; yeniden oynatılan bir flow'un adımı da bunu kendi beklemesinden önce yapar. Yatay tutulan bir telefon, uygulamanın tamamının üstünde tam ekran bir klavye gösterir. iOS'ta bir web formunun üstündeki klavye, hangi dilde olursa olsun üstündeki çubuğun Done'ı ile kapatılır. Uygulamanın yine de açık tuttuğu bir klavyeye yazılmaz: dokunuş `UNSUPPORTED` ile reddedilir ve öğenin klavyenin altında olduğunu söyler.
 
 ## Ekranı okumak
 

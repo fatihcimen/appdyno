@@ -217,7 +217,7 @@ A touch refused as `NOT_FOUND` or `STALE` holds the screen as it is now, as an a
 
 ### A target under the keyboard
 
-When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app. On iOS the keyboard over a web form is closed by the Done of the bar over it. A keyboard the app keeps open all the same is not typed on: the touch is refused as `UNSUPPORTED`, saying the element is under it.
+When a target is under the on-screen keyboard, where a touch would type a letter, or a selector finds nothing because the keyboard shrank the window, the keyboard is closed and the target is looked for once more, before any wait for it; a replayed flow's step does the same before its own wait. A phone in landscape shows a full-screen keyboard over the whole app. On iOS the keyboard over a web form is closed by the Done of the bar over it, in any language. A keyboard the app keeps open all the same is not typed on: the touch is refused as `UNSUPPORTED`, saying the element is under it.
 
 ## Reading the screen
 

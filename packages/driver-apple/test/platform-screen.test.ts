@@ -222,8 +222,11 @@ describe('what covers the app', () => {
 });
 
 describe('closing the keyboard', () => {
-  /** A web form's field with the keyboard up, and the bar over it (a simulator's read of one). */
-  const form = (bar: string[]): Tree => ({
+  /**
+   * A web form's field in focus with the keyboard up, and the bar over it, as a simulator in Turkish read it: Önceki,
+   * Sonraki side by side, Bitti apart at the end. `x`: each button's left edge.
+   */
+  const form = (bar: { d: string; x: number }[], web = true): Tree => ({
     hash: 'k',
     truncated: false,
     elapsedMs: 1,
@@ -239,24 +242,58 @@ describe('closing the keyboard', () => {
     ],
     nodes: [
       { p: -1, w: 0, c: 'Application', b: [0, 0, 402, 874], f: 17 },
-      { p: 0, w: 0, c: 'TextField', d: 'Customer name:', b: [60, 70, 140, 82], f: 17 | 128 },
-      { p: 0, w: 0, c: 'Button', d: 'Done', b: [340, 20, 390, 60], f: 19 },
-      { p: 0, w: 0, c: 'Toolbar', d: 'Toolbar', b: [0, 508, 402, 556], f: 17 },
-      ...bar.map((d, i) => ({
-        p: 3,
+      { p: 0, w: 0, c: web ? 'WebView' : 'ScrollView', b: [0, 0, 402, 874], f: 17 | 256 },
+      { p: 1, w: 0, c: 'TextField', d: 'E-mail address:', b: [61, 222, 340, 247], f: 17 | 128 | 8 },
+      { p: 0, w: 0, c: 'Button', d: 'Bitti', b: [340, 20, 390, 60], f: 19 },
+      { p: 0, w: 0, c: 'Toolbar', d: 'Araç Çubuğu', id: 'Toolbar', b: [0, 508, 402, 556], f: 17 },
+      ...bar.map(({ d, x }) => ({
+        p: 4,
         w: 0,
         c: 'Button',
         d,
-        b: [21 + i * 160, 513, 61 + i * 160, 551] as [number, number, number, number],
+        b: [x, 513, x + 40, 551] as [number, number, number, number],
         f: 19,
       })),
       { p: 0, w: 0, c: 'Keyboard', b: [0, 583, 402, 816], f: 17 },
     ],
   });
+  const tr = [
+    { d: 'Önceki', x: 21 },
+    { d: 'Sonraki', x: 75 },
+    { d: 'Bitti', x: 341 },
+  ];
 
   it("touches the Done of the bar over the keyboard, which a web form's touch beside its fields does not close", () => {
-    expect(keyboardCloser(form(['Previous', 'Next', 'Done']))).toEqual({ x: 361, y: 532 });
+    expect(
+      keyboardCloser(
+        form([
+          { d: 'Previous', x: 21 },
+          { d: 'Next', x: 75 },
+          { d: 'Done', x: 341 },
+        ]),
+      ),
+    ).toEqual({
+      x: 361,
+      y: 532,
+    });
     // a Done far from the keyboard is the app's own, as a navigation bar's: not touched for it
-    expect(keyboardCloser(form(['Previous', 'Next']))).not.toEqual({ x: 365, y: 40 });
+    expect(keyboardCloser(form(tr.slice(0, 2)))).not.toEqual({ x: 365, y: 40 });
+  });
+
+  it('finds that Done in any language by its place: at the end, apart from the two side by side', () => {
+    expect(keyboardCloser(form(tr))).toEqual({ x: 361, y: 532 });
+    // a bar from right to left
+    const rtl = [
+      { d: 'تم', x: 21 },
+      { d: 'التالي', x: 287 },
+      { d: 'السابق', x: 341 },
+    ];
+    expect(keyboardCloser(form(rtl))).toEqual({ x: 41, y: 532 });
+    // the bar of an app's own over a field that is no web page's: its last button may be a Send
+    expect(keyboardCloser(form(tr, false))).not.toEqual({ x: 361, y: 532 });
+    // a button of the page itself in the band over the keyboard, at its far right, is none of the bar's
+    const page = form(tr);
+    page.nodes.push({ p: 1, w: 0, c: 'Button', d: 'Gönder', b: [350, 520, 400, 570], f: 19 });
+    expect(keyboardCloser(page)).toEqual({ x: 361, y: 532 });
   });
 });

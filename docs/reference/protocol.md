@@ -123,7 +123,8 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 
 iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
 shows one, else the Done of a bar just over the keyboard (Previous, Next, Done, as Safari puts over a web form, which a
-touch beside its fields leaves open), else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is Home
+touch beside its fields leaves open: in another language, with a web page's field in focus, the button at an end of the bar that stands
+apart from the two side by side), else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is Home
 pressed twice on a simulator, the same input as a window's control, and it answers half a second after the second press,
 as iOS takes a press that comes sooner as part of the two; on a phone it is the home indicator's slow drag up. Control Center and Notification Center are the drags a window's controls send, by the mirror's
 input on a simulator: `act` would wait for the app under them to report the touch, take it for lost when it does not, and

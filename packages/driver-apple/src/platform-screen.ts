@@ -55,23 +55,52 @@ export const staticTexts = ({ nodes }: Tree) =>
 const KEYBOARD_BAR_PT = 80;
 
 /**
- * Where a touch closes the keyboard: its own hide key where it shows one, the Done of the bar a form puts over it
- * (Previous, Next, Done, over a web form), else a place with no control, which closes it in an app that takes that as
- * leaving the field. A web form takes a touch beside its fields as none.
+ * Where a touch closes the keyboard: its own hide key where it shows one, the Done of the bar a form puts over it, else a
+ * place with no control, which closes it in an app that takes that as leaving the field. A web form takes a touch
+ * beside its fields as none.
  */
 export function keyboardCloser(t: Tree): Point {
-  const said = (n: Tree['nodes'][number]) => n.d ?? n.t ?? '';
+  const said = (n: Node) => n.d ?? n.t ?? '';
   const keyboard = t.nodes.find((n) => /keyboard$/i.test(n.c));
-  const key = t.nodes.find(
-    (n) =>
-      /button$/i.test(n.c) &&
-      (/^(hide keyboard|dismiss keyboard)$/i.test(said(n)) ||
-        (!!keyboard &&
-          /^done$/i.test(said(n)) &&
-          n.b[3] <= keyboard.b[1] &&
-          n.b[3] >= keyboard.b[1] - KEYBOARD_BAR_PT)),
-  );
+  const key =
+    t.nodes.find(
+      (n) =>
+        /button$/i.test(n.c) &&
+        (/^(hide keyboard|dismiss keyboard)$/i.test(said(n)) ||
+          (!!keyboard && /^done$/i.test(said(n)) && overKeyboard(n, keyboard))),
+    ) ??
+    (keyboard && webFormDone(t, keyboard));
   return key ? { x: (key.b[0] + key.b[2]) / 2, y: (key.b[1] + key.b[3]) / 2 } : inertPoint(t);
+}
+
+type Node = Tree['nodes'][number];
+
+const overKeyboard = (n: Node, keyboard: Node) =>
+  n.b[3] <= keyboard.b[1] && n.b[3] >= keyboard.b[1] - KEYBOARD_BAR_PT;
+
+/**
+ * The Done of the bar a web form puts over the keyboard (Previous, Next, Done), by its place, as its words are the
+ * system language's ("Bitti"): of the buttons just over the keyboard, the one at an end that stands apart from the rest,
+ * which a bar from right to left mirrors; the page's own buttons in that band are not of it. Only with a field of a web
+ * view in focus: the bar of an app's own may end in another button, as a chat's Send.
+ */
+function webFormDone(t: Tree, keyboard: Node): Node | undefined {
+  const inWeb = (n: Node | undefined): boolean => !!n && (n.c === 'WebView' || inWeb(t.nodes[n.p]));
+  const editing = NODE_FLAGS.editable | NODE_FLAGS.focused;
+  if (!t.nodes.some((n) => (n.f & editing) === editing && inWeb(n))) return undefined;
+  const bar = t.nodes
+    .filter(
+      (n) =>
+        n.c === 'Button' &&
+        (n.f & NODE_FLAGS.visible) !== 0 &&
+        overKeyboard(n, keyboard) &&
+        !inWeb(n),
+    )
+    .sort((a, b) => a.b[0] - b.b[0]);
+  const [first, second] = bar;
+  const [before, last] = bar.slice(-2);
+  if (bar.length < 3 || !first || !second || !before || !last) return undefined;
+  return last.b[0] - before.b[2] >= second.b[0] - first.b[2] ? last : first;
 }
 
 /** A point above the keyboard with no control or field on it; else near the top. */

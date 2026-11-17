@@ -123,7 +123,8 @@ pano ve aşağıdaki her durum için. `APPDYNO_SIM_DIRECT=off` ikisini de kapat�
 
 iOS'ta klavyeyi kapatacak ya da uygulama değiştiriciyi açacak bir tuş yoktur. `dismissKeyboard`, klavye bir gizleme tuşu gösteriyorsa ona,
 yoksa klavyenin hemen üstündeki bir çubuğun Done'ına (Safari'nin bir web formunun üstüne koyduğu Previous, Next, Done; formun alanlarının
-yanına bir dokunuş klavyeyi açık bırakır), o da yoksa kontrol olmayan bir yere dokunur; host sonra klavyenin gidip gitmediğini okur ve gitmediyse reddeder. `appSwitch` bir simulator'da
+yanına bir dokunuş klavyeyi açık bırakır: başka bir dilde, bir web sayfasının alanı odaktayken, çubuğun bir ucunda yan yana iki düğmeden
+ayrı duran düğme), o da yoksa kontrol olmayan bir yere dokunur; host sonra klavyenin gidip gitmediğini okur ve gitmediyse reddeder. `appSwitch` bir simulator'da
 iki kez basılan Home'dur, bir pencerenin kontrolüyle aynı girdi; ikinci basıştan yarım saniye sonra yanıt verir,
 çünkü iOS daha erken gelen bir basışı o ikisinin parçası sayar; bir telefonda ana ekran göstergesinin yukarı doğru yavaş sürüklenmesidir. Denetim Merkezi ve Bildirim Merkezi, bir simulator'da bir pencerenin kontrollerinin yansıtmanın
 girdisiyle gönderdiği sürüklemelerdir: `act`, altlarındaki uygulamanın dokunuşu bildirmesini beklerdi, bildirmeyince onu kayıp sayıp
