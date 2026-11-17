@@ -185,10 +185,13 @@ export const COMMANDS = {
       'device-class': value('C'),
       last: value('N'),
       replace: on,
+      kind: value('K'),
+      max: value('N'),
+      min: value('N'),
       format: value('text|json|junit'),
       measurements: value('dir'),
     },
-    what: 'the performance gate: non-zero on a regression or a broken budget',
+    what: 'the performance gate: non-zero on a regression, a broken budget or a change it could not decide; budget takes --kind with --max or --min',
   },
   'perf why|reference': {
     flags: {
@@ -218,7 +221,7 @@ export const COMMANDS = {
     what: 'which functions moved between two kept profiles',
   },
   'perf prune': {
-    flags: { 'limit-gb': value('N'), 'dry-run': on, measurements: value('dir') },
+    flags: { 'limit-gb': value('N'), 'dry-run': on },
     what: 'kept traces and heap dumps down to the limit, 10 GB by default',
   },
   timeline: {

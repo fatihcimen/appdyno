@@ -1,3 +1,4 @@
+import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { describe, expect, it } from 'vitest';
 import { mirrorArgs, mirrorRun } from '../src/mirror-args.js';
 import { commandList, COMMANDS, helpFor, line, usage } from '../src/usage.js';
@@ -88,6 +89,32 @@ describe('usage', () => {
       ['appdyno', 'perf', 'survey', '--app'],
     ]);
     expect(usage('ios build')).toBe('usage: appdyno ios build [--no-fetch]');
+  });
+
+  it("lists for the gate's words every flag of the tool they call, and no flag it refuses", () => {
+    const takes = Object.keys(
+      opsFor(new ServerContext(DEFAULT_POLICY, [])).compare_performance?.input.shape ?? {},
+    );
+    // the command line's own: the folder a context keeps its runs in, and the device it drives, shared or not
+    const own = ['measurements', 'device', 'share'];
+    const camel = (flag: string) => flag.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+    for (const name of [
+      'perf compare|baseline|budget',
+      'perf why|reference',
+      'perf prune',
+    ] as const)
+      expect(
+        Object.keys(COMMANDS[name].flags).filter(
+          (f) => !own.includes(f) && !takes.includes(camel(f)),
+        ),
+        name,
+      ).toEqual([]);
+    expect(line('perf compare|baseline|budget')).toContain('[--kind K] [--max N] [--min N]');
+    // a prune goes by the state folder's own runs, and refuses any other
+    expect(line('perf prune')).toBe('perf prune [--limit-gb N] [--dry-run]');
+    expect(COMMANDS['perf compare|baseline|budget'].what).toMatch(
+      /^the performance gate: non-zero on a regression, a broken budget or a change it could not decide/,
+    );
   });
 
   it('lists a short command beside what it does, a long one above it', () => {
