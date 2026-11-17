@@ -22,6 +22,13 @@ import { preparedFlow, projectRoot } from './prepare.js';
 
 export const FLOW_FILE = /\.flow$/;
 
+/**
+ * A line of what could not be cleaned up after a flow, as a run's record keeps it under `cleanup`: what was done, and
+ * why it failed. Such a line fails the run, beside the file's own outcome, and the files after it on that device do not
+ * run.
+ */
+export const cleanupFailure = (what: string, why: string) => `${what} failed: ${why}`;
+
 const Kept: z.ZodType<RecordingState> = z.object({
   serial: z.string(),
   app: z.string().optional(),

@@ -72,6 +72,8 @@ export type RunResult = {
   failure?: RunFailure;
   /** What the teardown did: every step of it ran, and each that failed is kept. */
   teardown?: { ok: boolean; steps: StepResult[]; failed: RunFailure[] };
+  /** What the run could not clean up after its steps, a line each, as the mock rules they added. */
+  cleanup?: string[];
 };
 
 export type RunOptions = {

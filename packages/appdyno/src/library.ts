@@ -140,11 +140,13 @@ export type ErrorCode =
  * A run as a program reads it: one whose teardown failed has not passed, as `appdyno test` exits 1 for it, whatever
  * its own steps came to.
  */
-const told = <R extends { passed: boolean; teardown?: { ok: boolean } }>(run: R) => {
+const told = <R extends { passed: boolean; teardown?: { ok: boolean }; cleanup?: string[] }>(
+  run: R,
+) => {
   const teardownFailed = run.teardown?.ok === false;
   return {
     ...run,
-    passed: run.passed && !teardownFailed,
+    passed: run.passed && !teardownFailed && !run.cleanup?.length,
     ...(teardownFailed && { teardownFailed }),
   };
 };
@@ -231,6 +233,11 @@ export type ReplayResult = {
   failure?: ReplayFailure;
   /** What the teardown did, where the flow has one: every step of it ran, and each that failed is here. */
   teardown?: { ok: boolean; steps: ReplayStep[]; failed: ReplayFailure[] };
+  /**
+   * What the replay could not clean up after its steps, a line each, as the mock rules they added: `passed` is then
+   * false, as the next run starts from what it left.
+   */
+  cleanup?: string[];
 };
 
 export type Appdyno = {
@@ -242,8 +249,11 @@ export type Appdyno = {
   ): Promise<Answer<N>>;
   /** Runs a flow file on this device. */
   replay(file: string, options?: ReplayOptions): Promise<ReplayResult>;
-  /** Puts back what it changed on the device, and lets it go. */
-  close(): Promise<void>;
+  /**
+   * Puts back what it changed on the device, and lets it go. `cleanup`: what it could not put back, a line each, also
+   * written to stderr; it does not reject for them.
+   */
+  close(): Promise<{ cleanup: string[] }>;
 };
 
 /** `run` as a call that `signal` stops, the way a client's cancel stops a server's: one stopped before it began does nothing. */
@@ -311,8 +321,11 @@ export function connect(options: ConnectOptions = {}): Appdyno {
       return told(run);
     },
     async close() {
-      await ctx.end().catch(() => []);
+      const cleanup = await ctx.end().catch((e: unknown) => [(e as Error).message]);
       ctx.close();
+      // a close in a finally keeps resolving: what is left is said, and stays written down for the next session there
+      for (const line of cleanup) process.stderr.write(`appdyno: could not put back: ${line}\n`);
+      return { cleanup };
     },
   };
 }

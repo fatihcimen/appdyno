@@ -23,23 +23,40 @@ export function verdictLine(r: RunRecord) {
   ].join('');
 }
 
+/** A teardown that failed under the case. */
+const tornBadly = (c: RunCase) => !!c.teardown && !c.teardown.ok;
+
 /** The cases a reader has to look at, the failed ones first: all but those that passed with nothing left behind. */
 export const notable = (r: RunRecord) => {
   const rank = (c: RunCase) => ['failed', 'not_run', 'flaky', 'passed'].indexOf(c.outcome);
   return r.cases
-    .filter((c) => c.outcome !== 'passed' || (c.teardown && !c.teardown.ok))
+    .filter((c) => c.outcome !== 'passed' || tornBadly(c) || !!c.cleanup?.length)
     .sort((a, b) => rank(a) - rank(b));
 };
 
-/** What a case came to, in a word. */
+/** What a case came to, in a word: one that passed is here for what it left behind. */
 export const wordOf = (c: RunCase) =>
-  ({ failed: 'FAIL', not_run: 'NOT RUN', flaky: 'FLAKY', passed: 'TEARDOWN FAILED' })[c.outcome];
+  c.outcome === 'passed'
+    ? tornBadly(c)
+      ? 'TEARDOWN FAILED'
+      : 'CLEANUP FAILED'
+    : { failed: 'FAIL', not_run: 'NOT RUN', flaky: 'FLAKY' }[c.outcome];
 
 /** The failure a line shows for a case: its last, or the teardown's where its own steps passed. */
 export const failureOf = (c: RunCase) => c.attempts.findLast((a) => a.failure);
 
+/** Why a case is to be looked at: its failure, the teardown's, why it did not run, and what it left uncleaned. */
 export const saidOf = (c: RunCase) =>
-  (c.outcome === 'passed' ? c.teardown?.failed[0] : failureOf(c)?.failure?.message) ?? 'failed';
+  [
+    c.outcome === 'not_run'
+      ? c.why
+      : c.outcome === 'passed'
+        ? c.teardown?.failed[0]
+        : failureOf(c)?.failure?.message,
+    c.cleanup?.[0],
+  ]
+    .filter(Boolean)
+    .join('; ') || 'failed';
 
 /** The names a rerun's line leaves out, as what to do about them. */
 export const needsLine = (needs: string[] | undefined) =>

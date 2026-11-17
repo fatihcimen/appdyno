@@ -40,6 +40,13 @@ describe("a run's verdict", () => {
     });
     expect(verdictOf([left])).toEqual({ verdict: 'FAIL', why: ['1 teardown failed'] });
   });
+
+  it('fails for what a case could not clean up, whatever its own outcome', () => {
+    const left = aCase('a.flow', {
+      cleanup: ['put back failed: dark_mode (was off): it reads on'],
+    });
+    expect(verdictOf([left])).toEqual({ verdict: 'FAIL', why: ['1 cleanup failed'] });
+  });
 });
 
 describe('records merged', () => {
@@ -103,6 +110,8 @@ describe('a record as JUnit', () => {
       aCase('a.flow', { out: '1. launch: 5 ms' }),
       failed('b.flow'),
       aCase('c.flow', { teardown: { ok: false, failed: ['teardown line 2, step 1: left'] } }),
+      aCase('d.flow', { cleanup: ['put back failed: dark_mode (was off): it reads on'] }),
+      aCase('e.flow', { outcome: 'not_run', attempts: [], why: 'd.flow was not cleaned up after' }),
     ],
     { shard: { i: 2, n: 4 } },
   );
@@ -112,7 +121,7 @@ describe('a record as JUnit', () => {
   );
 
   it('names the shard, the device, the commit and the command that runs a case again', () => {
-    expect(xml).toContain('<testsuites name="shard 2/4" tests="4" failures="2"');
+    expect(xml).toContain('<testsuites name="shard 2/4" tests="7" failures="4"');
     expect(xml).toContain('<property name="appdyno.device" value="emulator-5554"/>');
     expect(xml).toContain(`<property name="appdyno.commit" value="${'a'.repeat(40)}"/>`);
     expect(xml).toContain('<property name="appdyno.shard" value="2/4"/>');
@@ -131,8 +140,16 @@ describe('a record as JUnit', () => {
     expect(xml.indexOf('<properties>')).toBeLessThan(xml.indexOf('<failure '));
   });
 
-  it('keeps a teardown that failed a case of its own, and a passed case as it was', () => {
+  it('keeps a teardown or a cleanup that failed a case of its own, and a passed case as it was', () => {
     expect(xml).toContain('<testcase name="c.flow (teardown)"');
+    expect(xml).toContain('<testcase name="d.flow (cleanup)"');
+    expect(xml).toContain(
+      '<failure message="put back failed: dark_mode (was off): it reads on">put back failed: dark_mode (was off): it reads on</failure>',
+    );
     expect(xml).toContain('<system-out>1. launch: 5 ms</system-out>');
+  });
+
+  it('fails a file that did not run, with why', () => {
+    expect(xml).toContain('<failure message="not run: d.flow was not cleaned up after">');
   });
 });

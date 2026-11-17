@@ -196,12 +196,17 @@ export const heldNow = (serial: string): Held => {
 
 /**
  * Takes out the rules of those lines, as a flow's end takes out what its steps added, and puts back what else its
- * steps changed; the rest stay.
+ * steps changed; the rest stay. What kept the probe from being told, which then answers as it did; none where it was.
  */
-export function dropRules(s: Session, lines: string[], was: Held = heldNow(s.device.serial)) {
+export function dropRules(
+  s: Session,
+  lines: string[],
+  was: Held = heldNow(s.device.serial),
+): string | undefined {
   const now = captures.read(s.device.serial);
-  if (now?.via !== 'probe' || !s.device.network?.control) return;
-  if (lines.length === 0 && now.strict === was.strict && now.unmatched === was.unmatched) return;
+  if (now?.via !== 'probe' || !s.device.network?.control) return undefined;
+  if (lines.length === 0 && now.strict === was.strict && now.unmatched === was.unmatched)
+    return undefined;
   const gone = lines.map(ruleLine);
   const { strict: _, unmatched: __, ...rest } = now;
   const next: Capture = {
@@ -212,9 +217,11 @@ export function dropRules(s: Session, lines: string[], was: Held = heldNow(s.dev
   };
   try {
     tellProbe(s, next);
-  } catch {
+    return undefined;
+  } catch (e) {
     // a rule that stays has lost the file it answers with: the list is kept, and the next change says so
     captures.write(s.device.serial, next);
+    return `the probe still answers by the rules it had: ${(e as Error).message}`;
   }
 }
 

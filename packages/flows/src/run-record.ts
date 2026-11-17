@@ -70,6 +70,13 @@ const Case = z.object({
   /** The last attempt's steps as a report shows them. */
   out: z.string().optional(),
   teardown: z.object({ ok: z.boolean(), failed: z.array(z.string()) }).optional(),
+  /**
+   * What could not be cleaned up after the file, a line each, as a device setting this tool could not put back: the
+   * file's own outcome stands, and the run fails, as what comes after it would start from what it left.
+   */
+  cleanup: z.array(z.string()).optional(),
+  /** Why it did not run, where it did not. */
+  why: z.string().optional(),
   measured: z.object({ scenario: z.string(), outcome: z.string() }).optional(),
   /** The command that runs this file alone on this device: never a value of a param or a secret. */
   rerun: z.string(),
@@ -151,12 +158,13 @@ export const tally = (cases: RunCase[]) => {
     failed: of('failed'),
     notRun: of('not_run'),
     teardowns: cases.filter((c) => c.teardown && !c.teardown.ok).length,
+    cleanups: cases.filter((c) => c.cleanup?.length).length,
   };
 };
 
 /**
- * A run's verdict: FAIL for a case that failed or did not run, a flaky one under `failOnFlaky`, a teardown that failed
- * (the next file started from what it left), or any of `also`, as a shard that never ran.
+ * A run's verdict: FAIL for a case that failed or did not run, a flaky one under `failOnFlaky`, a teardown or a cleanup
+ * that failed (the next file started from what it left), or any of `also`, as a shard that never ran.
  */
 export function verdictOf(
   cases: RunCase[],
@@ -168,6 +176,7 @@ export function verdictOf(
     ...(t.notRun > 0 ? [`${t.notRun} not run`] : []),
     ...(failOnFlaky && t.flaky > 0 ? [`${FLAKY_FAILS}: ${t.flaky} flaky`] : []),
     ...(t.teardowns > 0 ? [`${t.teardowns} teardown failed`] : []),
+    ...(t.cleanups > 0 ? [`${t.cleanups} cleanup failed`] : []),
     ...also,
   ];
   return { verdict: why.length > 0 ? 'FAIL' : 'PASS', why };
@@ -243,8 +252,9 @@ export const attachmentsOf = (e: Evidence) =>
   [e.shotMarked, e.shot, e.video, e.tree, e.log, e.crash, e.har].flatMap((f) => f ?? []);
 
 /**
- * The record as JUnit takes it: a suite per device, a case per file, and one more for a teardown that failed. `pathOf`
- * turns a path under the run's folder into the one a CI system finds the file by.
+ * The record as JUnit takes it: a suite per device, a case per file, and one more for a teardown or a cleanup that
+ * failed. A file that did not run fails with why. `pathOf` turns a path under the run's folder into the one a CI system
+ * finds the file by.
  */
 export function suitesOf(r: RunRecord, pathOf: (under: string) => string): TestSuite[] {
   const names = [...new Set(r.cases.map((c) => c.device))];
@@ -259,12 +269,25 @@ export function suitesOf(r: RunRecord, pathOf: (under: string) => string): TestS
         const last = c.outcome === 'failed' || c.outcome === 'not_run' ? failed.at(-1) : undefined;
         const plain = ({ message, detail }: z.infer<typeof Failure>) => ({ message, detail });
         const retried = failed.filter((a) => a !== last).map((a) => plain(a.failure));
-        const left = c.teardown?.failed ?? [];
+        const failure = last
+          ? plain(last.failure)
+          : c.why && { message: `not run: ${c.why}`, detail: c.why };
+        /** What a file left behind, a case of its own beside the file's. */
+        const after = (kind: string, left: string[] = []): TestCase[] =>
+          left[0] === undefined
+            ? []
+            : [
+                {
+                  name: `${c.label} (${kind})`,
+                  ms: 0,
+                  failure: { message: left[0], detail: left.join('\n') },
+                },
+              ];
         return [
           {
             name: c.label,
             ms: c.ms,
-            ...(last && { failure: plain(last.failure) }),
+            ...(failure && { failure }),
             ...(retried.length > 0 && { retried }),
             ...(c.out && { out: c.out }),
             properties: {
@@ -275,15 +298,8 @@ export function suitesOf(r: RunRecord, pathOf: (under: string) => string): TestS
             },
             attachments: failed.flatMap((a) => attachmentsOf(a.evidence)).map(pathOf),
           },
-          ...(left[0] === undefined
-            ? []
-            : [
-                {
-                  name: `${c.label} (teardown)`,
-                  ms: 0,
-                  failure: { message: left[0], detail: left.join('\n') },
-                },
-              ]),
+          ...after('teardown', c.teardown?.failed),
+          ...after('cleanup', c.cleanup),
         ];
       }),
   }));

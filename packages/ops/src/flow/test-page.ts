@@ -63,6 +63,7 @@ function caseHtml(r: RunRecord, c: RunCase) {
     ...(last?.failure?.step ? [pre(last.failure.step)] : []),
     ...(last?.failure ? [pre(last.failure.detail)] : []),
     ...(c.teardown && !c.teardown.ok ? [pre(c.teardown.failed.join('\n'))] : []),
+    ...(c.cleanup?.length ? [pre(c.cleanup.join('\n'))] : []),
     `<p class="note">To run it alone${needs ? `, ${esc(needs)}, then` : ''}:</p>`,
     pre(c.rerun),
     `<p class="note">${esc(
@@ -96,7 +97,7 @@ function gridHtml(r: RunRecord) {
     if (!c) return '<td class="note">not on it</td>';
     const failed = c.outcome !== 'passed' && c.outcome !== 'flaky';
     const word = c.outcome === 'not_run' ? 'not run' : c.outcome;
-    return `<td class="${failed ? 'bad' : c.outcome === 'flaky' ? 'flaky' : 'ok'}"><a href="#${anchorOf(r, c)}">${word}</a>${c.teardown && !c.teardown.ok ? ' <span class="bad">teardown failed</span>' : ''}</td>`;
+    return `<td class="${failed ? 'bad' : c.outcome === 'flaky' ? 'flaky' : 'ok'}"><a href="#${anchorOf(r, c)}">${word}</a>${c.teardown && !c.teardown.ok ? ' <span class="bad">teardown failed</span>' : ''}${c.cleanup?.length ? ' <span class="bad">cleanup failed</span>' : ''}</td>`;
   };
   return [
     '<table>',

@@ -240,8 +240,10 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
                   ...(scenario && { scenario }),
                 })
               : { result: await runner.run(s, readFlow(path), path, replay), journey: undefined };
-            // what a teardown could not clean up is said beside the failure, and is the refusal after a pass
-            const left = runner.teardownText(path, result);
+            // what a teardown or the run could not clean up is said beside the failure, and is the refusal after a pass
+            const left = [runner.teardownText(path, result), ...(result.cleanup ?? [])]
+              .filter(Boolean)
+              .join('\n');
             if (result.failure)
               throw new ToolError(
                 [
@@ -256,7 +258,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
               throw new ToolError(
                 `passed: ${result.steps.length} steps\n${left}`,
                 'CHECK_FAILED',
-                'the next run starts from what the teardown left: put that right first',
+                'the next run starts from what was left: put that right first',
               );
             const t = runner.linesOf(result).join('\n');
             return reply(

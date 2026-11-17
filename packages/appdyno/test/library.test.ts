@@ -272,6 +272,61 @@ describe('the library', () => {
     }
   });
 
+  it('is no pass where it could not clean up, and its close rejects with what it could not put back', async () => {
+    device.screen = 'home';
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-library-'));
+    const flow = join(dir, 'a.flow');
+    writeFileSync(flow, 'mock api.test/pay fail=offline\n');
+    let told = 0;
+    const was = { network: Reflect.get(device, 'network') as unknown, settings: device.settings };
+    Object.assign(device, {
+      network: {
+        paths: () => Promise.resolve([{ via: 'probe', sees: 'requests' }]),
+        start: () => Promise.resolve({ via: 'probe', app: 'dev.app' }),
+        read: () => Promise.resolve({ entries: [] }),
+        stop: () => Promise.resolve({ entries: [] }),
+        detail: () => Promise.resolve(undefined),
+        control: () => {
+          if (++told > 1) throw new Error('EACCES: control.json');
+        },
+      },
+    });
+    const d = library.connect({ app: 'dev.app' });
+    try {
+      const run = await d.replay(flow);
+      expect(run.passed).toBe(false);
+      expect(run.cleanup?.[0]).toContain('take out its mock rules failed: ');
+      const held: Record<string, string> = { dark_mode: 'off' };
+      let broken = true;
+      device.settings = {
+        get: (name) => Promise.resolve(held[name] ?? 'none'),
+        set: (name, value) => {
+          if (broken && value === 'off') return Promise.reject(new Error('restore failed'));
+          held[name] = value;
+          return Promise.resolve(undefined);
+        },
+      };
+      await d.tool('set_device', { name: 'dark_mode', value: 'on' });
+      const said: string[] = [];
+      const write = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+        said.push(String(chunk));
+        return true;
+      });
+      // it resolves, as a close in a finally always has, and says what it left
+      expect(await d.close()).toEqual({ cleanup: ['dark_mode (was off): restore failed'] });
+      write.mockRestore();
+      expect(said).toEqual(['appdyno: could not put back: dark_mode (was off): restore failed\n']);
+      // what was left stays written down, and a restore of a later connection puts it back
+      broken = false;
+      const again = library.connect({ app: 'dev.app' });
+      await again.tool('set_device', { name: 'restore' });
+      await again.close();
+      expect(held.dark_mode).toBe('off');
+    } finally {
+      Object.assign(device, was);
+    }
+  });
+
   it('gives the tree of the screen an action left, from the read its answer made', async () => {
     device.screen = 'home';
     const d = library.connect();

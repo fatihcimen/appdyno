@@ -90,6 +90,16 @@ describe('appdyno test, of runs that are already there', () => {
     expect(errors.at(-1)).toContain('usage: appdyno test merge <dir>... --out dir');
   });
 
+  it('exits 1 for a file it could not clean up after, though the file passed', async () => {
+    const [one, two] = [partIn(dir, 1, 2), partIn(dir, 2, 2)];
+    const file = join(two, 'run.json');
+    const record = JSON.parse(readFileSync(file, 'utf8')) as { cases: { cleanup?: string[] }[] };
+    for (const c of record.cases) c.cleanup = ['put back failed: dark_mode (was off): it reads on'];
+    writeFileSync(file, JSON.stringify(record));
+    expect(await run('merge', one, two, '--out', join(dir, 'left'))).toBe(1);
+    expect(out.join('\n')).toContain('because: 1 cleanup failed');
+  });
+
   it('says what a folder holds, and packs none with a video until told which way', async () => {
     const part = partIn(dir, 1, 1, 2);
     expect(await run('share', part)).toBe(0);

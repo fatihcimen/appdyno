@@ -18,7 +18,7 @@ import type { FlowRunner } from './runner.js';
 import { preparedCommand } from './prepare.js';
 import { inShard, type Shard } from './shard.js';
 import { isShared, readFlow } from './shared.js';
-import { fileRunner, type FileOptions } from './test-file.js';
+import { fileRunner, type FileOptions, type FileRun } from './test-file.js';
 import {
   appFacts,
   changedOn,
@@ -131,7 +131,8 @@ const sharedBy = (files: string[]) =>
  * reported as flaky with what failed. Such a file leaves the run passed, unless `failOnFlaky`. A file's setup and
  * teardown run around each go at it, and a teardown that failed is a case of its own in JUnit, beside the file's: the
  * file's own result stays what its steps came to, and the run fails, as the next file starts from what the teardown
- * left. The run's record is kept after each file, and the folder's verdict, page, JUnit and pull request text are
+ * left. What this tool could not clean up after a file, a setting it could not put back, is a case of its own the same
+ * way, and the files after it on that device are not run, each with why. The run's record is kept after each file, and the folder's verdict, page, JUnit and pull request text are
  * written from it at the end.
  */
 export async function runTests(
@@ -189,21 +190,29 @@ export async function runTests(
     const name = s?.device.serial ?? device ?? 'device';
     log(`${name}:`);
     if (s) devices.push(await deviceFacts(s));
+    /** Why the files left on this device do not run: one before them was not cleaned up after. */
+    let stopped: string | undefined;
     for (const file of files) {
       const label = labelOf(file);
       const evidence = join(o.artifacts, safeName(name), safeName(label));
       const changed = changedOn(name);
-      const ran = await run(s, openError, file, label, evidence, (f) => relative(o.artifacts, f));
+      if (stopped) log(`  NOT RUN ${label}: ${stopped}`);
+      const ran: FileRun = stopped
+        ? { outcome: 'not_run', ms: 0, attempts: [] }
+        : await run(s, openError, file, label, evidence, (f) => relative(o.artifacts, f));
       const app = s && (await appOf(s));
       cases.push({
         device: name,
         file,
         label,
         ...ran,
+        ...(stopped && { why: stopped }),
         ...(app && { app }),
         start: { changed },
         ...rerunOf(file, name, o),
       });
+      if (ran.cleanup?.[0] && !stopped)
+        stopped = `${label} was not cleaned up after (${ran.cleanup[0]}), and a file after it would start from what it left`;
       saveRecord(o.artifacts, record());
     }
   }

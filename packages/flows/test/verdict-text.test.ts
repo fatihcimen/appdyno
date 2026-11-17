@@ -33,6 +33,27 @@ describe('verdict.txt', () => {
     expect(text).not.toContain('a.flow');
   });
 
+  it('names a cleanup that failed beside the case’s own outcome, and a file not run with why', () => {
+    const left = 'put back failed: dark_mode (was off): it reads on';
+    const text = verdictText(
+      aRecord([
+        aCase('a.flow', { cleanup: [left] }),
+        failed('b.flow', { cleanup: [left] }),
+        aCase('c.flow', {
+          outcome: 'not_run',
+          attempts: [],
+          why: 'a.flow was not cleaned up after',
+        }),
+      ]),
+      under,
+    );
+    expect(text).toContain(`CLEANUP FAILED emulator-5554 a.flow ${left} |`);
+    expect(text).toContain(
+      `FAIL emulator-5554 b.flow line 14, step 6: no element matches {"text":"Continue"}; ${left} |`,
+    );
+    expect(text).toContain('NOT RUN emulator-5554 c.flow a.flow was not cleaned up after |');
+  });
+
   it('stops at 30 cases, and says how many more the page has', () => {
     const many = Array.from({ length: 42 }, (_, i) => failed(`f${i}.flow`));
     const lines = verdictText(aRecord(many), under).trimEnd().split('\n');

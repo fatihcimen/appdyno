@@ -33,7 +33,7 @@ import { failedSince } from '../network-watch.js';
 import { mockLine, opCall, REPLAY_WAIT_MS, SHOTS_DIR, type StepPlace } from './op-call.js';
 import { auditWithin, checkedHere, checkHere } from './own-checks.js';
 import { prepared, preparedCommand, type PreparePlace } from './prepare.js';
-import { loadRecording } from './shared.js';
+import { cleanupFailure, loadRecording } from './shared.js';
 import { looksStill } from './still.js';
 import { keepEvidence } from './test-evidence.js';
 
@@ -325,8 +325,9 @@ export function flowRunner(
       since: Date.now(),
       began: Date.now(),
     };
+    let result: RunResult | undefined;
     try {
-      const result = await runSteps(flow, executor(s, was, at), {
+      result = await runSteps(flow, executor(s, was, at), {
         from,
         values,
         platform: at.platform,
@@ -343,7 +344,8 @@ export function flowRunner(
     } finally {
       undo();
       // the rules its mock steps added, on a pass and on a failure alike: one a person or an agent set stays
-      dropRules(s, at.mocked, held);
+      const left = dropRules(s, at.mocked, held);
+      if (left && result) result.cleanup = [cleanupFailure('take out its mock rules', clean(left))];
     }
   };
 

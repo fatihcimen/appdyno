@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { encodePng, type AddedMedia, type Device, type Mirror } from '@appdyno/core';
@@ -363,18 +370,65 @@ stop background
       expect(lines.join('\n')).not.toContain('could not put back');
     });
 
-    it('says a photo it could not take out, and takes nothing where a file added none', async () => {
+    it('fails the run for a photo it could not take out', async () => {
       const seen = settingsOf({ dark_mode: 'off' });
       takingMedia(seen, ['/sdcard/Pictures/appdyno/photo.png']);
       flowFile('setting media photo.png', 'a.flow');
-      flowFile('screenshot plain', 'b.flow');
       const lines: string[] = [];
-      expect((await test({ log: (l) => lines.push(l) })).passed).toBe(true);
+      const r = await test({ log: (l) => lines.push(l) });
+      expect(r.passed).toBe(false);
       expect(lines).toContain(
-        '  could not put back after a.flow: media: left /sdcard/Pictures/appdyno/photo.png in the library: changed since it was added',
+        '  CLEANUP FAILED a.flow: put back failed: media: left /sdcard/Pictures/appdyno/photo.png in the library: changed since it was added',
       );
-      // b.flow added nothing: nothing is asked of the library after it
       expect(seen.filter((x) => x === 'photo taken out')).toHaveLength(1);
+    });
+
+    it('fails the run for a setting it could not put back, and runs no later file on that device', async () => {
+      const held: Record<string, string> = { dark_mode: 'off' };
+      const seen = settingsOf(held);
+      const set = device.settings.set.bind(device.settings);
+      device.settings.set = (name, value) =>
+        value === 'off' ? Promise.reject(new Error('restore failed')) : set(name, value);
+      flowFile('setting dark_mode on\nassert text="Nowhere" timeoutMs=200', 'a.flow');
+      flowFile('screenshot plain', 'b.flow');
+      flowFile('screenshot plain', 'c.flow');
+      const lines: string[] = [];
+      const artifacts = join(dir, 'artifacts');
+      const { passed, record } = await test({ retries: 2, log: (l) => lines.push(l) });
+      expect(passed).toBe(false);
+      // no retry starts from a device that was not put back
+      expect(seen.filter((x) => x === 'dark_mode on')).toHaveLength(1);
+      const left = 'put back failed: dark_mode (was off): restore failed';
+      expect(lines).toContain(`  CLEANUP FAILED a.flow: ${left}`);
+      const why = `a.flow was not cleaned up after (${left}), and a file after it would start from what it left`;
+      expect(lines).toContain(`  NOT RUN b.flow: ${why}`);
+      expect(record.why).toEqual(['1 failed', '2 not run', '1 cleanup failed']);
+      expect(record.cases.map((c) => [c.label, c.outcome, c.cleanup, c.why])).toEqual([
+        ['a.flow', 'failed', [left], undefined],
+        ['b.flow', 'not_run', undefined, why],
+        ['c.flow', 'not_run', undefined, why],
+      ]);
+      const read = (name: string) => readFileSync(join(artifacts, name), 'utf8');
+      expect(JSON.parse(read('run.json'))).toMatchObject({ verdict: 'FAIL' });
+      expect(read('verdict.txt')).toContain(`NOT RUN ${device.serial} b.flow ${why}`);
+      expect(read('verdict.txt')).toContain(`; ${left}`);
+      expect(read('j.xml')).toContain('<testcase name="a.flow (cleanup)"');
+      expect(read('j.xml')).toContain(`<failure message="not run: ${why}">`);
+      expect(read('index.html')).toContain('cleanup failed');
+    });
+
+    it('keeps a file that passed as passed, its cleanup a case of its own', async () => {
+      settingsOf({ dark_mode: 'off' });
+      const set = device.settings.set.bind(device.settings);
+      device.settings.set = (name, value) =>
+        value === 'off' ? Promise.reject(new Error('restore failed')) : set(name, value);
+      flowFile('setting dark_mode on', 'a.flow');
+      const { passed, record } = await test();
+      expect(passed).toBe(false);
+      expect(record.cases[0]).toMatchObject({ outcome: 'passed', cleanup: [expect.any(String)] });
+      expect(readFileSync(join(dir, 'artifacts', 'verdict.txt'), 'utf8')).toContain(
+        `CLEANUP FAILED ${device.serial} a.flow put back failed: dark_mode (was off): restore failed`,
+      );
     });
 
     it('puts back after each attempt of a file it retries, its failure’s picture taken first', async () => {

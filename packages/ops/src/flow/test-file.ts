@@ -7,7 +7,7 @@ import type { Session } from '../session.js';
 import { restoreConditions } from '../settings.js';
 import { journeyText, measureJourney, type JourneyAnswer } from './journey.js';
 import type { FlowRunner } from './runner.js';
-import { readFlow } from './shared.js';
+import { cleanupFailure, readFlow } from './shared.js';
 import { evidenceOf } from './test-evidence.js';
 
 /** What a test run takes of its options to run one file. */
@@ -33,11 +33,14 @@ const RETRY_RESETS =
 /** What a report line shows of a message, whose next lines are for a person reading the one failure. */
 const firstLine = (s: string) => must(s.split('\n')[0], 'a first line');
 
-/** One go at a file: how its run ended, or what kept it from one. */
-type Attempt = { result?: RunResult; journey?: JourneyAnswer; error?: Error };
+/** One go at a file: how its run ended, or what kept it from one, and what could not be cleaned up after it. */
+type Attempt = { result?: RunResult; journey?: JourneyAnswer; error?: Error; cleanup?: string[] };
 
 /** What running a file gives its case in the record: the rest is the run's to say. */
-export type FileRun = Pick<RunCase, 'outcome' | 'ms' | 'attempts' | 'steps' | 'out' | 'teardown'>;
+export type FileRun = Pick<
+  RunCase,
+  'outcome' | 'ms' | 'attempts' | 'steps' | 'out' | 'teardown' | 'cleanup'
+>;
 
 /** A file of a test run, with its retries: what it logs as it goes, and how it ended. */
 export function fileRunner(
@@ -51,20 +54,19 @@ export function fileRunner(
 
   /**
    * What a file changed on the device goes back once it has run, so that its dark mode is no other file's, and the
-   * photos it added come out where the device takes them out.
+   * photos it added come out where the device takes them out: what could not, a line each.
    */
-  const putBack = async (s: Session, label: string) => {
+  const putBack = async (s: Session) => {
     const not = (e: unknown) => ({ failed: [(e as Error).message] });
     const { failed } = await restoreConditions(s, isThisProcess).catch(not);
     const media = await mediaRestored(s.device.addedMedia, isThisProcess).catch(not);
-    for (const f of [...failed, ...media.failed]) log(`  could not put back after ${label}: ${f}`);
+    return [...failed, ...media.failed].map((f) => cleanupFailure('put back', f));
   };
 
   /** One go at a file: its pictures in `kept`, a retry's evidence in a folder of its own. */
   const once = async (
     s: Session,
     file: string,
-    label: string,
     kept: string,
     attempt: number,
   ): Promise<Attempt> => {
@@ -75,20 +77,19 @@ export function fileRunner(
       ...(o.params && { params: o.params }),
       ...(o.fromFile && { fromFile: o.fromFile }),
     };
-    try {
-      return o.iterations
+    const went: Attempt = await (async () =>
+      o.iterations
         ? await measureJourney(ctx, runner, s, readFlow(file), file, {
             ...replay,
             iterations: o.iterations,
           })
-        : { result: await runner.run(s, readFlow(file), file, replay) };
-    } catch (e) {
+        : { result: await runner.run(s, readFlow(file), file, replay) })().catch(
       // a file that does not parse, a value missing: this file's failure, not the run's
-      return { error: e as Error };
-    } finally {
-      // after a measured file's iterations, not between them: each iteration starts as the one before it ended
-      await putBack(s, label);
-    }
+      (e: unknown) => ({ error: e as Error }),
+    );
+    // after a measured file's iterations, not between them: each iteration starts as the one before it ended
+    const left = await putBack(s);
+    return { ...went, cleanup: [...(went.result?.cleanup ?? []), ...left] };
   };
 
   /** What a go's teardown could not clean up, a line a failure: none where it ran clean or there is none. */
@@ -154,23 +155,26 @@ export function fileRunner(
   ): Promise<FileRun> => {
     const t0 = Date.now();
     const attempts: FileRun['attempts'] = [];
+    const cleanup: string[] = [];
     let began = t0;
     const went = (go: Attempt) => {
       attempts.push(attemptOf(file, go, attempts.length + 1, Date.now() - began, pathOf));
+      cleanup.push(...(go.cleanup ?? []));
       began = Date.now();
       return go;
     };
     let go: Attempt = went(
-      s ? await once(s, file, label, evidence, 1) : { ...(openError && { error: openError }) },
+      s ? await once(s, file, evidence, 1) : { ...(openError && { error: openError }) },
     );
-    // a run that ended on a step may end otherwise; what kept a file from running would again
-    while (s && go.result?.failure && attempts.length <= retries) {
+    // a run that ended on a step may end otherwise; what kept a file from running would again, and a device not put
+    // back would start the retry from what the last go left
+    while (s && go.result?.failure && attempts.length <= retries && cleanup.length === 0) {
       const failed = failureOf(file, go);
       log(`  retry ${label}, attempt ${attempts.length} of ${retries + 1}: ${failed.message}`);
       for (const line of leftBy(file, go)) log(`       ${line}`);
       if (!resetsSaid) log(`       ${RETRY_RESETS}`);
       resetsSaid = true;
-      go = went(await once(s, file, label, evidence, attempts.length + 1));
+      go = went(await once(s, file, evidence, attempts.length + 1));
     }
     const { result, journey } = go;
     const ms = Date.now() - t0;
@@ -192,6 +196,7 @@ export function fileRunner(
     }
     const left = leftBy(file, go);
     if (left[0] !== undefined) log(`  TEARDOWN FAILED ${label}: ${left[0]}`);
+    for (const line of cleanup) log(`  CLEANUP FAILED ${label}: ${line}`);
     return {
       outcome: !result?.passed ? 'failed' : said ? 'flaky' : 'passed',
       ms,
@@ -207,6 +212,7 @@ export function fileRunner(
       }),
       ...(out && { out }),
       ...(result?.teardown && { teardown: { ok: left.length === 0, failed: left } }),
+      ...(cleanup.length > 0 && { cleanup }),
     };
   };
 }

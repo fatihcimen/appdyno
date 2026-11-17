@@ -338,6 +338,27 @@ describe('the network probe through its tool and a flow', () => {
     expect(captures.read(device.serial)?.rules).toEqual([]);
   });
 
+  it('fails a run whose mock rules could not be taken out, though its steps passed', async () => {
+    const ctx = context();
+    const file = flowFile('mock api.test/pay fail=offline');
+    let told = 0;
+    probe.control = (_, c) => {
+      if (++told > 1) throw new Error('EACCES: control.json');
+      probe.controls.push(c);
+    };
+    const r = await flowsFor(ctx).replay(file);
+    expect(r.passed).toBe(true);
+    expect(r.cleanup).toEqual([
+      'take out its mock rules failed: the probe still answers by the rules it had: EACCES: control.json',
+    ]);
+    told = 0;
+    const e = await refusal(callerOf(ctx)('run_flow', { action: 'run', file }));
+    expect(e.code).toBe('CHECK_FAILED');
+    expect(e.message).toBe(
+      'passed: 1 steps\ntake out its mock rules failed: the probe still answers by the rules it had: EACCES: control.json',
+    );
+  });
+
   it('records each rule set as a mock step, and what has no step as unrecorded', async () => {
     const call = callerOf(context());
     const { text } = await recorded(call, async () => {
