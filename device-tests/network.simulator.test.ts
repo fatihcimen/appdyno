@@ -485,7 +485,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     out(`STRICT ${strict.text.replaceAll('\n', ' | ')}`);
     expect(strict.data.code).toBe('CHECK_FAILED');
     expect(strict.text).toMatch(
-      /^tapped .*\nnetwork strict: GET 127\.0\.0\.1:\d+\/fail 500 \(id \d+/,
+      /^CHECK_FAILED: tapped .*\nnetwork strict: GET 127\.0\.0\.1:\d+\/fail 500 \(id \d+/,
     );
     // one a rule of one's own made is said, and fails nothing
     await ok('capture_network', { action: 'mock', rules: [`${a.at}/json status=503`] });
@@ -521,7 +521,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
     out(`CHECK miss: ${miss.text}`);
     expect(miss.data.code).toBe('CHECK_FAILED');
     expect(miss.text).toMatch(
-      /nearest: POST 127\.0\.0\.1:\d+\/echo 200 \(id \d+\): its request body has \{"user":"fixture"\}$/,
+      /nearest: POST 127\.0\.0\.1:\d+\/echo 200 \(id \d+\): its request body has \{"user":"fixture"\}$/m,
     );
     const hidden = await call('capture_network', {
       action: 'check',
@@ -529,7 +529,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       has: 'password=x',
       timeoutMs: 0,
     });
-    expect(hidden.text).toMatch(/its request body has \{"password":"•••"\}$/);
+    expect(hidden.text).toMatch(/its request body has \{"password":"•••"\}$/m);
     // one that has not ended when the check begins: the server answers it five seconds on
     const last = Number(/found: (\d+)/.exec(found.text)?.[1]);
     await ok('open_link', { url: 'appdyno-fixture://open/network' });
