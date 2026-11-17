@@ -149,6 +149,7 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Düzeltilenler
 
+- iPhone: trace aracının uygulamanın sürecini 240 s boyunca bulamadığı bir ölçüm artık ne yapılacağını söyler (birkaç dakika sonra yeniden ölçmek); önceden cihazın yanıt vermediğini ve ekranı okumayı söylüyordu.
 - Mac uygulamasının Ağ bölmesinde bir kuralı kaydetmek, kaldırmak ya da açıp kapatmak, listenin o anki hâlinde yalnızca o kuralı değiştirir; böylece bir yapay zekâ istemcisinin o arada eklediği kural durur ve başka bir yerden yapılan değişiklik söylenir. Liste, daha çok isteğin son 200'ünü gösterdiğinde bunu söyler. Durdur'dan sonra liste hâlâ aranabilir; süren bir yakalama gerektirenler kapalıdır ve nedenini söyler. Süzgeç `failed`, `başarısız`, `5xx`, `mocked` sözcüklerini ve bir isteğin numarasını (`#12`) iki dilde de, büyük harfle de, harflerin işaretleri olmadan da bulur. Bir isteğin ayrıntısı pencerenin dilindedir.
 
 - iOS, runner yoluyla (gerçek bir iPhone ve yardımcıları olmayan bir simulator): yeni başlamış bir uygulamaya gönderilen ilk değiştirici tuşlu tuş, değiştiricisini kaybediyordu; `command+a` hiçbir şey seçmiyor, `shift+arrow_left` seçmeden imleci kaydırıyordu. Artık değiştiricisini koruyor. Bu, Mac'in yüküne bağlı değildi: hiçbir donanım tuşunun ulaşmadığı bir simulator'da oluyordu.

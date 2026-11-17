@@ -149,6 +149,7 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Fixed
 
+- iPhone: a measure whose trace tool keeps not finding the app's process for 240 s says what to do, measure again in a few minutes, where it said the device had not answered and to read the screen.
 - In the Mac app's Network pane, saving, removing or switching a rule changes that one rule in the list as it stands, so a rule an AI client added meanwhile is kept, and a change made elsewhere is said. The list says when it shows the latest 200 of more requests. After Stop the list can still be searched, and what needs a running capture is off and says why. The filter finds `failed`, `başarısız`, `5xx`, `mocked` and a request's number (`#12`) in either language, in capitals and without the marks on a letter. A request's detail is in the window's language.
 
 - iOS, by the runner (a real iPhone, and a simulator without its helpers): the first key with a modifier sent to an app that had just started lost its modifier, so `command+a` selected nothing and `shift+arrow_left` moved the cursor without selecting. It now keeps it. This did not depend on the Mac's load: it happened on a simulator no hardware key had reached.
