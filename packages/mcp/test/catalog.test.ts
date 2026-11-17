@@ -255,6 +255,16 @@ it('lists no name tools had before 1.3.0, and answers a call by one with the nam
   ]);
 });
 
+/** The tools a server of these groups lists, and the characters of that list as the budget above counts them. */
+async function listed(ops: ReturnType<typeof opsFor>, sets: readonly Toolset[]) {
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  await createServer(inToolsets(ops, sets), () => undefined).connect(a);
+  const client = new Client({ name: 'test', version: '0' });
+  await client.connect(b);
+  const { tools } = await client.listTools();
+  return [tools.length, JSON.stringify({ tools }).length] as const;
+}
+
 it('has every tool in one group, and lists a group at the size it was measured', async () => {
   const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
   const grouped = TOOLSET_NAMES.flatMap((set) => [...TOOLSETS[set]]);
@@ -265,15 +275,8 @@ it('has every tool in one group, and lists a group at the size it was measured',
   expect(() => toolsetsOf('core,everything')).toThrow(
     '--toolsets takes core, device, apps, evidence, network, perf, with a comma between them, not everything',
   );
-  const sizeOf = async (sets: readonly Toolset[]) => {
-    const [a, b] = InMemoryTransport.createLinkedPair();
-    await createServer(inToolsets(ops, sets), () => undefined).connect(a);
-    const client = new Client({ name: 'test', version: '0' });
-    await client.connect(b);
-    const { tools } = await client.listTools();
-    return [tools.length, JSON.stringify({ tools }).length];
-  };
-  const sizes: Record<string, number[]> = {};
+  const sizeOf = (sets: readonly Toolset[]) => listed(ops, sets);
+  const sizes: Record<string, readonly number[]> = {};
   for (const set of TOOLSET_NAMES) sizes[set] = await sizeOf([set]);
   // tools, then characters as the budget above counts them; each list is 12 characters of its own
   expect(sizes).toEqual({
@@ -285,4 +288,89 @@ it('has every tool in one group, and lists a group at the size it was measured',
     perf: [2, 3_600],
   });
   expect(await sizeOf(['core', 'network', 'perf'])).toEqual([16, 15_899]);
+});
+
+/** A page of the repository, as a reader is given it. */
+const page = (path: string) => readFileSync(new URL(`../../../${path}`, import.meta.url), 'utf8');
+
+/** A count as a page writes it: 26,851 in English, 26.851 in Turkish. */
+const written = (n: number, mark: ',' | '.') => String(n).replace(/\B(?=(\d{3})+$)/g, mark);
+
+/**
+ * What a changelog says of the release to come. Once released it is what was true then, held to nothing, and the
+ * section of the next one may say none of it: a changelog's figures are held where it says them.
+ */
+const unreleased = (path: string) =>
+  /^## (?:Unreleased|Yayımlanmamış)\n([^]*?)^## /m.exec(page(path))?.[1] ?? '';
+
+/** The number each match of these words holds, in whichever of its groups took one. */
+const said = (text: string, words: RegExp) =>
+  [...text.matchAll(words)].map((m) => m.slice(1).join(''));
+
+/** Where a page says how many tools there are, and how many times: words that change are found again here. */
+const COUNTS: [string, RegExp, number][] = [
+  ['README.md', /All (\d+) tools/g, 1],
+  ['README.tr.md', /(\d+) aracın hepsi/g, 1],
+  ['docs/README.md', /the (\d+) tools on one screen/g, 1],
+  ['docs/README.tr.md', /tek ekranda (\d+) araç/g, 1],
+  ['docs/reference/tools.md', /The (\d+) tools an MCP client can call/g, 1],
+  ['docs/reference/tools.tr.md', /çağırabildiği (\d+) araç/g, 1],
+  ['site/src/i18n/en.ts', /See all (\d+) tools/g, 1],
+  ['site/src/i18n/tr.ts', /(\d+) aracın tümünü/g, 1],
+];
+
+it('is quoted in the docs at the count and the sizes it is measured at', async () => {
+  const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+  const [count, whole] = await listed(ops, TOOLSET_NAMES);
+  const [en, tr] = [unreleased('CHANGELOG.md'), unreleased('CHANGELOG.tr.md')];
+  const quoted: [string, string[], number, string][] = [
+    ...COUNTS.map(([path, words, times]): [string, string[], number, string] => [
+      path,
+      said(page(path), words),
+      times,
+      String(count),
+    ]),
+    [
+      'CHANGELOG.md',
+      said(en, /The 48 tools are now (\d+)|The catalog is (\d+) tools/g),
+      3,
+      String(count),
+    ],
+    ['CHANGELOG.tr.md', said(tr, /48 araç artık (\d+)|48 araçtan (\d+) araca/g), 3, String(count)],
+    [
+      'tools.md',
+      said(page('docs/reference/tools.md'), /the whole list is ([\d,]+)\./g),
+      1,
+      written(whole, ','),
+    ],
+    [
+      'tools.tr.md',
+      said(page('docs/reference/tools.tr.md'), /listenin tümü ([\d.]+) karakterdir/g),
+      1,
+      written(whole, '.'),
+    ],
+    ['CHANGELOG.md', said(en, /client reads (?:is )?([\d,]+) characters/g), 2, written(whole, ',')],
+    ['CHANGELOG.tr.md', said(tr, /([\d.]+) karaktere? (?:okur|indi)/g), 2, written(whole, '.')],
+  ];
+  for (const [path, numbers, times, measured] of quoted) {
+    expect(
+      numbers.filter((n) => n !== measured),
+      path,
+    ).toEqual([]);
+    expect(path.startsWith('CHANGELOG') ? [0, times] : [times], path).toContain(numbers.length);
+  }
+  // each group's row: its tools, and the size of a list of them alone
+  for (const [path, mark] of [
+    ['docs/reference/tools.md', ','],
+    ['docs/reference/tools.tr.md', '.'],
+  ] as const) {
+    const rows = [...page(path).matchAll(/^\| `(\w+)` +\| (`[^|]+`) +\| ([\d.,]+) +\|$/gm)];
+    const want: Record<string, string[]> = {};
+    for (const set of TOOLSET_NAMES)
+      want[set] = [
+        TOOLSETS[set].map((t) => `\`${t}\``).join(', '),
+        written((await listed(ops, [set]))[1], mark),
+      ];
+    expect(Object.fromEntries(rows.map((r) => [r[1], [r[2], r[3]]])), path).toEqual(want);
+  }
 });
