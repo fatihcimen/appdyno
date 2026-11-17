@@ -49,7 +49,7 @@ Veri kaybettiren bir komut önce kendi terminalinde sorar; hangileri olduğu [Ar
 
 `test`, `--retries N` yanında `--fail-on-flaky` alır: bir dosyanın yalnızca yeniden denemede geçtiği bir çalıştırma 1 ile çıkar ve son satırında her birini adıyla söyler; bayrak olmadan 0 ile çıkar. Bkz. [Flow'lar](../guides/flows.tr.md#yeniden-denemeler).
 
-`test`, bir klasörün `_setup.flow` dosyasını altındaki her flow'dan önce, `_teardown.flow` dosyasını da sonra çalıştırır; adı `_` ile başlayan bir dosyayı test olarak çalıştırmaz. Bir flow'un `prepare` komutlarını sormadan çalıştırır, çünkü onu çalıştıran kişi projenin kendi komutlarını çalıştırmıştır, ve her birini önce yazdırır: bkz. [Veri hazırlamak](../guides/flows.tr.md#veri-hazırlamak).
+`test`, bir klasörün `_setup.flow` dosyasını altındaki her flow'dan önce, `_teardown.flow` dosyasını da sonra çalıştırır; kendisine bir klasör verildiğinde, onun altında adı `_` ile başlayan bir dosyayı test olarak çalıştırmaz. Bir flow'un `prepare` komutlarını sormadan çalıştırır, çünkü onu çalıştıran kişi projenin kendi komutlarını çalıştırmıştır, ve her birini önce yazdırır: bkz. [Veri hazırlamak](../guides/flows.tr.md#veri-hazırlamak).
 
 ## Sunucu seçenekleri
 

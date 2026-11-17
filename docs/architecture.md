@@ -140,6 +140,6 @@ Rules that matter are tests, so they cannot go stale in silence.
 | `packages/protocol/test/native.test.ts`       | The Kotlin, Swift and TypeScript sides agree on the protocol.                |
 | `packages/appdyno/test/docs.test.ts`          | Every link in the docs resolves, and these diagrams match the code.          |
 
-Device suites live in `device-tests`. They need a device you name, and CI runs none of them: see [the CI page](reference/ci.md).
+Device suites live in `device-tests`. They need a device you name, and CI runs none of them but the simulator smoke, on a simulator it makes for itself: see [the CI page](reference/ci.md).
 
 **How the diagrams stay true.** Each is hand-written SVG in `docs/images`, with no generator, in four files: `X.svg` light and `X.dark.svg` dark, and `X.tr.svg` and `X.tr.dark.svg` for the Turkish pages. A page shows the light one and the dark one in a `<picture>`, which picks by GitHub's theme. `docs.test.ts` fails when one drifts: a dark file must be its light one in the dark colours and nothing else, the gate's picture must say the gate's constants and a tool call's the settle's times, and any path a diagram names must exist. `boundaries.test.ts` checks the rows of the English package map against the import rules. A route or a layout that changes without a test seeing it is still yours to redraw.

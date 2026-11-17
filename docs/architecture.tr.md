@@ -140,6 +140,6 @@ Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece 
 | `packages/protocol/test/native.test.ts`       | Kotlin, Swift ve TypeScript taraflarının protokolde anlaşması.                               |
 | `packages/appdyno/test/docs.test.ts`          | Belgelerdeki her bağlantının bir yere varması ve bu diyagramların kodla uyuşması.            |
 
-Cihaz suite'leri `device-tests` içindedir. Adını verdiğiniz bir cihaz isterler ve CI hiçbirini çalıştırmaz: bkz. [CI sayfası](reference/ci.tr.md).
+Cihaz suite'leri `device-tests` içindedir. Adını verdiğiniz bir cihaz isterler ve CI, kendi oluşturduğu bir simulator'daki simulator smoke dışında hiçbirini çalıştırmaz: bkz. [CI sayfası](reference/ci.tr.md).
 
 **Diyagramlar nasıl doğru kalır.** Her biri `docs/images` içinde elle yazılmış SVG'dir, üreteci yoktur ve dört dosyadan oluşur: açık `X.svg` ile koyu `X.dark.svg`, Türkçe sayfalar için de `X.tr.svg` ile `X.tr.dark.svg`. Bir sayfa açık ve koyu olanı, GitHub'ın temasına göre seçen bir `<picture>` içinde gösterir. Biri koddan uzaklaştığında `docs.test.ts` başarısız olur: koyu bir dosya, açık olanın koyu renklerle aynısı olmalı ve başka hiçbir farkı olmamalıdır; kapının resmi kapının sabitlerini, bir araç çağrısınınki de durulmanın sürelerini söylemelidir; bir diyagramın andığı her yol da var olmalıdır. `boundaries.test.ts`, İngilizce paket haritasının satırlarını içe aktarma kurallarına karşı denetler. Bir testin görmediği biçimde değişen bir rotayı ya da yerleşimi yeniden çizmek yine size kalır.

@@ -26,12 +26,12 @@ Bir kapı, bir çalıştırmayı daha önce sakladığınızla karşılaştırı
 
 ```sh
 appdyno measure-performance launch --app A --mode cold --repeats 6  # üç kez, sonra:
-appdyno perf baseline --app A --last 3
+appdyno perf baseline --app A --scenario launch-cold --last 3
 appdyno measure-performance launch --app A --mode cold --repeats 6  # değişikliğinizden sonra
-appdyno perf compare --app A                                        # gerilemede 1 ile çıkar
+appdyno perf compare --app A --scenario launch-cold                 # gerilemede 1 ile çıkar
 ```
 
-Ajanınız üzerinden `baseline` ile `measure_performance launch` üç çalıştırmayı ölçer ve onları tek çağrıda baseline olarak saklar. Diğer her çalıştırmanın yanıtındaki `next` satırı, çalıştırmanın ne olarak saklandığını ve onu hangi çağrının baseline yapacağını söyler: tek bir çalıştırma baseline değildir.
+Ajanınız üzerinden `baseline` ile `measure_performance launch` üç çalıştırmayı ölçer ve onları tek çağrıda baseline olarak saklar. Diğer her launch ölçümünün yanıtındaki `next` satırı, çalıştırmanın ne olarak saklandığını ve onu hangi çağrının baseline yapacağını söyler: tek bir çalıştırma baseline değildir.
 
 Baseline `.appdyno/perf/baselines/` altına gider. Onu commit edin. Kendi sınırlarınız `.appdyno/perf/budgets.json` içine girer:
 
@@ -85,8 +85,8 @@ appdyno'nun servisi de token'ı da yoktur ve hiçbir şey göndermez. Bir dosya 
 
 ### Bir runner'dan ne beklenir
 
-- Yük altında görülen bir değişiklik `noisy` sayılır, job'ı başarısız kılar ve yanıt yeniden ölçmenizi söyler. Yük altındaki bir çalıştırma baseline olarak reddedilir.
-- GitHub'ın arm64 runner'larında 3 çekirdek vardır, bu da sınırı 2,4 yük yapar; bir build arkasında bundan fazlasını bırakır. Job'ın üç çalıştırma tamamlanana kadar ölçmesinin nedeni budur.
-- Yeni bir simulator başta kendi kendine meşguldür: iOS 27.2 ile bir M5 Pro'da yaklaşık 3 dakika ve 7 çekirdek. Bu yüzden job önce yükün düşmesini bekler, her build'den sonra da yeniden.
+- Size ait bir Mac'te yük altında görülen bir değişiklik `noisy` sayılır, job'ı başarısız kılar ve yanıt yeniden ölçmenizi söyler. Yük altındaki bir çalıştırma baseline olarak reddedilir.
+- Bir GitHub runner'ı sanal bir Mac'tir ve yük ortalaması onun ne kadar meşgul olduğunu söylemez (3 çekirdekli bir runner boştayken 115 ile 650 arası okudu), bu yüzden appdyno onu orada okumaz: sayıları `host-load-unread` der ve gürültüye kapının kendi testleri karar verir. Job, `perf baseline` çıkış koduyla üç çalıştırmanın tamamlandığını söyleyene kadar ölçer.
+- Yeni bir simulator başta kendi kendine meşguldür: iOS 27.2 ile bir M5 Pro'da yaklaşık 3 dakika ve 7 çekirdek. Bu yüzden size ait bir Mac'te job, base'in build'inden önce ve head'in build'inden sonra yükün düşmesini bekler; sanal bir Mac'te beklemez.
 - `macos-latest` bir arm64 runner'ıdır ve [bunlarda iç içe sanallaştırma yoktur](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). Bir Android emulator'ı bir Intel etiketi ya da size ait bir Mac ister.
 - Yeni bir simulator bir bağlantının uygulamayı açıp açamayacağını bir kez sorar ve bu, bir flow'u ilk `open_link`'inde durdurur. Ölçülen ilk çalıştırmadan önce bir kez yanıtlayın ya da ekrana düğmeleriyle ulaşın.

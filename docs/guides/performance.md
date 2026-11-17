@@ -26,12 +26,12 @@ A gate compares a run against what you kept before. It needs three runs to know 
 
 ```sh
 appdyno measure-performance launch --app A --mode cold --repeats 6  # three times, then:
-appdyno perf baseline --app A --last 3
+appdyno perf baseline --app A --scenario launch-cold --last 3
 appdyno measure-performance launch --app A --mode cold --repeats 6  # after your change
-appdyno perf compare --app A                                        # exit 1 on a regression
+appdyno perf compare --app A --scenario launch-cold                 # exit 1 on a regression
 ```
 
-Through your agent, `measure_performance launch` with `baseline` measures the three runs and keeps them as the baseline in one call. Every other run's answer has a `next` line that says what the run was kept as, and which call makes a baseline of it: one run alone is no baseline.
+Through your agent, `measure_performance launch` with `baseline` measures the three runs and keeps them as the baseline in one call. Every other launch's answer has a `next` line that says what the run was kept as, and which call makes a baseline of it: one run alone is no baseline.
 
 The baseline goes to `.appdyno/perf/baselines/`. Commit it. Limits of your own go in `.appdyno/perf/budgets.json`:
 
@@ -85,8 +85,8 @@ appdyno has no service and no token, and posts nothing. It writes a file, and yo
 
 ### What to expect of a runner
 
-- A change seen under load is `noisy`: it fails the job, and the answer tells you to measure again. A run under load is refused as a baseline.
-- GitHub's arm64 runners have 3 cores, which makes the limit a load of 2.4, and a build leaves more than that behind. That is why the job measures until three runs are in.
-- A new simulator is busy by itself at first: about 3 minutes and 7 cores on an M5 Pro with iOS 27.2. So the job waits for the load to fall first, and again after each build.
+- On a Mac of your own, a change seen under load is `noisy`: it fails the job, and the answer tells you to measure again. A run under load is refused as a baseline.
+- A GitHub runner is a virtual Mac, whose load average says nothing of how busy it is (a runner of 3 cores read 115 to 650 at rest), so appdyno does not read it there: its numbers say `host-load-unread`, and the gate's own tests judge the noise. The job measures until `perf baseline` says, by its exit code, that three runs are in.
+- A new simulator is busy by itself at first: about 3 minutes and 7 cores on an M5 Pro with iOS 27.2. So on a Mac of your own the job waits for the load to fall before the base's build and again after the head's; on a virtual Mac it does not wait.
 - `macos-latest` is an arm64 runner, and [those have no nested virtualization](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). An Android emulator needs an Intel label or a Mac of your own.
 - A new simulator asks once whether a link may open the app, and that stops a flow at its first `open_link`. Answer it once before the first measured run, or reach the screen by its buttons.

@@ -33,7 +33,7 @@ export const en = {
     title: 'Ask. Watch it drive.',
     sub: 'Pick a job. The agent makes the same calls on your simulator, emulator or phone.',
     jobs: 'Jobs to try',
-    phone: 'An iPhone simulator running the shop example',
+    phone: 'An example coffee shop app on an iPhone simulator',
     client: 'agent → appdyno',
     ready: 'ready',
     running: 'running',
@@ -158,7 +158,7 @@ export const en = {
       },
       {
         q: 'Which AI clients can use it?',
-        a: 'Any MCP client. One command, npx -y appdyno install, finds the clients on your Mac and adds appdyno to the ones you pick.',
+        a: 'Any MCP client that starts a local server, and one in a browser through a tunnel you run. One command, npx -y appdyno install, finds the clients on your Mac and adds appdyno to the ones you pick.',
       },
       {
         q: 'What do I need to run it?',

@@ -24,7 +24,7 @@ measuring step was postponed, as what never ran is no pass. It needs `mise` and 
 | where                                                          | what runs                                                                                                                                                                                                                                                 |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.github/workflows/ci.yml`, a push to `main` or a pull request | lint, types, unit tests, the agent's unit tests and build, the runner's core, and the simulator smoke: 21 cases of `ios`, `keys`, `views.simulator`, `flows-ci`. **No Android suite**, and no other suite of a simulator, so their rot is seen only below |
-| `scripts/ci.sh`, no option                                     | the same, on this Mac                                                                                                                                                                                                                                     |
+| `scripts/ci.sh`, no option                                     | the same, on this Mac, but the simulator smoke, which `node scripts/sim-smoke.mjs` runs                                                                                                                                                                   |
 | `--device <serial>`                                            | `android`, `smoke`, `mcp-stdio`, then `perf`                                                                                                                                                                                                              |
 | `--ios <simulator id>`                                         | `ios`, `mcp-stdio`, then `ios-perf`                                                                                                                                                                                                                       |
 | `--iphone <UDID>`                                              | `iphone`, `iphone-mcp`. Needs `APPDYNO_IPHONE_FIXTURE_APP` and refuses to start without it: with no fixture its measures would skip and the step read ok                                                                                                  |
@@ -66,7 +66,7 @@ passing runs in `.ci/history.jsonl`; slower by more than 20 % and 10 ms, or any 
 the run. Every run is appended to the history with its commit, its environment (host and device load,
 GPU mode) and its numbers; a failing run is kept but never becomes a baseline.
 
-**On a shared machine**: measuring steps (device-perf, latency) are skipped while `APPDYNO_BUSY_FILE` exists
+**On a shared machine**: measuring steps (device-perf, ios-perf, latency) are skipped while `APPDYNO_BUSY_FILE` exists
 and write `APPDYNO_LOCK_FILE` while they run. A device is never chosen by default: `--device` names it.
 
 ```sh

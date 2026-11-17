@@ -35,7 +35,7 @@ export const tr: Words = {
     title: 'Sorun. Kullanışını izleyin.',
     sub: 'Bir iş seçin. Ajan aynı çağrıları sizin simulator’ınızda, emulator’ınızda ya da telefonunuzda yapar.',
     jobs: 'Denenecek işler',
-    phone: 'Shop örneğini çalıştıran bir iPhone simulator’ı',
+    phone: 'Bir iPhone simulator’ında örnek bir kahve dükkânı uygulaması',
     client: 'ajan → appdyno',
     ready: 'hazır',
     running: 'çalışıyor',
@@ -160,7 +160,7 @@ export const tr: Words = {
       },
       {
         q: 'Hangi yapay zekâ istemcileri kullanabilir?',
-        a: 'Bütün MCP istemcileri. Tek bir komut, npx -y appdyno install, Mac’inizdeki istemcileri bulur ve appdyno’yu seçtiklerinize ekler.',
+        a: 'Yerel bir sunucu başlatan her MCP istemcisi; tarayıcıdaki bir istemci de sizin çalıştırdığınız bir tünelle. Tek bir komut, npx -y appdyno install, Mac’inizdeki istemcileri bulur ve appdyno’yu seçtiklerinize ekler.',
       },
       {
         q: 'Çalıştırmak için ne gerekir?',

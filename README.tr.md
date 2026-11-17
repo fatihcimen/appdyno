@@ -117,7 +117,7 @@ Her türün her cihazdaki durumu ve neyin nerede denendiği: [Push bildirimleri]
   <img src="docs/images/window-push.tr.webp" width="49.5%" alt="Bir simulator'ın kendi penceresi, koyu görünümüyle; Bildirim paneli açık: uygulamanın kimliği, Uyarı türü ve ne gönderdiği, doldurulmuş başlık, metin ve veri">
 </p>
 
-<p align="center"><sub>Bir cihazın kendi penceresi, açık ve koyu görünümüyle. Bildirim paneli, bir ajanın yaptığı gibi <code>push</code> ile gönderir; bu cihazın kabul ettiği türlerle.</sub></p>
+<p align="center"><sub>Bir cihazın kendi penceresi, açık ve koyu görünümüyle. Bildirim paneli, bir ajanın yaptığı gibi <code>send_push</code> ile gönderir; bu cihazın kabul ettiği türlerle.</sub></p>
 
 ### Veri kaybettiren işi kişi onaylar
 

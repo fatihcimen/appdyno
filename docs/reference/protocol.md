@@ -40,11 +40,11 @@ build, so an agent has no other versions to answer for.
 
 ## Deadlines and cancellation
 
-Every request carries `params._deadlineMs`; one that goes to the device's work without it ends the connection. The agent answers `TIMEOUT` when the work takes longer and
+Every request carries `params._deadlineMs`; one that goes to the device's work without it ends the connection to the iOS runner, and the Android agent answers it `INVALID_ARGUMENT`. The agent answers `TIMEOUT` when the work takes longer and
 tells the work to stop (long loops poll a cancel flag; a call blocked inside the framework still returns
 when the framework gives up). The host waits one second longer than the deadline, then fails the call
 itself and sends `cancel {id}`. Device work runs on one thread in arrival order; `hello`, `ping` and
-`cancel` are answered at once. A call that times out is followed by a quick one through the same lane, `app.foreground`, given 3 s: no answer at all means the agent is stuck, and it is restarted and the call's `TIMEOUT` says so; any answer, the agent's own `TIMEOUT` for a call that came too late to start among them, says the lane moved, and nothing is restarted. An iOS runner restarted as stuck twice in a row, with nothing answered between, is left running at the third, as a screen that held every new runner as it held the last made a loop of starts, and the `TIMEOUT` says it was left and why. A runner restarted as stuck is not asked to `shutdown` first, as that is a job of the stuck lane.
+`cancel` are answered at once. A call that times out is followed by a quick one through the same lane, `app.foreground`, given 3 s: no answer at all means the agent is stuck, and it is restarted and the call's `TIMEOUT` says so; any answer, the agent's own `TIMEOUT` for a call that came too late to start among them, says the lane moved, and nothing is restarted. An Android agent or an iOS runner restarted as stuck twice in a row, with nothing answered between, is left running at the third, as a screen that held every new runner as it held the last made a loop of starts, and the `TIMEOUT` says it was left and why. A runner restarted as stuck is not asked to `shutdown` first, as that is a job of the stuck lane.
 
 ## Methods
 
@@ -54,7 +54,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `ping`                            | –                                                                                                        | `uptimeMs`, `atMs` (the device's wall clock)                                          |
 | `tree.get`                        | `maxDepth` (128), `maxNodes` (5000), `pkg?` (iOS)                                                        | `Tree`                                                                                |
 | `act`                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`, `pidOf?`                                  | `settle?`, `animationWaitMs?` (iOS), `hash?`, `tree?`, `pid?`                         |
-| `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `submitted?`, `focusMs` |
+| `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, and `mode` (`setText`/`paste`/`keys`), `verified?`, `submitted?`, `focusMs` |
 | `text.keys` (iOS)                 | `text`, `into?`, `focusTimeoutMs` (6000)                                                                 | `focusMs`                                                                             |
 | `screenshot`                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                          |
 | `app.foreground`                  | –                                                                                                        | `pkg?`                                                                                |
@@ -64,9 +64,9 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `clipboard.set` / `clipboard.get` | `text` / –                                                                                               | – / `text?`                                                                           |
 | `animations.wait` (iOS)           | `x`, `y`                                                                                                 | `ms?`                                                                                 |
 | `orientation.set`                 | `rotation` 0–3 (frozen), `kept?`                                                                         | –                                                                                     |
-| `animations.set`                  | `off`                                                                                                    | –                                                                                     |
+| `animations.set` (Android)        | `off`                                                                                                    | –                                                                                     |
 | `locales` (Android)               | `set?`                                                                                                   | `tags`                                                                                |
-| `rest.wait`                       | –                                                                                                        | –                                                                                     |
+| `rest.wait` (Android)             | –                                                                                                        | –                                                                                     |
 | `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                                    |
 | `a11y.read` (Android)             | `maxNodes` (60)                                                                                          | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`)      |
 | `touch` (Android)                 | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  | –                                                                                     |

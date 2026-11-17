@@ -26,7 +26,7 @@ ekranı ve onun bir görüntüsünü. `stop` o klasöre, bu arada kaydedilen vid
 ve alınan ölçümlerle birlikte `index.html` yazar. Bir oturumun sonu da yazar. `write` onu herhangi bir anda yazar; `start` olmadan ise ekranın
 o anki halinin raporudur.
 
-Sayfa hiçbir şey yüklemez: betiği yoktur ve içerik politikası yalnızca kendi klasörüne izin verir. Listelenen gizli değerler ve
+Sayfa hiçbir şey yüklemez: betiği yoktur ve içerik politikası yalnızca bu Mac'teki dosyalardan resim ve videoya izin verir. Listelenen gizli değerler ve
 kimlik bilgisine benzeyen her şey bütün metinlerde gizlenir. Yazılan metin ve bir şeyi adlandırdığı bilinmeyen her argüman uzunluğuyla gösterilir. Bir öğenin gizli bir değer tuttuğu ya da
 parola alanı olduğu yerde görüntünün üstü boyanır; üstü boyanamıyorsa görüntü dışarıda bırakılır. Arkasında öğe olmadan çizilen metin ayırt edilemez ve bir videonun üstü boyanmaz.
 

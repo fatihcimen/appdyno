@@ -166,10 +166,10 @@ This is the first place to look if it fails with "spawn npx ENOENT" or a server 
 Or install it from one file, a desktop extension. Each release carries `appdyno-<version>.mcpb`, which holds the server, its agents and an icon, so no `npx` stands between the app and appdyno.
 
 1. Download it from the [latest release](https://github.com/fatihcimen/appdyno/releases/latest) and open it with the app, which shows an installation dialog.
-2. Fill in the form, or leave it empty. It has 3 fields: the devices it may drive, the apps it may touch and the links it may open. They are `--allow-devices`, `--allow-apps` and `--allow-urls` of [Server options](../reference/cli.md#server-options), and an empty field limits nothing.
+2. Fill in the form, or leave it empty. It has 5 fields: the devices it may drive, the apps it may touch, the links it may open, the folders it may write in and the groups of tools it lists. They are `--allow-devices`, `--allow-apps`, `--allow-urls`, `--allow-write` and `--toolsets` of [Server options](../reference/cli.md#server-options), and an empty field is the same as leaving its flag out.
 3. Check as above: appdyno is listed with its tools.
 
-The file is not signed. It needs Node 22 or newer, as every install does. Use the file or the entry above, not both, as each starts a server of its own.
+The file is not signed. It needs Node 22 or newer, as the npm package does. Use the file or the entry above, not both, as each starts a server of its own.
 
 The file brings no `appdyno` command and no entry to edit. It finds `adb` in `ANDROID_HOME`, then in Android Studio's SDK, `~/Library/Android/sdk`, then one that `appdyno tools install adb` downloaded, then on the `PATH`. Before a first iOS use, `npx -y appdyno ios build` builds the helpers for it too, when both are the same version: a build is kept by the sources it was made from, not by the copy that made it.
 

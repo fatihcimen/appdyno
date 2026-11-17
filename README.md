@@ -117,7 +117,7 @@ Until APNs is set up, a real iPhone takes no push, and the answer says so. FCM's
   <img src="docs/images/window-push.webp" width="49.5%" alt="A simulator's own window in its dark look, with its Push pane open: the app's id, the type Alert and what it sends, and a title, a body and data filled in">
 </p>
 
-<p align="center"><sub>A device's own window, light and dark. Its Push pane sends by <code>push</code>, as an agent does, with the types this device takes.</sub></p>
+<p align="center"><sub>A device's own window, light and dark. Its Push pane sends by <code>send_push</code>, as an agent does, with the types this device takes.</sub></p>
 
 ### A person approves what loses data
 
