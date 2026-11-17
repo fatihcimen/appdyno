@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { madeUp, toolCaller } from './helpers.js';
 import { IosSimulatorDevice } from './workspace.js';
 
@@ -120,8 +120,9 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
   const adb = (...words: string[]) =>
     execFileSync('adb', ['-s', ANDROID, ...words], { encoding: 'utf8' });
   // a person installs it, as CONTRIBUTING.md says: on a phone that asks before an install, or holds a copy signed by
-  // another Mac's key, an install here would need a tap or lose that copy's data, and a skip would hide that nothing ran
-  beforeAll(() => {
+  // another Mac's key, an install here would need a tap or lose that copy's data, and a skip would hide that nothing ran.
+  // Each case fails with it: a hook before all marks its cases skipped, and a run's summary showed no reason
+  beforeEach(() => {
     if (!adb('shell', `pm path ${PUSH_APP} 2>&1; true`).includes('package:'))
       throw new Error(
         `${PUSH_APP} is not installed on ${ANDROID}: build and install it first, ` +

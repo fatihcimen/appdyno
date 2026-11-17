@@ -159,9 +159,13 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
         } else await pause(50);
       }
       const at = Date.now();
+      // read without blocking: the watcher under test runs in this process, on these same seconds
       while (slept && !done) {
-        const awake = sh(`dumpsys power | grep -m1 'mWakefulness=' 2>/dev/null; true`);
-        after.push(`${Date.now() - at} ${awake} ${focus().replace(/.*mCurrentFocus=/, '')}`);
+        const now = await adb.exec(
+          serial,
+          `dumpsys power | grep -m1 'mWakefulness='; ${FOCUS_READ}; true`,
+        );
+        after.push(`${Date.now() - at} ${now.replace(/\s+/g, ' ').trim()}`);
         await pause(300);
       }
     })();
