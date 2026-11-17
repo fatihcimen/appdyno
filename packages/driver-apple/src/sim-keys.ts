@@ -38,6 +38,11 @@ const focused = (n: Node | undefined) => !!n && (n.f & F.focused) !== 0;
 const fieldOf = (t: Tree | undefined, at?: Point) =>
   t?.nodes.find((n) => editable(n) && (at ? inside(n, at) : focused(n)));
 
+/** One field wherever it stands, by what it is and not by its place or what it holds. */
+const sameField = (a: Node, b: Node) => a.c === b.c && a.id === b.id && a.h === b.h && a.d === b.d;
+
+type Find = (t: Tree | undefined) => Node | undefined;
+
 /** Between keys: with none, the fixture's field that formats what is typed lost one of ten, once in three. */
 const KEY_GAP_MS = 20;
 const SLOW_KEY_GAP_MS = 70;
@@ -69,17 +74,12 @@ async function clear(k: Keyboard) {
  * Whether the field holds the text once its keys are handled, within the echo wait. `givesUp`: one whose text has held
  * still for half a second will not. Undefined: the field is gone.
  */
-async function echoed(
-  k: Keyboard,
-  at: Point | undefined,
-  holds: (s: string) => boolean,
-  givesUp: boolean,
-) {
+async function echoed(k: Keyboard, find: Find, holds: (s: string) => boolean, givesUp: boolean) {
   const end = Date.now() + ECHO_MS;
   let last: string | undefined;
   let still = Date.now();
   for (;;) {
-    const field = fieldOf(await k.read(), at);
+    const field = find(await k.read());
     if (!field) return undefined;
     const now = field.t ?? '';
     if (holds(now)) return true;
@@ -107,6 +107,11 @@ export async function typeByKeys(
   let t = await k.read();
   let field = fieldOf(t, at);
   if (!field || (field.f & F.password) !== 0) return undefined;
+  const touched = field;
+  // at the point while it stands there, else by its focus: the keyboard that comes up may lift a form and bring another
+  // field under the point, as a password field on a phone on its side, which the keys then went into
+  const find: Find = (now) =>
+    [fieldOf(now, at), fieldOf(now)].find((n) => n && sameField(n, touched));
   if (!focused(field)) {
     if (!at || !(await k.send({ kind: 'tap', ...at }))) return undefined;
     // the keys wait for that field to have the focus, and its keyboard to be up
@@ -114,7 +119,7 @@ export async function typeByKeys(
       if (Date.now() - start > FOCUS_MS) return undefined;
       await sleep(50);
       t = await k.read();
-      field = fieldOf(t, at);
+      field = find(t);
     }
   }
   const focusMs = Date.now() - start;
@@ -125,17 +130,17 @@ export async function typeByKeys(
   const known = replace || !before;
   if (replace) await clear(k);
   await press(k, text, KEY_GAP_MS);
-  let verified = await echoed(k, at, holds, known);
+  let verified = await echoed(k, find, holds, known);
   if (verified === false && known) {
     await clear(k);
     await press(k, text, SLOW_KEY_GAP_MS);
-    verified = await echoed(k, at, holds, false);
+    verified = await echoed(k, find, holds, false);
     if (verified === false) {
       await clear(k);
       return 'retype' as const;
     }
   }
-  if (verified === false && !known && (await takeBack(k, at, before))) return 'append' as const;
+  if (verified === false && !known && (await takeBack(k, find, before))) return 'append' as const;
   // other text than asked for is not submitted, which a search or a form would act on
   const submitted = opts.submit && verified !== false;
   throwIfCancelled('the text');
@@ -149,15 +154,15 @@ export async function typeByKeys(
 }
 
 /** What keys added after the text a field held, deleted: true once it holds that text alone again. */
-async function takeBack(k: Keyboard, at: Point | undefined, before: string) {
-  let now = fieldOf(await k.read(), at)?.t ?? '';
+async function takeBack(k: Keyboard, find: Find, before: string) {
+  let now = find(await k.read())?.t ?? '';
   if (now.length - before.length > TAKE_BACK_MAX) return false;
   // one at a time, each seen gone: a field that formats may take a separator along with a character
   for (let left = now.length - before.length; left > 0 && now.startsWith(before); left--) {
     throwIfCancelled('the text');
     const was = now;
     await k.send({ kind: 'key', key: 'delete' });
-    if (!(await echoed(k, at, (s) => ((now = s), s !== was), false))) return false;
+    if (!(await echoed(k, find, (s) => ((now = s), s !== was), false))) return false;
     if (now === before) return true;
   }
   return now === before;

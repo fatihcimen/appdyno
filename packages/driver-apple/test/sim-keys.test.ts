@@ -93,6 +93,53 @@ describe("typing by a simulator's keys", () => {
     expect(f.sent[1]).toEqual({ kind: 'key', key: 'A', modifiers: ['shift'] });
   });
 
+  it('types into the field it touched where the keyboard lifts the form and brings another under the point', async () => {
+    // a phone on its side: "Your name" at the point, then the password field there once the keyboard is up
+    let up = false;
+    let name = '';
+    const at = (y: number) => box(0, y, 800, y + 40);
+    const tree = (): Tree => ({
+      windows: [],
+      nodes: [
+        { p: -1, w: 0, c: 'Application', b: box(0, 0, 800, 400), f: F.visible },
+        {
+          ...{
+            p: 0,
+            w: 0,
+            c: 'TextField',
+            id: 'name_input',
+            h: 'Your name',
+            b: up ? at(-6) : at(100),
+          },
+          ...(name && { t: name }),
+          f: F.visible | F.editable | (up ? F.focused : 0),
+        },
+        {
+          ...{ p: 0, w: 0, c: 'SecureTextField', id: 'password_input', h: 'Password' },
+          ...{ b: up ? at(100) : at(200), f: F.visible | F.editable | F.password },
+        },
+        ...(up ? [{ p: 0, w: 0, c: 'Keyboard', b: box(0, 250, 800, 400), f: F.visible }] : []),
+      ],
+      truncated: false,
+      elapsedMs: 1,
+      hash: 'h',
+    });
+    const sent: ActParams[] = [];
+    const keyboard = {
+      read: () => Promise.resolve(tree()),
+      send: (a: ActParams) => {
+        sent.push(a);
+        if (a.kind === 'tap') up = true;
+        else if (a.kind === 'key') name += a.key;
+        return Promise.resolve(true);
+      },
+      keyboardOpen: (t: Tree) => t.nodes.some((n) => n.c === 'Keyboard'),
+    };
+    expect(await typeByKeys('ada', { at: AT }, keyboard)).toMatchObject({ verified: true });
+    expect(name).toBe('ada');
+    expect(sent.filter((a) => a.kind === 'tap')).toEqual([{ kind: 'tap', ...AT }]);
+  });
+
   it(
     'types again, slower, what a field that formats lost, once it knows all it must hold',
     fakeTimed(async () => {
