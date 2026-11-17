@@ -74,7 +74,8 @@ static NSString *markOf(NSDictionary *rule) {
     _open.bordered = NO;
     _open.transparent = YES;
     _open.accessibilityLabel = [NSString stringWithFormat:@"%@, %@", says.stringValue, took.stringValue];
-    for (NSView *part in @[_open, mark, lines, _on]) {
+    // the open button lies over the words, so a click on them is its click whichever way a label answers hit testing
+    for (NSView *part in @[mark, lines, _open, _on]) {
       part.translatesAutoresizingMaskIntoConstraints = NO;
       [self addSubview:part];
     }
