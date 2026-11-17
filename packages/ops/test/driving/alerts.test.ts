@@ -1,4 +1,7 @@
-import { type ActParams, type Tree } from '@appdyno/protocol';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DeviceError, type ActParams, type Tree } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect, act } from './shared.js';
@@ -102,6 +105,27 @@ describe('system alerts', () => {
       expect((await call('open_link', { url: 'app://screen', read })).done).toBe(
         `opened app://screen, answering the system's "Open in …?" for appdyno fixture on the way`,
       );
+  });
+
+  it('passes a flow’s alert step only where no alert is open: a button not on it, or no screen read, fails it', async () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-alert-')), 'a.flow');
+    const run = async (d: FakeDevice, body: string) => {
+      writeFileSync(file, `app dev.app\n${body}\n`);
+      return (await connect(d)).call('run_flow', { action: 'run', file });
+    };
+    expect((await run(new WithDialog(), 'alert allow')).error).toBe(false);
+    const d = new WithDialog();
+    d.add = dialog('android', 3);
+    const wrong = await run(d, 'alert "Reboot"');
+    expect(wrong.error).toBe(true);
+    expect(wrong.text).toContain('no button "Reboot" on the alert');
+    const unread = new WithDialog();
+    unread.current = () => {
+      throw new DeviceError('NOT_FOUND', 'no window to read');
+    };
+    const blind = await run(unread, 'alert allow');
+    expect(blind.error).toBe(true);
+    expect(blind.text).toContain('no window to read');
   });
 
   it('answers a localized permission prompt by allow, and leaves the app’s dialog alone', async () => {

@@ -266,6 +266,18 @@ describe('android accessibility checks', () => {
       });
       expect(types(await d.audit({ types: ['duplicateLabel'] }))).toEqual(['duplicateLabel']);
     });
+
+    it('refuses contrast on a picture it cannot decode, and checks the rest with none', async () => {
+      const d = new AndroidDevice('emulator-5640', {} as Adb);
+      Object.assign(d, {
+        open: () => Promise.resolve({ screen: { density: 420 } }),
+        call: () => Promise.resolve({ result: { tree: t, clips: [], traversal: [] } }),
+        screenshot: () => Promise.resolve({ data: Buffer.from('not a png') }),
+      });
+      await expect(d.audit()).rejects.toThrow('so contrast could not be checked');
+      await expect(d.audit({ types: ['imageContrast'] })).rejects.toThrow('could not be decoded');
+      expect(types(await d.audit({ types: ['duplicateLabel'] }))).toEqual(['duplicateLabel']);
+    });
   });
 
   it('decodes every PNG row filter it may meet and refuses what it cannot', () => {

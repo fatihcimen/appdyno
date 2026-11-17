@@ -26,6 +26,7 @@ import type { Steps } from '../steps.js';
 import { keyboardFirst } from '../keyboard.js';
 import { refused, ToolError, type Op } from '../tool.js';
 import { WHOLE_STEP } from '../tool-kinds.js';
+import { NO_ALERT } from '../act.js';
 import { dropRules, heldNow } from '../network-capture.js';
 import { requestsFrom } from '../network-check.js';
 import { failedSince } from '../network-watch.js';
@@ -227,8 +228,10 @@ export function flowRunner(
     const op = must(ops()[name], `the op ${name}`);
     const answered = await op.handler(opInput(name, args, st.action)).catch(async (e: unknown) => {
       if (!(e instanceof ToolError)) throw e;
-      // a prompt comes once: a run after the one that answered it finds none, and that is no failure of the run
-      if (st.action === 'alert' && e.code === 'NOT_FOUND') return undefined;
+      // a prompt comes once: a run after the one that answered it finds none, and that is no failure of the run; a
+      // button not on it, or a screen not read, is
+      if (st.action === 'alert' && e.code === 'NOT_FOUND' && e.message.startsWith(NO_ALERT))
+        return undefined;
       // a wait that ran out fails as a check does, and a flow says it as the time it is
       if (st.action !== 'wait_for' || e.code !== 'CHECK_FAILED') throw e;
       const screen = await s.read();

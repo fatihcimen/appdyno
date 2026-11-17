@@ -115,6 +115,24 @@ describe('a screen with no words in its tree', () => {
     expect(r.error).toBe(false);
     expect(r.text).toContain('none from the picture: no compiler');
   });
+
+  it('passes no check that a text is not there when the picture that holds its words cannot be read', async () => {
+    const { call } = await connect('blind', () => Promise.reject(new Error('no compiler')));
+    const gone = { selector: { text: 'Game Over' }, check: 'absent' };
+    for (const r of [
+      await call('check_element', gone),
+      await call('check_element', { ...gone, check: 'exists', expect: false }),
+      await call('check_element', { ...gone, timeoutMs: 300 }),
+    ]) {
+      expect(r.error).toBe(true);
+      expect(r.text).toContain(
+        'cannot tell that text="Game Over" is not on the screen: its tree has no words, and its picture could not be read: no compiler',
+      );
+    }
+    // read, the same check passes
+    const { call: seen } = await connect('blind', () => Promise.resolve([word('Start Game')]));
+    expect((await seen('check_element', gone)).error).toBe(false);
+  });
 });
 
 describe('a screen with words in its tree', () => {

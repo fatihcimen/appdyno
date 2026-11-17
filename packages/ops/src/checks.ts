@@ -118,6 +118,18 @@ export function checksFor({
     return { screen, done: `check passed: ${said}` };
   };
 
+  /**
+   * "Not on the screen", said of a screen whose words come from its picture where that read failed: not known, and
+   * no pass.
+   */
+  const unread = (s: Session, what: string) => {
+    if (s.pictureFailed)
+      throw new ToolError(
+        `cannot tell that ${what} is not on the screen: its tree has no words, and its picture could not be read: ${s.pictureFailed}`,
+        'CHECK_FAILED',
+      );
+  };
+
   /** A check on a fresh read, given `timeoutMs` to come true; a refusal when it does not. */
   const checkNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
     if (a.check === 'moves') return movesNow(s, a);
@@ -131,6 +143,8 @@ export function checksFor({
     if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
     const v = judge(screen, a);
     if (!v.pass) throw new ToolError(v.why, 'CHECK_FAILED');
+    if ((a.check === 'absent') === a.expect && (a.check === 'absent' || a.check === 'exists'))
+      unread(s, a.ref ?? showSelector(selectorOf(a.selector) ?? {}));
     return { screen, done: `check passed: ${v.why}` };
   };
 
@@ -153,6 +167,7 @@ export function checksFor({
     const { screen, met } = await s.until((x) => !!found(x) !== a.gone, a.timeoutMs);
     if (!screen)
       throw new ToolError('the screen could not be read: nothing to look in', 'NOT_FOUND');
+    if (a.gone && met) unread(s, a.ref ?? showSelector(must(sel, 'a selector')));
     return { screen, met, found: found(screen) };
   };
 

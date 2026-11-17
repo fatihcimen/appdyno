@@ -270,7 +270,15 @@ export class AndroidDevice extends RpcDevice implements Device {
     const hello = await this.open();
     const { tree, clips, traversal } = (await this.call('a11y.read', {}, TIMEOUTS.read)).result;
     const shot = await this.screenshot({ format: 'png' });
-    const r = auditAndroid(tree, decodePng(shot.data), {
+    const img = decodePng(shot.data);
+    // contrast is read from the picture: none to read is no contrast found
+    if (!img && (!opts.types || opts.types.some((t) => t === 'contrast' || t === 'imageContrast')))
+      throw new DeviceError(
+        'INTERNAL',
+        'the screenshot could not be decoded, so contrast could not be checked',
+        'audit again, or name the types without contrast and imageContrast',
+      );
+    const r = auditAndroid(tree, img, {
       scale: hello.screen.density / 160,
       clips,
       ...(opts.types && { types: opts.types }),

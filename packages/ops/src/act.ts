@@ -213,6 +213,9 @@ function assertOp(ctx: ServerContext, { summary, clean }: Answers, { checkNow }:
   });
 }
 
+/** How an answer asked of no alert begins: the one refusal a flow's `alert` step passes, as a prompt comes once. */
+export const NO_ALERT = 'no system alert is open';
+
 function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
   return defineOp({
     name: 'answer_alert',
@@ -229,8 +232,8 @@ function alertOp(ctx: ServerContext, { act, summary, clean }: Answers) {
       const a = facts.systemAlert(screen.tree, screen.elements);
       if (!a) {
         const t = answer
-          ? "no system alert is open, so no button was touched (the app's own dialogs are not touched)"
-          : "no system alert is open (the app's own dialogs are not touched)";
+          ? `${NO_ALERT}, so no button was touched (the app's own dialogs are not touched)`
+          : `${NO_ALERT} (the app's own dialogs are not touched)`;
         // an answer asked for and not given; a question has its answer here
         if (answer) throw new ToolError(t, 'NOT_FOUND', undefined, false);
         return reply(t, summary(t));
