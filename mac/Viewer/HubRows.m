@@ -48,6 +48,8 @@ MVRow *MVDeviceRow(NSDictionary *device) {
   if (named) [about addObject:phone ? model : own];
   if ([device[@"detail"] length] && ![device[@"detail"] isEqual:model]) [about addObject:device[@"detail"]];
   row.detail = [about componentsJoinedByString:@" · "];
+  // whole where its Start leaves the line too little room
+  row.help = row.detail.length ? [NSString stringWithFormat:@"%@\n%@", row.title, row.detail] : row.title;
   row.symbol = MVDeviceSymbol(device);
   row.tile = MVHueTile(0);
   row.dot = stateColor(device);
@@ -142,23 +144,11 @@ static MVRow *sayRow(NSString *kind, NSString *title, NSString *detail, NSString
   return kinds;
 }
 
-/// What needs a person first, then phones, then a section for each kind of virtual device, then the places.
+/// The places first, which a long list of devices would push out of sight; then what needs a person, phones, and a
+/// section for each kind of virtual device.
 - (void)listDevices {
   NSString *words = _search.stringValue;
-  NSMutableArray<MVRow *> *phones = [NSMutableArray array], *needs = [NSMutableArray array];
-  for (NSDictionary *device in _devices) {
-    if (!matches(device, words)) continue;
-    if (device[@"need"]) [needs addObject:MVDeviceRow(device)];
-    else if ([device[@"kind"] isEqual:@"phone"]) [phones addObject:MVDeviceRow(device)];
-  }
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
-  BOOL gone = _left && !hereAnotherWay(_left, _devices);
-  if (needs.count || gone) [rows addObject:[MVRow headerNamed:MVWord(@"Needs You")]];
-  if (gone) [rows addObject:goneRow(_left)];
-  [rows addObjectsFromArray:needs];
-  if (phones.count) [rows addObject:[MVRow headerNamed:MVWord(@"Phones")]];
-  [rows addObjectsFromArray:phones];
-  for (NSDictionary *kind in [self kindsListed]) [self listKind:kind[@"kind"] about:kind into:rows words:words];
   [_places enumerateObjectsUsingBlock:^(MVPlace *place, NSUInteger at, __unused BOOL *stop) {
     MVRow *row = [MVRow new];
     row.title = place.title;
@@ -168,6 +158,19 @@ static MVRow *sayRow(NSString *kind, NSString *title, NSString *detail, NSString
     row.key = [NSString stringWithFormat:@"%@%lu", MVPlaceKey, (unsigned long)at];
     [rows addObject:row];
   }];
+  NSMutableArray<MVRow *> *phones = [NSMutableArray array], *needs = [NSMutableArray array];
+  for (NSDictionary *device in _devices) {
+    if (!matches(device, words)) continue;
+    if (device[@"need"]) [needs addObject:MVDeviceRow(device)];
+    else if ([device[@"kind"] isEqual:@"phone"]) [phones addObject:MVDeviceRow(device)];
+  }
+  BOOL gone = _left && !hereAnotherWay(_left, _devices);
+  if (needs.count || gone) [rows addObject:[MVRow headerNamed:MVWord(@"Needs You")]];
+  if (gone) [rows addObject:goneRow(_left)];
+  [rows addObjectsFromArray:needs];
+  if (phones.count) [rows addObject:[MVRow headerNamed:MVWord(@"Phones")]];
+  [rows addObjectsFromArray:phones];
+  for (NSDictionary *kind in [self kindsListed]) [self listKind:kind[@"kind"] about:kind into:rows words:words];
   _list.rows = rows;
   [_list selectKey:_placeKey ?: _shown[@"id"]];
 }

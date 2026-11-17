@@ -123,7 +123,8 @@ NSString *MVSystemName(NSDictionary *row) {
   _create.enabled = !waiting && filled && !_refused;
   _model.enabled = _os.enabled = _name.enabled = !waiting && filled;
   _again.hidden = waiting || filled;
-  // as tall as its rows: room left over would stand between two of them
+  // as tall as its rows, once a line hidden has left: room left over stood under the buttons
+  [_stack layoutSubtreeIfNeeded];
   [_sheet setContentSize:_stack.fittingSize];
 }
 

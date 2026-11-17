@@ -42,6 +42,7 @@ static void checkSections(void) {
               @"kinds": @[@{@"kind": @"emulator"}, @{@"kind": @"simulator"}]}];
   NSArray<NSString *> *titles = hub.rowTitles;
   NSUInteger simulators = [titles indexOfObject:MVWord(@"Simulators")], emulators = [titles indexOfObject:MVWord(@"Emulators")];
+  MVCheck(@"devices: the places stand over them, where a long list pushes none out of sight", [titles indexOfObject:MVWord(@"Help")] < simulators, [titles componentsJoinedByString:@"|"]);
   MVCheck(@"devices: a section for each kind, simulators first, the shut-down ones listed and not folded away", simulators != NSNotFound && emulators > simulators && [titles containsObject:@"off2"], [titles componentsJoinedByString:@"|"]);
   MVCheck(@"devices: what runs comes first in its section", [titles indexOfObject:@"up"] < [titles indexOfObject:@"off0"], [titles componentsJoinedByString:@"|"]);
   MVCheck(@"devices: a shut-down one has its Start, a running one none", [rowTitled(hub, @"off0").button isEqual:@"Start"] && !rowTitled(hub, @"up").button, nil);
@@ -130,6 +131,8 @@ static void checkSheet(void) {
   MVPump(0.1);
   NSPopUpButton *system = (NSPopUpButton *)viewNamed(sheet, @"system"), *model = (NSPopUpButton *)viewNamed(sheet, @"model");
   // two runtimes of one name, as iOS 27.2 and the iOS 27.2 of one model: each a row, and the newest chosen
+  NSRect pressed = [create convertRect:create.bounds toView:nil];
+  MVCheck(@"sheet: filled, it is as tall as its rows, its buttons as far from its foot as its title from its head", NSMinY(pressed) < 26, [NSString stringWithFormat:@"%.0f under Create", NSMinY(pressed)]);
   MVCheck(@"sheet: a system of a name another has is a row of its own, and the last is chosen", system.numberOfItems == 3 && system.indexOfSelectedItem == 2 && create.enabled, [NSString stringWithFormat:@"%ld rows, %ld chosen", (long)system.numberOfItems, (long)system.indexOfSelectedItem]);
   [model selectItemAtIndex:1];
   [system selectItemAtIndex:1];

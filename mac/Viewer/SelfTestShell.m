@@ -247,7 +247,7 @@ static void checkPlaces(void) {
   place.view = room;
   [hub addPlace:place];
   MVCheck(@"hub: the keyboard starts on the list, with no caret blinking in Search", [hub.room.window.initialFirstResponder isKindOfClass:NSTableView.class], nil);
-  MVCheck(@"sidebar: a place has its row, under the devices", [hub.rowTitles containsObject:@"Help"], [hub.rowTitles componentsJoinedByString:@"|"]);
+  MVCheck(@"sidebar: a place has its row, over the devices, where no long list of them pushes it out of sight", [hub.rowTitles.firstObject isEqual:@"Help"], [hub.rowTitles componentsJoinedByString:@"|"]);
   [hub choosePlace:place];
   MVCheck(@"sidebar: a place takes the room", room.superview == hub.room, nil);
   [hub leavePlaceFor:@{}];
