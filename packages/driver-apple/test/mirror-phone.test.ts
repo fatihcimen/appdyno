@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path';
 import { assert, describe, expect, it, vi } from 'vitest';
 import { must, NeedError, stateDir, type DeviceState, type InputEvent } from '@appdyno/core';
-import { imageSize } from '@appdyno/core';
+import { encodePng, imageSize, noting } from '@appdyno/core';
 import { loadPhoneStream, PhoneMirror, type PhoneRunner } from '../src/mirror-phone.js';
 import type { PhoneStreamEvent, PhoneStreamModule } from '../src/phone-stream-port.js';
 
@@ -24,7 +24,7 @@ function fake(
     check: () => Promise.resolve(check),
     onWifi: (_udid, asked = false) => Promise.resolve(asked),
     portOnWifi: () => Promise.resolve({ socket: {} as never }),
-    screenshot: vi.fn(() => {
+    screenshot: vi.fn((_udid: string, _format: 'png' | 'jpeg') => {
       const png = Buffer.alloc(24);
       png[0] = 0x89;
       png.writeUInt32BE(100, 16);
@@ -409,6 +409,42 @@ describe('a screenshot by the phone service', () => {
     await expect(
       new PhoneMirror(UDID, () => Promise.resolve(undefined)).screenshot('png'),
     ).resolves.toBeUndefined();
+  });
+
+  it('is a PNG made JPEG here where the phone takes PNG alone, which it is asked for from then on', async () => {
+    const { mirror, module } = fake();
+    const png = encodePng({ width: 4, height: 2, channels: 3, data: new Uint8Array(24) });
+    // iOS 27.2's service: "Cannot initialize ScreenshotImageFormat from invalid String value jpeg"
+    vi.mocked(module.screenshot).mockImplementation((_udid, format) =>
+      format === 'png' ? Promise.resolve(png) : Promise.reject(new Error('invalid String value')),
+    );
+    const { value, notes } = await noting(() => mirror.screenshot('jpeg'));
+    expect([value?.meta.format, value?.data[0], value?.data[1]]).toEqual(['jpeg', 0xff, 0xd8]);
+    expect(value?.meta).toMatchObject({ w: 4, h: 2 });
+    expect(notes).toEqual(["taken by the phone's capture service, its PNG made JPEG here"]);
+    await mirror.screenshot('jpeg');
+    expect(vi.mocked(module.screenshot).mock.calls.map((c) => c[1])).toEqual([
+      'jpeg',
+      'png',
+      'png',
+    ]);
+  });
+
+  it('takes one at a time, as the phone refuses a second while one runs', async () => {
+    const { mirror, module } = fake();
+    let running = 0;
+    let most = 0;
+    vi.mocked(module.screenshot).mockImplementation(async () => {
+      most = Math.max(most, ++running);
+      await new Promise((r) => setTimeout(r, 5));
+      running--;
+      const png = Buffer.alloc(24);
+      png[0] = 0x89;
+      return png;
+    });
+    const shots = await Promise.all([mirror.screenshot('png'), mirror.screenshot('png')]);
+    expect(shots.every((s) => s?.meta.format === 'png')).toBe(true);
+    expect(most).toBe(1);
   });
 });
 

@@ -16,6 +16,7 @@ import {
   type SystemSwipe,
   type TreeOptions,
   must,
+  noteInAnswer,
 } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
@@ -212,7 +213,9 @@ export class IosPhoneDevice extends IosDevice {
 
   /** By the phone's own service where it has it, which needs no runner but has one size; else as any device. */
   override async screenshot(opts: Parameters<IosDevice['screenshot']>[0] = {}) {
-    const own = opts.maxPx ? undefined : await this.mirror.screenshot(opts.format ?? 'jpeg');
+    if (opts.maxPx) return super.screenshot(opts);
+    const own = await this.mirror.screenshot(opts.format ?? 'jpeg');
+    if (!own) noteInAnswer("taken by the device agent: the phone's capture service gave none");
     return own ?? super.screenshot(opts);
   }
   readonly apps: PhoneApps;

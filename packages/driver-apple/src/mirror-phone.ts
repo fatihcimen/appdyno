@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process';
-import { mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import {
   imageSize,
   NeedError,
+  noteInAnswer,
   pause,
   safeName,
   startOf,
@@ -62,6 +64,19 @@ async function makeFrames(file: string) {
     if (pid && startOf(Number(pid)) === '') rmSync(join(dir, name), { force: true });
   }
   await run('/usr/bin/mkfifo', ['-m', '600', file]);
+}
+
+/** A PNG as a JPEG, by this Mac's own image tool: the capture service of iOS 27.2 gives PNG alone. */
+async function jpegOf(png: Buffer): Promise<Buffer> {
+  const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
+  const [from, to] = [join(dir, 'shot.png'), join(dir, 'shot.jpg')];
+  try {
+    writeFileSync(from, png);
+    await run('sips', ['-s', 'format', 'jpeg', from, '--out', to], { timeout: 10_000 });
+    return readFileSync(to);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** A stream that ended for this need is not tried again for this long, however often it is checked. */
@@ -145,14 +160,40 @@ export class PhoneMirror implements Mirror {
     return this.module;
   }
 
-  /** The screen with no runner; undefined with no stream in this build, or a phone that does not offer it. */
-  async screenshot(format: 'png' | 'jpeg') {
+  /**
+   * The screen with no runner; undefined with no stream in this build, or a phone that does not offer it. One at a time,
+   * as the phone refuses a capture while another runs. A phone whose service refused a JPEG and gave a PNG (iOS 27.2's
+   * takes `png` alone) is asked for PNG from then on, made JPEG here where one is asked for. The answer says which.
+   */
+  screenshot(format: 'png' | 'jpeg'): ReturnType<PhoneMirror['capture']> {
+    const shot = this.shooting.then(() => this.capture(format));
+    this.shooting = shot.catch(() => undefined);
+    return shot;
+  }
+
+  private async capture(format: 'png' | 'jpeg') {
     const stream = await this.stream();
     if (!stream) return undefined;
-    const data = await stream.screenshot(this.udid, format).catch(() => undefined);
+    const ask = (f: 'png' | 'jpeg') => stream.screenshot(this.udid, f).catch(() => undefined);
+    let data = format === 'jpeg' && this.pngOnly ? undefined : await ask(format);
+    let converted = false;
+    if (!data && format === 'jpeg') {
+      const png = await ask('png');
+      this.pngOnly ||= !!png;
+      data = png && (await jpegOf(png).catch(() => undefined));
+      converted = !!data;
+    }
     const size = data && imageSize(data);
-    return size && { meta: { ...size, format, bytes: data.length }, data };
+    if (!data || !size) return undefined;
+    noteInAnswer(
+      `taken by the phone's capture service${converted ? ', its PNG made JPEG here' : ''}`,
+    );
+    return { meta: { ...size, format, bytes: data.length }, data };
   }
+
+  /** Its capture service gave a PNG where a JPEG was refused. */
+  private pngOnly = false;
+  private shooting: Promise<unknown> = Promise.resolve();
 
   async check(options?: MirrorOptions): Promise<MirrorCheck> {
     const stream = await this.stream();
