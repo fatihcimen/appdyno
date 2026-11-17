@@ -414,6 +414,16 @@ try {
     if (!r.stdout.includes('Check for Updates Automatically')) throw new Error(r.stdout);
     return r.stdout.trim().split('\n').join(' | ');
   });
+  await step('the menu says what a look for a release found in plain words', () => {
+    const r = say(
+      menu,
+      '--said',
+      'installed: 1.2.0, installed by the app, at /A\nlatest: 1.3.1\nwould download https://x/A.dmg',
+    );
+    if (!r.stdout.startsWith('Appdyno 1.3.1 is available\n') || !r.stdout.trim().endsWith('1.3.1'))
+      throw new Error(r.stdout);
+    return r.stdout.trim().split('\n').join(' | ');
+  });
   const windows = windowLister();
   const windowPids = () => new Set(windows().map((w) => w.split(' ')[0]));
   /** @param {string} pid */

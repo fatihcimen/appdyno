@@ -406,3 +406,19 @@ describe('Doctor', () => {
     ]);
   });
 });
+
+describe('a look for a release', () => {
+  it('gives what update --check said, whole, for the window to say; nothing where it cannot look', async () => {
+    const p = hubServices({
+      home,
+      env: {},
+      mcpCommand: [process.execPath, fake, 'http'],
+      policy: policyOf({}, {}),
+      doctor: () => Promise.resolve([]),
+      lookForUpdate: () => Promise.resolve('installed: 1.3.0\nlatest: 1.3.1'),
+    });
+    services.push(p);
+    expect(await act(p, 'update')).toEqual({ update: 'installed: 1.3.0\nlatest: 1.3.1' });
+    expect(await act(place(), 'update')).toEqual({ update: '' });
+  });
+});

@@ -50,6 +50,8 @@ void MVCheckPlaces(void);
 void MVCheckConnect(void);
 /// The hub's sections of devices, their Start, and the sheet that makes one.
 void MVCheckHubDevices(void);
+/// About, Check for Updates and Settings, and what a look for a release says.
+void MVCheckUpdates(void);
 void MVCheckLinks(void);
 void MVCheckPush(void);
 void MVCheckDevice(void);

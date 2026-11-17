@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -194,11 +195,11 @@ describe('appdyno update, in the app', () => {
     oldStays();
   });
 
-  it('says with --check the words the menu bar app offers a release by', async () => {
+  it('says with --check the words the app and its window offer a release by', async () => {
     const { going } = updating(getting(released()), {}, true);
     await expect(going).resolves.toBe(0);
-    const menu = readFileSync(join(import.meta.dirname, '../../../mac/App/Menu.m'), 'utf8');
-    for (const words of ['would download', 'latest: ']) {
+    const menu = readFileSync(join(import.meta.dirname, '../../../mac/Viewer/Updates.m'), 'utf8');
+    for (const words of ['would ', 'latest: ', 'installed: ']) {
       expect(menu).toContain(`@"${words}"`);
       expect(lines.join('\n')).toContain(words);
     }
@@ -294,19 +295,41 @@ describe('appdyno update, in the app', () => {
     oldStays();
   });
 
-  it('refuses an app still on its disk image or where it was downloaded', async () => {
-    for (const bundle of [
-      '/Volumes/Appdyno/Tool.app',
-      '/private/var/AppTranslocation/x/d/Tool.app',
-    ]) {
-      const root = join(bundle, 'Contents/Resources/app');
-      const { going } = (() => {
-        const mac = tools();
-        return {
-          going: update({ root, run: mac.run, get: getting({}), tmp, out: () => undefined }),
-        };
-      })();
-      await expect(going).rejects.toThrow();
-    }
+  /** An app where macOS runs one it has not moved: where it was downloaded, by a path of its own. */
+  const passing = () => {
+    const { bundle } = anApp();
+    const moved = join(dirname(dirname(bundle)), 'AppTranslocation/x/d/Tool.app');
+    mkdirSync(dirname(moved), { recursive: true });
+    renameSync(bundle, moved);
+    return join(moved, 'Contents/Resources/app');
+  };
+
+  it('refuses an app still on its disk image or where it was downloaded, asking nothing', async () => {
+    const asked: string[] = [];
+    const get: Get = (url) => {
+      asked.push(url);
+      return Promise.reject(new Error('E404'));
+    };
+    const going = update({ root: passing(), run: tools().run, get, tmp, out: () => undefined });
+    await expect(going).rejects.toMatchObject({ code: 'UNSUPPORTED' });
+    expect(asked).toEqual([]);
+  });
+
+  it('says there such an app that a newer release is out, and what to do to have it', async () => {
+    const said: string[] = [];
+    const going = update({
+      root: passing(),
+      run: tools().run,
+      get: getting(released()),
+      tmp,
+      check: true,
+      out: (l) => said.push(l),
+    });
+    await expect(going).resolves.toBe(0);
+    expect(said.slice(1)).toEqual([
+      'latest: 1.1.0',
+      'would refuse: tool here is an app not yet in Applications (UNSUPPORTED)',
+      '  drag Appdyno to Applications, and open it from there',
+    ]);
   });
 });

@@ -1,6 +1,7 @@
 // The hub: every device this Mac can reach in a sidebar, and the one chosen, live, in its room. A stage stands there by
 // the same code as in a window of its own; what a person asks goes to the parent as a message.
 #import "HubParts.h"
+#import "Settings.h"
 #import "Window.h"
 #import "Words.h"
 
@@ -126,6 +127,7 @@ static NSString *stateWords(NSDictionary *device) {
     // AppKit's choice is the first field, a caret blinking in Search on a window that has nothing for it yet
     _window.initialFirstResponder = _list.documentView;
     MVPresent(_window, how);
+    [MVAppItems.shared serveHub:self];
   }
   return self;
 }

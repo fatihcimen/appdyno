@@ -1,6 +1,6 @@
 // Every control of a window, once: its name, its words, its symbol and its shortcut. The menus and the glass bar
 // are both made from this table, so that a control cannot be in one and missing from the other.
-#import "Window.h"
+#import "Settings.h"
 #import "Words.h"
 
 static const NSEventModifierFlags kCmd = NSEventModifierFlagCommand, kShift = NSEventModifierFlagShift, kOpt = NSEventModifierFlagOption, kCtl = NSEventModifierFlagControl;
@@ -95,11 +95,30 @@ static NSMenuItem *menuOf(NSMenu *bar, NSString *title, NSMenu *menu) {
   return item;
 }
 
+static NSMenuItem *add(NSMenu *menu, NSString *title, SEL action, NSString *key, NSEventModifierFlags mods) {
+  NSMenuItem *item = [menu addItemWithTitle:MVWord(title) action:action keyEquivalent:key];
+  item.keyEquivalentModifierMask = mods;
+  return item;
+}
+
+/// As every Mac app's: About with the version and how it is updated, a look for a release, Settings, then the system's own.
 static NSMenu *appMenu(void) {
   NSMenu *menu = [NSMenu new];
-  [menu addItemWithTitle:MVWord(@"Hide appdyno") action:@selector(hide:) keyEquivalent:@"h"];
+  MVAppItems *own = MVAppItems.shared;
+  add(menu, @"About Appdyno", @selector(about:), @"", 0).target = own;
   [menu addItem:NSMenuItem.separatorItem];
-  [menu addItemWithTitle:MVWord(@"Quit appdyno") action:@selector(terminate:) keyEquivalent:@"q"];
+  add(menu, @"Check for Updates…", @selector(checkForUpdates:), @"", 0).target = own;
+  add(menu, @"Settings…", @selector(settings:), @",", kCmd).target = own;
+  [menu addItem:NSMenuItem.separatorItem];
+  NSMenu *services = [[NSMenu alloc] initWithTitle:MVWord(@"Services")];
+  add(menu, @"Services", NULL, @"", 0).submenu = services;
+  NSApp.servicesMenu = services;
+  [menu addItem:NSMenuItem.separatorItem];
+  add(menu, @"Hide Appdyno", @selector(hide:), @"h", kCmd);
+  add(menu, @"Hide Others", @selector(hideOtherApplications:), @"h", kCmd | kOpt);
+  add(menu, @"Show All", @selector(unhideAllApplications:), @"", 0);
+  [menu addItem:NSMenuItem.separatorItem];
+  add(menu, @"Quit Appdyno", @selector(terminate:), @"q", kCmd);
   return menu;
 }
 

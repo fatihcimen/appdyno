@@ -48,6 +48,7 @@ import {
   pathCommand,
   toolsCommand,
   updateCommand,
+  updateLook,
 } from './setup.js';
 import { testCommand } from './test-command.js';
 import { flightCommand, timelineCommand } from './timeline.js';
@@ -147,6 +148,7 @@ const servicesOfHub = (ctx: ServerContext) => {
     mcpCommand: [process.execPath, fileURLToPath(import.meta.url), 'mcp'],
     policy: ctx.policy,
     doctor: async () => [installCheck(root), ...(await doctor({ providers: providers() }))],
+    lookForUpdate: () => updateLook(root),
     self: [process.execPath, fileURLToPath(import.meta.url)],
     providers: providers(),
     measurements: ctx.measurementsDir,
@@ -273,6 +275,8 @@ ${listOf(ops)}`,
 }
 
 async function main(): Promise<number> {
+  // a window's About says it: a viewer compiled on first use has no bundle to read it from
+  process.env.APPDYNO_VERSION = SERVER_INFO.version;
   if (['version', '--version', '-v'].includes(command ?? '')) {
     console.log(SERVER_INFO.version);
     return 0;

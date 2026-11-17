@@ -21,8 +21,11 @@ export const repositoryOf = ({ repository }: Manifest) =>
 export type Manager = { by: 'npm'; prefix: string } | { by: 'pnpm' };
 /** Appdyno.app, which keeps its own package and replaces itself. */
 export type TheApp = { by: 'the app'; bundle: string };
-/** What keeps a copy, or what to do instead where this command cannot change it. */
-export type Installed = Manager | TheApp | { by: string; instead: string };
+/**
+ * What keeps a copy, or what to do instead where this command cannot change it; `app`, an app run from its disk image or
+ * where it was downloaded, which still reads its own releases to say one is there.
+ */
+export type Installed = Manager | TheApp | { by: string; instead: string; app?: string };
 
 /** Where the app keeps the package. */
 const IN_THE_APP = /^(.+\.app)\/Contents\/Resources\/app$/;
@@ -49,6 +52,7 @@ export function installedBy(root: string, name: string): Installed {
       ? {
           by: 'an app not yet in Applications',
           instead: 'drag Appdyno to Applications, and open it from there',
+          app: bundle,
         }
       : { by: 'the app', bundle };
   if (root.includes(ONE_OFF))

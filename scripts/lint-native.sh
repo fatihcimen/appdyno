@@ -77,7 +77,7 @@ compiles() { # name, xcrun's words…
 }
 compiles viewer "${macos[@]}" "${viewer[@]}"
 compiles viewer-test "${macos[@]}" -DMV_SELFTEST "${viewer_test[@]}"
-compiles app "${macos[@]}" mac/App/Menu.m
+compiles app "${macos[@]}" mac/App/Menu.m mac/Viewer/Updates.m mac/Viewer/Words*.m
 compiles text-scan "${macos[@]}" mac/TextScan/TextScan.m
 compiles sim-hid clang -fobjc-arc ios/SimHelper/SimHID.m
 compiles sim-energy clang ios/SimHelper/SimEnergy.m

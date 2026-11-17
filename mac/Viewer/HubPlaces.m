@@ -1,6 +1,7 @@
 // The hub's two places: how a person comes to AI Clients and Help, and what they are told as they do.
 #import "HubParts.h"
 #import "Place.h"
+#import "Settings.h"
 #import "Words.h"
 
 static const double kNoteSeconds = 12;
@@ -113,6 +114,7 @@ static const double kNoteSeconds = 12;
 /// All a place's parent says comes by one word: each part has its own key.
 - (void)showClients:(NSDictionary *)message {
   if (message[@"connect"]) return [_connect show:message[@"connect"]];
+  if ([message[@"update"] isKindOfClass:NSString.class]) return [self heardUpdate:message[@"update"]];
   if (message[@"apps"]) return [_tools showApps:message];
   if (!message[@"run"]) return [_clients show:message];
   [_tools heard:message[@"run"]];

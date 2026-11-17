@@ -95,6 +95,8 @@ export type ServicesOptions = {
   /** The hub's own devices and apps, by flag or variable, which the server it starts for a tunnel keeps to. */
   policy: Policy;
   doctor(): Promise<Check[]>;
+  /** What `update --check` says, for a hub that is not the app's: the app's own process looks for itself. */
+  lookForUpdate?(): Promise<string>;
   /** This copy of appdyno, for what a person runs from the window. */
   self?: string[];
   /** Who to ask of phones; none, for what has no phones to speak of. */
@@ -314,6 +316,7 @@ export function hubServices(o: ServicesOptions): HubServices {
       say(status());
     },
     doctor: async (_, say) => say({ doctor: await o.doctor() }),
+    update: async (_, say) => say({ update: (await o.lookForUpdate?.()) ?? '' }),
   };
 
   return {

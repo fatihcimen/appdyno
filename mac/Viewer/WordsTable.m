@@ -112,8 +112,6 @@ const MVWordRow MVWordTable[] = {
     {"Device", "Cihaz"},
     {"System", "Sistem"},
     {"Window", "Pencere"},
-    {"Hide appdyno", "appdyno'yu Gizle"},
-    {"Quit appdyno", "appdyno'dan Çık"},
     {"Minimize", "Küçült"},
     {"Zoom", "Büyüt"},
     {"Close", "Kapat"},

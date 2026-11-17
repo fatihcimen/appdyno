@@ -94,20 +94,21 @@ Bir suite bir cihazı kullanmadan önce hub'ı, yani `appdyno hub`'ın ve Mac uy
 
 Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#sunucu-seçenekleri) ve onun yönlendirdiği sayfalardadır. Aşağıdaki değişkenler iç değişkenlerdir: appdyno'nun süreçlerinden biri onları bir başkasına verir ya da bir test ayarlar. Başka hiçbir şey onları ayarlamamalıdır ve herhangi biri değişebilir. `packages/appdyno/test/environment.test.ts`, TypeScript kaynaklarındaki her `APPDYNO_` adını belgelere ya da bu tabloya bağlı tutar.
 
-| değişken                     | ayarlayan                                     | ne için                                                                                                     |
-| ---------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `APPDYNO_HELPERS`            | Mac uygulamasının `appdyno` komutu            | uygulamanın hazır derlenmiş görüntüleyicisinin ve yardımcılarının yeri: ilk kullanımda hiçbir şey derlenmez |
-| `APPDYNO_NATIVE_DIR`         | testler ve `scripts/build-app.mjs`            | görüntüleyicinin ve yardımcıların `~/Library/Caches/appdyno/native` yerine derlendiği yer                   |
-| `APPDYNO_RUNNER_URL`         | testler                                       | simulator runner'ının zip'inin, sürümün sayfası yerine istendiği yer: sha256'sı yine paketinkidir           |
-| `APPDYNO_HELD_BY_HUB`        | hub, çalıştırdığı bir komut için              | komut hub ile birlikte biter                                                                                |
-| `APPDYNO_FORM_ALLOW_DEVICES` | masaüstü eklentisinin manifest dosyası        | kurulum formunun `--allow-devices` alanı: boş bırakılırsa liste yoktur                                      |
-| `APPDYNO_FORM_ALLOW_APPS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-apps` için                                                                                 |
-| `APPDYNO_FORM_ALLOW_URLS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-urls` için                                                                                 |
-| `APPDYNO_FORM_ALLOW_WRITE`   | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-write` için: aralarında iki nokta olan klasörler, ev klasörü için `~`                      |
-| `APPDYNO_FORM_TOOLSETS`      | masaüstü eklentisinin manifest dosyası        | aynısı, `--toolsets` için: aralarında virgül olan araç grupları                                             |
-| `APPDYNO_PROBE_OUT`          | kare probe'unun başlatılışı, uygulama için    | uygulamadaki probe'un karelerini yazdığı dosya                                                              |
-| `APPDYNO_VIEW_SOCKET`        | görünüm probe'unun başlatılışı, uygulama için | uygulamadaki probe'un yanıt verdiği soket                                                                   |
-| `APPDYNO_RECORD_SEGMENT_S`   | `device-tests/evidence.test.ts`               | bir Android kaydının parçası, yoksa 180 sn; böylece uzun bir kaydın testi kısa sürer                        |
+| değişken                     | ayarlayan                                     | ne için                                                                                                             |
+| ---------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `APPDYNO_HELPERS`            | Mac uygulamasının `appdyno` komutu            | uygulamanın hazır derlenmiş görüntüleyicisinin ve yardımcılarının yeri: ilk kullanımda hiçbir şey derlenmez         |
+| `APPDYNO_VERSION`            | her `appdyno` komutu, pencereleri için        | bir pencerenin Hakkında'sının söylediği sürüm: ilk kullanımda derlenen görüntüleyicinin okuyacağı bir paketi yoktur |
+| `APPDYNO_NATIVE_DIR`         | testler ve `scripts/build-app.mjs`            | görüntüleyicinin ve yardımcıların `~/Library/Caches/appdyno/native` yerine derlendiği yer                           |
+| `APPDYNO_RUNNER_URL`         | testler                                       | simulator runner'ının zip'inin, sürümün sayfası yerine istendiği yer: sha256'sı yine paketinkidir                   |
+| `APPDYNO_HELD_BY_HUB`        | hub, çalıştırdığı bir komut için              | komut hub ile birlikte biter                                                                                        |
+| `APPDYNO_FORM_ALLOW_DEVICES` | masaüstü eklentisinin manifest dosyası        | kurulum formunun `--allow-devices` alanı: boş bırakılırsa liste yoktur                                              |
+| `APPDYNO_FORM_ALLOW_APPS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-apps` için                                                                                         |
+| `APPDYNO_FORM_ALLOW_URLS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-urls` için                                                                                         |
+| `APPDYNO_FORM_ALLOW_WRITE`   | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-write` için: aralarında iki nokta olan klasörler, ev klasörü için `~`                              |
+| `APPDYNO_FORM_TOOLSETS`      | masaüstü eklentisinin manifest dosyası        | aynısı, `--toolsets` için: aralarında virgül olan araç grupları                                                     |
+| `APPDYNO_PROBE_OUT`          | kare probe'unun başlatılışı, uygulama için    | uygulamadaki probe'un karelerini yazdığı dosya                                                                      |
+| `APPDYNO_VIEW_SOCKET`        | görünüm probe'unun başlatılışı, uygulama için | uygulamadaki probe'un yanıt verdiği soket                                                                           |
+| `APPDYNO_RECORD_SEGMENT_S`   | `device-tests/evidence.test.ts`               | bir Android kaydının parçası, yoksa 180 sn; böylece uzun bir kaydın testi kısa sürer                                |
 
 ## Modüller
 

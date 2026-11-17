@@ -269,6 +269,11 @@ function assemble() {
   }
   const sdk = `-mmacosx-version-min=${MIN_MACOS}`;
   const menu = join(macos, NAME);
+  // the menu says the window's words, and puts what a look for a release found as the window does
+  const viewer = join(repo, 'mac/Viewer');
+  const shared = readdirSync(viewer)
+    .filter((f) => /^(Words\w*|Updates)\.m$/.test(f))
+    .map((f) => join(viewer, f));
   sh(
     'xcrun',
     'clang',
@@ -280,6 +285,7 @@ function assemble() {
     '-o',
     menu,
     join(repo, 'mac/App/Menu.m'),
+    ...shared,
   );
   sh('strip', '-x', menu);
 }

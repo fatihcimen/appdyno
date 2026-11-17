@@ -27,6 +27,7 @@ const rows = [
   'WordsConnect.m',
   'WordsDevice.m',
   'WordsPanes.m',
+  'WordsMenus.m',
 ]
   .flatMap((file) => [
     ...source(file).matchAll(/^\s*\{"((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\},$/gm),
@@ -215,12 +216,14 @@ describe('the table of words', () => {
 
   it('is what every control and label on a window says: nothing is written past it', () => {
     const shown =
-      /(?:buttonWithTitle|addItemWithTitle|addButtonWithTitle|labelWithString|initWithTitle):@"([^"]+)"|(?:placeholderString|toolTip|accessibilityLabel|messageText|informativeText) = @"([^"]+)"|(?:MVText|MVWrappedText|MVPaneNote|MVPaneHeading|MVParagraph|MVFormat|MVPlaceButton|MVPlacePrimary|MVWord|caption|note|heading|line)\(@"([^"]+)"/g;
+      /(?:buttonWithTitle|addItemWithTitle|addButtonWithTitle|labelWithString|initWithTitle):@"([^"]+)"|(?:placeholderString|toolTip|accessibilityLabel|messageText|informativeText) = @"([^"]+)"|(?:MVText|MVWrappedText|MVPaneNote|MVPaneHeading|MVParagraph|MVFormat|MVPlaceButton|MVPlacePrimary|MVWord|caption|note|heading|line|add)\(@"([^"]+)"|\badd:@"([^"]+)"/g;
     const missed: string[] = [];
-    for (const file of readdirSync(viewer).filter((f) => f.endsWith('.m'))) {
+    // the app's item in the menu bar says the window's words
+    const files = [...readdirSync(viewer).filter((f) => f.endsWith('.m')), '../App/Menu.m'];
+    for (const file of files) {
       if (file.startsWith('SelfTest') || file.startsWith('Words')) continue;
       for (const m of source(file).matchAll(shown)) {
-        const word = must(m[1] ?? m[2] ?? m[3], 'a word');
+        const word = must(m[1] ?? m[2] ?? m[3] ?? m[4], 'a word');
         // a dash for a figure not read yet, and a name to type: no word to put in another language
         if (word.startsWith('\\u') || !/[a-z]{2}/i.test(word) || word === 'appdyno_emulator')
           continue;

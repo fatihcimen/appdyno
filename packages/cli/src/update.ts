@@ -157,8 +157,16 @@ export async function update(o: UpdateOptions & { check?: boolean | undefined })
   // a refusal that needs no network does not wait for one
   if (!o.check && 'instead' in place) throw notHere(me.name, place);
   o.out(`installed: ${me.version}, ${said(place)}, at ${o.root}`);
+  // an app on its disk image reads its own releases too, to say a newer one is there and what to do to have it
   const latest =
-    'bundle' in place ? await fromAppcast(o, me, place) : await fromRegistry(o, me, place);
+    'bundle' in place
+      ? await fromAppcast(o, me, place)
+      : 'app' in place && place.app
+        ? {
+            ...(await fromAppcast(o, me, { by: 'the app', bundle: place.app })),
+            refused: notHere(me.name, place),
+          }
+        : await fromRegistry(o, me, place);
   o.out(`latest: ${latest.version}`);
   const next = verdict(me, latest.version) ?? latest.refused;
   if (typeof next === 'string') o.out(`nothing to do: ${next}`);

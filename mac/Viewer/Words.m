@@ -38,6 +38,7 @@ static NSDictionary<NSString *, NSString *> *exact(void) {
     take(MVWordTableConnect, MVWordCountConnect);
     take(MVWordTableDevice, MVWordCountDevice);
     take(MVWordTablePanes, MVWordCountPanes);
+    take(MVWordTableMenus, MVWordCountMenus);
     words = all;
   });
   return words;
@@ -75,6 +76,7 @@ static NSArray<NSArray *> *patterns(void) {
     take(MVWordTableConnect, MVWordCountConnect);
     take(MVWordTableDevice, MVWordCountDevice);
     take(MVWordTablePanes, MVWordCountPanes);
+    take(MVWordTableMenus, MVWordCountMenus);
     rows = all;
   });
   return rows;
@@ -95,6 +97,7 @@ static NSDictionary<NSString *, NSString *> *templates(void) {
     take(MVWordTableConnect, MVWordCountConnect);
     take(MVWordTableDevice, MVWordCountDevice);
     take(MVWordTablePanes, MVWordCountPanes);
+    take(MVWordTableMenus, MVWordCountMenus);
     [all addEntriesFromDictionary:forms()];
     words = all;
   });

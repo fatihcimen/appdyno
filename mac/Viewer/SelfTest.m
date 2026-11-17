@@ -372,6 +372,7 @@ int MVSelfTest(NSString *fixtures) {
   MVCheckPlaces();
   MVCheckConnect();
   MVCheckHubDevices();
+  MVCheckUpdates();
   MVCheckLinks();
   MVCheckPush();
   MVCheckDevice();

@@ -50,6 +50,15 @@ export async function installCommand(
   }
 }
 
+/** What `update --check` says, whole, for the hub's window to put in a person's words: a failure is its last line. */
+export async function updateLook(root: string): Promise<string> {
+  const lines: string[] = [];
+  await update({ root, run, get: download, check: true, out: (l) => lines.push(l) }).catch(
+    (e: unknown) => lines.push(e instanceof Error ? e.message : String(e)),
+  );
+  return lines.join('\n');
+}
+
 /** `update`. */
 export async function updateCommand(args: string[], root: string): Promise<number> {
   const { values } = parseArgs({ args, options: COMMANDS.update.flags });
