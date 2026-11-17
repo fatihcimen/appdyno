@@ -267,6 +267,21 @@ is still running. Every action and screenshot waits on the device for a running 
 visible virtual node on the sliding window (Compose, a web view: no place in the window) and API 33 and below
 get no such answer: the agent waits for the end of the slide, then for the window.
 
+**A window that grows.** An app brought to the front grows from the launcher, and a dialog may grow in or come
+from past the display's edge; what the platform reads of them meanwhile is midway, and a Flutter app's nodes have
+no place in the window to give. On API 34+ a window whose root is drawn smaller than its size in the window,
+alike both ways, is growing; with one, with an application window sticking out of the display, or with nodes of a
+sliding window that have no place, a read waits on the device, a read 40 ms after the last, for at most 1 s, and
+the settle after an action waits as for a busy screen. WMS's own answer is no guide: it says the transition is
+over while the places are still midway. A window that stood where it was for all of a wait that ran out, as an
+app the system scales to fit, is not waited for again while reads find it so. A read on a still screen costs
+nothing more. On an API 36 emulator a Flutter app on its settings page, brought back from the home screen by
+`launch_app`, was answered with its bottom bar at y 1968 to 2049 of 2211 in 18 of 19 launches, and a tap by ref
+right after hit the row above it 10 of 10 times; it is answered at rest 12 of 12 times, in 677 to 728 ms where it
+took 441 to 457 at the same host load, the tap lands 6 of 6, and with animations 5 times slower 3 of 3. A sign-in
+sheet over another app's start, read past the display's right edge (its button at x 1869 to 1892 on a screen 1080
+wide) 6 of 6 times, is read at rest 3 of 3 times, 0.4 to 0.8 s later. Below API 34 no window is known to grow.
+
 On a loaded device the window stretches (up to 4×) by how much slower the agent's own reads are than
 their recent best, per node read: a slow device also starts its reaction later.
 

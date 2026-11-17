@@ -4,6 +4,7 @@ import android.graphics.Rect
 import android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION
 import android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
 import android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -58,6 +59,50 @@ class SlideTest {
         assertFalse(Slide.fills(TYPE_APPLICATION, 1080, 2400, d, 33))
         assertFalse(Slide.fills(TYPE_APPLICATION, 900, 1200, d, 34)) // a dialog activity, a split screen
         assertFalse(Slide.fills(TYPE_SYSTEM, 1080, 2400, d, 34))
+    }
+
+    @Test
+    fun aWindowDrawnSmallerAlikeBothWaysIsScaled() {
+        // a Flutter app's window growing as it came to the front, its root at (57,128,1023,2272) of 1080 x 2400
+        assertTrue(Slide.scaled(966, 2144, 1080, 2400))
+        // a dialog growing in, 876 x 1510 of 1024 x 1765
+        assertTrue(Slide.scaled(876, 1510, 1024, 1765))
+        assertFalse(Slide.scaled(1024, 1765, 1024, 1765))
+        // the matrix's rounding midway through a slide
+        assertFalse(Slide.scaled(1079, 2400, 1080, 2400))
+        // a slide or a keyboard's pan cuts one side off
+        assertFalse(Slide.scaled(1080, 1800, 1080, 2400))
+        assertFalse(Slide.scaled(700, 2400, 1080, 2400))
+        // no size in the window before API 34
+        assertFalse(Slide.scaled(966, 2144, 0, 0))
+    }
+
+    @Test
+    fun aScreenWhoseWindowGrowsOrSticksOutIsNotAtRest() {
+        fun rect(l: Int, t: Int, r: Int, b: Int) = Rect().apply {
+            left = l
+            top = t
+            right = r
+            bottom = b
+        }
+        val bar = CWindow(166, TYPE_SYSTEM, "com.android.systemui", 1, rect(0, 0, 1080, 74), false, false)
+        fun shown(vararg windows: CWindow) = Capture(
+            listOf(*windows),
+            windows.indices.map { CNode(-1, it, "android.widget.FrameLayout", null, null, null, null, 0, 0, 10, 10, Flags.VISIBLE) },
+            false,
+            0,
+            d,
+        )
+        // a sign-in sheet over an app, read as it came in from past the right edge (its "Turn on" at x 1869), grew, and stood
+        val past = CWindow(204, TYPE_APPLICATION, "sheet", 0, rect(1231, 477, 2107, 1987), true, true, scaled = true)
+        val growing = CWindow(204, TYPE_APPLICATION, "sheet", 0, rect(97, 477, 973, 1987), true, true, scaled = true)
+        val still = CWindow(204, TYPE_APPLICATION, "sheet", 0, rect(28, 354, 1052, 2119), true, true)
+        assertEquals(listOf("204 1231,477,2107,1987 0,0"), shown(past, bar).restless)
+        // by where it is: one that grew on is another
+        assertEquals(listOf("204 97,477,973,1987 0,0"), shown(growing, bar).restless)
+        assertEquals(emptyList<String>(), shown(still, bar).restless)
+        // the status bar's is not the screen's place
+        assertEquals(emptyList<String>(), shown(still, CWindow(166, TYPE_SYSTEM, "com.android.systemui", 1, rect(0, 0, 1080, 74), false, false, scaled = true)).restless)
     }
 
     @Test

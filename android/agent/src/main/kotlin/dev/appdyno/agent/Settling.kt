@@ -31,6 +31,17 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
     private var answeredAt = 0L
     private var unsettledAt = 0L
 
+    /**
+     * The windows a read's wait for their places at rest ran out on, standing where they were when it began, as an app
+     * the system scales to fit: not waited for again while reads find them so. A read that finds others forgets them.
+     */
+    private var restlessStill = emptyList<String>()
+
+    private fun unrested(c: Capture): Boolean {
+        if (c.restless != restlessStill) restlessStill = emptyList()
+        return c.restless.isNotEmpty() && restlessStill.isEmpty()
+    }
+
     /** When an action last began, and whether what moved on the screen then moved by itself. */
     private var touchedAt = 0L
     private var byItself = false
@@ -60,14 +71,24 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
         val busy = SystemClock.uptimeMillis() - automation.lastEventAt < IDLE_QUIET_MS
         if (last != null && busy && cycling.active && SystemClock.uptimeMillis() - unsettledAt > ECHO_MS) {
             val c = readSettling(maxDepth, maxNodes, yielding = true)
-            if (!c.noApp && !c.busy && cycling.same(c.layout, last.layout, area, byItself = false)) {
+            if (!c.noApp && !c.busy && !unrested(c) && cycling.same(c.layout, last.layout, area, byItself = false)) {
                 cycling.stillCycling()
                 return c
             }
         }
         val quiet = idle(job)
         val take = { capture.capture(maxDepth, maxNodes, yielding = !quiet) }
-        val c = if (anyScreen) take() else aScreen(job, take)
+        var c = if (anyScreen) take() else aScreen(job, take)
+        // a window on its way gives places it will not rest at, and a launch's settle, on the host, took them as still.
+        // WMS says its transition is over while they still do
+        val end = SystemClock.uptimeMillis() + Cycling.CYCLE_MS
+        val first = c.restless
+        while (unrested(c) && !job.cancelled && SystemClock.uptimeMillis() < end) {
+            Thread.sleep(Settler.POLL_MS)
+            c = if (anyScreen) take() else aScreen(job, take)
+        }
+        // one still on its way when the time ran out, as on a slowed device, is waited for at the next read as well
+        if (unrested(c) && SystemClock.uptimeMillis() >= end && c.restless == first) restlessStill = c.restless
         // events of what an action of ours set moving name nothing
         if (!quiet && last != null && SystemClock.uptimeMillis() - touchedAt > OWN_MS + IDLE_MAX_MS) cycling.eventsKeptComing(c.layout, last.layout, area)
         return c
@@ -98,7 +119,7 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
                     }
                 },
                 { x, y -> cycling.same(x.layout, y.layout, area, byItself) },
-                { it.busy },
+                { it.busy || unrested(it) },
                 { job.cancelled },
                 { it.nodes.size },
                 { hold(then, last, !asked).also { asked = true } },

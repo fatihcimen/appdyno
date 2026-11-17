@@ -267,6 +267,21 @@ hâlâ sürdüğünü söyler. Her işlem ve ekran görüntüsü, süren bir ge�
 görünür sanal bir düğüm (Compose, bir web görünümü: pencerede yeri yok) ve API 33 ile altı
 böyle bir yanıt almaz: ajan kaymanın sonunu, sonra bekleme süresini bekler.
 
+**Büyüyen bir pencere.** Öne getirilen bir uygulama başlatıcıdan büyüyerek gelir, bir diyalog da büyüyerek ya da ekranın
+kenarının ötesinden gelebilir; platformun bu sırada onlardan okuduğu yarı yoldadır ve bir Flutter uygulamasının düğümlerinin
+pencerede verecek yeri yoktur. API 34+'ta kökü penceredeki boyutundan küçük, iki yönde aynı oranda çizilen bir pencere
+büyümektedir; böyle biri, ekranın dışına taşan bir uygulama penceresi ya da kayan bir pencerenin yeri olmayan düğümleri
+varken bir okuma cihazda bekler, bir öncekinden 40 ms sonra bir okuma, en çok 1 sn; bir işlemden sonraki bekleme de meşgul
+bir ekrandaki gibi bekler. WMS'in kendi yanıtı yol göstermez: yerler hâlâ yarı yoldayken geçişin bittiğini söyler. Süresi
+dolan bir beklemenin tamamında yerinden kıpırdamayan bir pencere, sistemin sığdırmak için ölçeklediği bir uygulama gibi,
+okumalar onu öyle buldukça yeniden beklenmez. Durgun bir ekranda bir okuma hiçbir şey fazladan tutmaz. API 36 emülatörde
+ayarlar sayfasındaki bir Flutter uygulaması ana ekrandan `launch_app` ile geri getirildiğinde 19 açılışın 18'inde alt çubuğu
+2211 yerine y 1968 ile 2049 arasında yanıtlanıyordu, hemen ardından ref ile bir dokunuş 10'da 10 üstündeki satıra gidiyordu;
+şimdi 12'de 12 durmuş haliyle, aynı makine yükünde 441 ile 457 ms yerine 677 ile 728 ms'de yanıtlanır, dokunuş 6'da 6 yerine
+varır, animasyonlar 5 kat yavaşken de 3'te 3. Başka bir uygulamanın açılışının üstündeki bir giriş kâğıdı 6'da 6 ekranın sağ
+kenarının ötesinde okunuyordu (düğmesi 1080 genişlikteki bir ekranda x 1869 ile 1892 arasında); şimdi 3'te 3, 0,4 ile 0,8 sn
+sonra, durmuş haliyle okunur. API 34'ün altında hiçbir pencerenin büyüdüğü bilinmez.
+
 Yük altındaki bir cihazda bekleme süresi (en çok 4×), ajanın kendi okumalarının okunan düğüm başına yakın geçmişteki en iyilerinden
 ne kadar yavaş olduğuna göre uzar: yavaş bir cihaz tepkisine de daha geç başlar.
 

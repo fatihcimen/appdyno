@@ -22,6 +22,8 @@ class CWindow(
     val focused: Boolean,
     /** Fills the display at rest, on a release with getBoundsInWindow: `bounds` is that place. */
     val fills: Boolean = false,
+    /** Drawn smaller than it is, on its way (`Slide.scaled`): its places are not those at rest. */
+    val scaled: Boolean = false,
 ) {
     /** How far from its resting place it is: as reported, then as the walk finds it (a node's place on the screen against its place in the window). */
     var offsetX = 0
@@ -104,8 +106,18 @@ class Capture(
      * or out: its reported place stays at a midway point until the animation ends).
      */
     val busy: Boolean by lazy {
-        noApp || unplaced > 0 || nodes.any { it.flags and Flags.VISIBLE != 0 && it.indeterminate } ||
-            windows.any { w -> w.type == AccessibilityWindowInfo.TYPE_APPLICATION && Slide.outside(w.bounds.left, w.bounds.top, w.bounds.right, w.bounds.bottom, display) }
+        noApp || unplaced > 0 || nodes.any { it.flags and Flags.VISIBLE != 0 && it.indeterminate } || windows.any(::outside)
+    }
+
+    private fun outside(w: CWindow) = w.type == AccessibilityWindowInfo.TYPE_APPLICATION && Slide.outside(w.bounds.left, w.bounds.top, w.bounds.right, w.bounds.bottom, display)
+
+    /**
+     * The windows whose places may not be those the screen comes to rest at, by id and where they are: drawn smaller than
+     * they are (an app coming to the front grows from the launcher, a dialog grows in; an app the system scales to fit
+     * stays so), sticking out of the display, or sliding with nodes that have no place in them.
+     */
+    val restless: List<String> by lazy {
+        windows.filter { (it.scaled && appWindow(it)) || outside(it) || (unplaced > 0 && it.sliding) }.map { "${it.id} ${it.bounds.left},${it.bounds.top},${it.bounds.right},${it.bounds.bottom} ${it.offsetX},${it.offsetY}" }
     }
 }
 
@@ -126,6 +138,17 @@ object Slide {
     fun pushedOff(left: Int, top: Int, right: Int, bottom: Int, dx: Int, dy: Int, d: DisplayInfo) = right + dx <= 0 || bottom + dy <= 0 || left + dx >= d.width || top + dy >= d.height
 
     fun outside(left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) = left < 0 || top < 0 || right > d.width || bottom > d.height
+
+    /**
+     * A window drawn smaller than it is, as a transition grows it: its root on the screen, against its size in the window
+     * (API 34; empty before), shrunk alike both ways. A slide or a pan cuts one side off, and a pixel is the matrix's rounding.
+     */
+    fun scaled(screenW: Int, screenH: Int, windowW: Int, windowH: Int): Boolean {
+        if (windowW <= 0 || windowH <= 0 || screenW <= 0 || screenH <= 0) return false
+        val x = screenW.toDouble() / windowW
+        val y = screenH.toDouble() / windowH
+        return x < 0.99 && y < 0.99 && kotlin.math.abs(x - y) < 0.02
+    }
 
     /**
      * An application window of the display's size: it slides at most, and comes to rest filling the display, where a place in the window is the place on the screen. Not known
@@ -186,7 +209,9 @@ class TreeCapture(private val automation: Automation) {
             // by its root's place in it: the window's own bounds are its touchable region, some other shape at times
             val inIt = Rect().also { if (Build.VERSION.SDK_INT >= 34) root.getBoundsInWindow(it) }
             val fills = Slide.fills(w.type, inIt.width(), inIt.height(), display)
-            val window = CWindow(w.id, w.type, root.packageName?.toString(), w.layer, if (fills) Rect(0, 0, display.width, display.height) else b, w.isActive, w.isFocused, fills)
+            val onScreen = Rect().also { root.getBoundsInScreen(it) }
+            val scaled = Slide.scaled(onScreen.width(), onScreen.height(), inIt.width(), inIt.height())
+            val window = CWindow(w.id, w.type, root.packageName?.toString(), w.layer, if (fills) Rect(0, 0, display.width, display.height) else b, w.isActive, w.isFocused, fills, scaled)
             if (fills) {
                 window.offsetX = b.left
                 window.offsetY = b.top
