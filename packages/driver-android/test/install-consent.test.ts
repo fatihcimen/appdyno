@@ -13,6 +13,7 @@ import {
   type InstallScreen,
   type InstallStep,
 } from '../src/install-consent.js';
+import { focusSteady } from '../src/wake.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 /**
@@ -205,7 +206,7 @@ function phone(
       Promise.resolve(
         (o.opensLater && looks++ === 0 ? undefined : screens[at]?.focus) ?? 'Window{0 u0 launcher}',
       ),
-    focusSteady: () => Promise.resolve(),
+    focusSteady: () => Promise.resolve(true),
     ensureAwake,
     tree: () => Promise.resolve(screens[at]?.tree ?? real('consent')),
     press: (p) => {
@@ -290,6 +291,52 @@ describe('answering during an install', () => {
     await fast(() => answerInstallPrompts(s, names, false, until(s), []));
     expect(s.ensureAwake).toHaveBeenCalled();
     expect(s.presses).toHaveLength(1);
+  });
+
+  it('wakes a screen that goes dark while the prompt is looked at, with no wait on a focus it no longer has', async () => {
+    // the first look finds the prompt; then the screen is dark, with no focus, and the next look wakes it
+    const s = phone([{ focus: '' }, { focus: CONSENT_WINDOW, tree: real('consent') }]);
+    const focus = s.currentFocus;
+    let looks = 0;
+    s.currentFocus = () => (looks++ === 0 ? Promise.resolve(CONSENT_WINDOW) : focus());
+    s.focusSteady = vi.fn(() => Promise.resolve(looks > 1));
+    const tree = vi.spyOn(s, 'tree');
+    await fast(() => answerInstallPrompts(s, names, false, until(s), []));
+    expect(s.ensureAwake).toHaveBeenCalledOnce();
+    expect(tree.mock.invocationCallOrder[0]).toBeGreaterThan(
+      must(s.ensureAwake.mock.invocationCallOrder[0], 'a wake'),
+    );
+    expect(s.presses).toEqual([centre(real('consent'), 'Yükle')]);
+  });
+
+  it('says at once that a focus it holds has gone dark, where after a wake it waits for one', async () => {
+    vi.useFakeTimers();
+    try {
+      let asked = 0;
+      const dark = () => (asked++, Promise.resolve('mCurrentFocus=null'));
+      const begun = Date.now();
+      expect(await focusSteady(dark, true)).toBe(false);
+      expect(asked).toBe(1);
+      const waited = focusSteady(dark);
+      await vi.runAllTimersAsync();
+      expect(await waited).toBe(true);
+      // the 5 s a phone just woken gets, which a prompt that says no after 10 s cannot spare
+      expect(Date.now() - begun).toBeGreaterThanOrEqual(5_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('touches nothing once a person has answered the prompt first, and says nothing', async () => {
+    // hand-written: the prompt's own read with no window in focus, as a person's tap closed it after the focus was read
+    const answered = real('consent');
+    answered.windows = answered.windows.map((w) => ({ ...w, focused: false }));
+    const s = phone([{ focus: CONSENT_WINDOW, tree: answered }]);
+    const said: string[] = [];
+    let looks = 0;
+    await fast(() => answerInstallPrompts(s, names, false, () => looks++ < 5, said));
+    expect(s.presses).toEqual([]);
+    expect(said).toEqual([]);
   });
 
   it('says so when touches are ignored, and names the setting it does not change', async () => {

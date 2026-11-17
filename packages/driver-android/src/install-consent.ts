@@ -8,7 +8,8 @@ export type InstallAnswers = { prompts: boolean; warnings: boolean };
 /** The device as the prompts need it, with its wake and its touches. */
 export type InstallScreen = {
   currentFocus(): Promise<string>;
-  focusSteady(): Promise<void>;
+  /** Whether a focus is still there once it has held: none, as on a dark screen, is said at once. */
+  focusSteady(): Promise<boolean>;
   ensureAwake(): Promise<unknown>;
   tree(): Promise<Tree>;
   press(p: Point, ms: number): Promise<unknown>;
@@ -235,9 +236,10 @@ export async function answerInstallPrompts(
     // a screen timing out as the prompt comes takes the prompt's chance with it
     if (!focus) await s.ensureAwake();
     if (!PROMPT_WINDOW.test(focus)) return;
-    await s.focusSteady();
-    const tree = await stillTree(s);
-    if (!tree || !pending()) return;
+    // a screen that goes dark now has no focus to hold, and the next look wakes it: waited on, it took the prompt's 10 s
+    if (!(await s.focusSteady())) return;
+    // read before the tree, so that nothing stands between the tree and the touch, which a person's own tap meanwhile
+    // would leave to what is under the prompt
     app ??= await names().catch((e: unknown) => {
       throw new DeviceError(
         'PERMISSION_REQUIRED',
@@ -245,6 +247,8 @@ export async function answerInstallPrompts(
         'answer it on the phone',
       );
     });
+    const tree = await stillTree(s);
+    if (!tree || !pending()) return;
     const step = installStep(tree, app, warnings);
     if (!step) return;
     if ('left' in step) throw new DeviceError('PERMISSION_REQUIRED', step.left, step.hint);

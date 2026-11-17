@@ -52,20 +52,23 @@ export async function wakeScreen(
 
 /**
  * A phone just woken has the app on its screen before the app can take a touch: a Xiaomi passes through no focus
- * and its launcher, and a touch meanwhile reaches no window. Until the focus has held for a moment.
+ * and its launcher, and a touch meanwhile reaches no window. Until the focus has held for a moment. `held`: a focus
+ * there already, whose loss is a screen gone dark or a window gone, said at once (false) and not waited out.
  */
-export async function focusSteady(shell: Shell) {
+export async function focusSteady(shell: Shell, held = false) {
   const end = Date.now() + WAKE_FOCUS_MS;
   let last = '';
   let since = Date.now();
   while (Date.now() < end) {
     const focus = await currentFocus(shell);
+    if (!focus && held) return false;
     if (!focus || focus !== last) {
       last = focus;
       since = Date.now();
-    } else if (Date.now() - since >= WAKE_STEADY_MS) return;
+    } else if (Date.now() - since >= WAKE_STEADY_MS) return true;
     await sleep(150);
   }
+  return true;
 }
 
 /** What a screen locked behind a credential says: no tool can answer it. */

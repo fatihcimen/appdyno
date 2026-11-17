@@ -98,7 +98,7 @@ export class AndroidDevice extends RpcDevice implements Device {
       serial,
       {
         currentFocus: () => currentFocus(this.sh),
-        focusSteady: () => focusSteady(this.sh),
+        focusSteady: () => focusSteady(this.sh, true),
         ensureAwake: () => this.ensureAwake(),
         tree: () => this.tree(),
         press: (p, ms) => this.longPress(p, ms, { settle: false }),

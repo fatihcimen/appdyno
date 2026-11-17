@@ -191,9 +191,14 @@ async function crashOf(device: Device, app: string, since: number) {
   }
 }
 
-/** By its process where a device has that to say: Android restarts a crashed app within the second, and it runs. */
+/**
+ * By its process where a device has that to say: Android restarts a crashed app within the second, and it runs. One
+ * the system holds for its "keeps stopping" keeps its process, dead until the dialog is answered.
+ */
 const stillThere = async (device: Device, app: string, a: Armed) =>
-  device.appPid ? (await device.appPid(app)) === a.pid : device.appRunning(app);
+  device.appPid
+    ? (await device.appPid(app)) === a.pid && !(await device.appCrashing?.(app).catch(() => false))
+    : device.appRunning(app);
 
 /**
  * A timeline with no end: it holds the last `seconds` of a device and keeps them when the app crashes or stalls, by the

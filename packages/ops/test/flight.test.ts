@@ -335,6 +335,29 @@ describe('the flight recorder', () => {
     await call('record_session', { kind: 'report', action: 'stop' });
   });
 
+  it('sees a crash the system holds for its dialog: the same process, dead until that is answered', async () => {
+    const d = new FlightDevice();
+    d.pid = '100';
+    d.appPid = d.fakePid;
+    let held = false;
+    d.appCrashing = () => Promise.resolve(held);
+    const { call } = connect(d, 20);
+    await call('record_session', { kind: 'flight', action: 'start' });
+    d.tell({ at: Date.now() });
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(saved()).toEqual([]);
+    held = true;
+    d.running = false;
+    d.crashReports = [{ at: new Date().toISOString(), reason: 'it crashed' }];
+    d.tell({ at: Date.now() });
+    await until(() => saved().length === 1);
+    expect(readFileSync(join(state, 'traces', must(saved()[0], 'a page')), 'utf8')).toContain(
+      'a crash: it crashed',
+    );
+    const off = await call('record_session', { kind: 'report', action: 'stop' });
+    expect(off.data.saved).toHaveLength(1);
+  });
+
   it('claims no more of a stretch than it watched', async () => {
     const d = new FlightDevice();
     const { call } = connect(d, 30);

@@ -223,6 +223,15 @@ export const heldForDialog = (app: string) => {
   return `{ dumpsys activity processes ${shq(app)} | sed -n '/ProcessRecord{[^ ]* ${own}/,/ProcessRecord{/p' | grep -qE '(mC|c)rashing=true'; } 2>/dev/null`;
 };
 
+/**
+ * A shell step for before a start: a process held for its crash dialog takes none (`am start -W` waited 10 s on it, the
+ * dialog still up), so it is stopped first, which takes the dialog with it, and the start is a new one.
+ */
+export const stopIfHeld = (app: string) => {
+  const pkg = shq(assertPkg(app));
+  return `pidof ${pkg} >/dev/null && ${heldForDialog(app)} && am force-stop ${pkg}`;
+};
+
 export async function androidCrashing(adb: Adb, serial: string, app: string) {
   return (await wholeAnswer(adb, serial, `${heldForDialog(app)} && echo held`)).trim() === 'held';
 }

@@ -14,7 +14,7 @@ import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { type Adb, amStartError, assertPkg, launcherArg, shq } from './adb.js';
 import { apkId, apkNames } from './apk-names.js';
 import { buildVariant } from './build.js';
-import { heldForDialog } from './crashes.js';
+import { stopIfHeld } from './crashes.js';
 import { androidLinks } from './links.js';
 import {
   answerInstallPrompts,
@@ -306,12 +306,9 @@ export class AndroidApps implements AppManager {
   /** Starts the app's launcher activity and waits for it (`am start -W`). */
   async start(app: string, args: string[] = []) {
     const activity = await launcherArg((c) => this.sh(c), app);
-    // a process held for its crash dialog takes no start (`am start -W` waited 10 s on it, the dialog still up): stopped
-    // first, which takes the dialog with it, the start is a new one
     const pkg = shq(app);
-    const stopHeld = `pidof ${pkg} >/dev/null && ${heldForDialog(app)} && am force-stop ${pkg}`;
     const out = await this.sh(
-      `${stopHeld}; am start -W ${activity} ${args.join(' ')} 2>&1; pidof ${pkg} >/dev/null || echo '${NO_PROCESS}'`,
+      `${stopIfHeld(app)}; am start -W ${activity} ${args.join(' ')} 2>&1; pidof ${pkg} >/dev/null || echo '${NO_PROCESS}'`,
     );
     const error = amStartError(out);
     if (error) throw new DeviceError('APP_NOT_RUNNING', `${app} did not start: ${error}`);

@@ -8,6 +8,7 @@ import {
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, launcherArg, shq } from './adb.js';
+import { stopIfHeld } from './crashes.js';
 
 /** What gives an app's code a push on Android: FCM's own message, to the app's own Firebase SDK. */
 const BY_FCM =
@@ -67,8 +68,11 @@ export class AndroidPush {
       target = await launcherArg((c) => this.sh(c), pkg);
     }
     const extras = data.flatMap(([k, v]) => ['--es', k, shq(v)]).join(' ');
-    // as Firebase's own tap opens it: the activity on top of the app's task anew, with this intent
-    const out = await this.sh(`am start -W -f ${CLEAR_TOP} ${target} ${extras}`);
+    // as Firebase's own tap opens it: the activity on top of the app's task anew, with this intent; an app held for its
+    // crash dialog is stopped first, as no start reaches it and the answer would say it opened
+    const out = await this.sh(
+      `${stopIfHeld(pkg)}; am start -W -f ${CLEAR_TOP} ${target} ${extras}`,
+    );
     if (/Error|Exception/.test(out))
       throw new DeviceError(
         'NOT_FOUND',

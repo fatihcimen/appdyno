@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { stopIfHeld } from '../src/crashes.js';
 import { ANDROID_PUSHES, AndroidPush } from '../src/push.js';
 
 /** A device whose shell answers `answer` to each command, and what it was asked. */
@@ -18,7 +19,20 @@ describe('a push on Android', () => {
     });
     expect(said).toBe('opened dev.app as a tapped push, with 2 data keys as extras');
     expect(asked.at(-1)).toBe(
-      "am start -W -f 0x04000000 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n 'dev.app/.Main' --es order '42' --es note 'it'\\''s'",
+      `${stopIfHeld('dev.app')}; am start -W -f 0x04000000 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n 'dev.app/.Main' --es order '42' --es note 'it'\\''s'`,
+    );
+  });
+
+  it('stops first an app the system holds for its crash dialog, which no start reaches', async () => {
+    const { push, asked } = device(() => 'Status: ok');
+    await push.send('dev.app', {
+      type: 'tapped',
+      payload: { notification: { click_action: 'X' } },
+    });
+    // only a process held so, in the same command as the start: `am start -W` waited 10 s on one, its dialog still up
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toMatch(
+      /^pidof 'dev\.app' >\/dev\/null && \{ dumpsys activity processes 'dev\.app' .*rashing=true.* && am force-stop 'dev\.app'; am start -W /,
     );
   });
 
@@ -30,7 +44,7 @@ describe('a push on Android', () => {
     };
     await push.send('dev.app', { type: 'tapped', payload });
     expect(asked).toEqual([
-      "am start -W -f 0x04000000 -a 'dev.app.OPEN' -p dev.app --es order '7'",
+      `${stopIfHeld('dev.app')}; am start -W -f 0x04000000 -a 'dev.app.OPEN' -p dev.app --es order '7'`,
     ]);
   });
 
