@@ -298,9 +298,9 @@ export function connect(options: ConnectOptions = {}): Appdyno {
       const run = await stoppedBy(signal, file, () =>
         flows.replay(file, {
           ...o,
-          onStep: async (e) => {
-            seen[e.phase]++;
-            await o.onStep?.(e);
+          // every step's action, a setup's too: one done touched the device, one begun may have
+          progress: (at) => {
+            seen[at]++;
           },
         }),
       ).catch((e: unknown) => {

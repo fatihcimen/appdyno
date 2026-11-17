@@ -87,6 +87,11 @@ export type RunOptions = {
   onStep?: (e: StepEvent) => void | Promise<void>;
   /** Called before each step but a teardown's (a cancelled call stops here). */
   checkpoint?: (n: number, total: number, step: FlowStep) => void;
+  /**
+   * Called as each step's action begins and once it ran to its end, a setup's and a teardown's too: what a caller counts
+   * to know whether a run it stopped had touched the device.
+   */
+  progress?: (at: 'before' | 'after') => void;
   /** At the failure that ends the steps, awaited before the teardown changes the screen it left. */
   onFailure?: (failure: RunFailure) => void | Promise<void>;
   /** The device's platform: a step kept to the other one is skipped, and its result says so. */
@@ -107,7 +112,15 @@ export type Executor = {
 export async function runSteps(
   flow: Flow,
   exec: Executor,
-  { from = 1, values: given = {}, onStep, checkpoint, onFailure, platform }: RunOptions = {},
+  {
+    from = 1,
+    values: given = {},
+    onStep,
+    checkpoint,
+    onFailure,
+    platform,
+    progress,
+  }: RunOptions = {},
 ): Promise<RunResult> {
   // a prepare step's values join them, for this run alone
   const values = { ...given };
@@ -145,9 +158,11 @@ export async function runSteps(
       const step = fillStep(written, values);
       await exec.prepare?.(step);
       await hook?.({ phase: 'before', n, total, step: written });
+      progress?.('before');
       const { values: gave, ...outcome } = await exec.act(step);
       Object.assign(values, gave);
       result = { ...at, ms: Date.now() - t0, ...outcome };
+      progress?.('after');
     } catch (e) {
       const err = e as Error & { code?: string; hint?: string };
       return {

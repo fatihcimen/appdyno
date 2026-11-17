@@ -42,7 +42,7 @@ export const stepTime = (action: FlowStep['action'], r: StepResult) =>
     ? { ms: r.settledMs, throughHost: false }
     : { ms: r.actMs ?? r.ms, throughHost: true };
 
-export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep'> & {
+export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep' | 'progress'> & {
   params?: Record<string, string>;
   /** An env file's values: under `params`, over the context's environment, and hidden as a secret is once used. */
   fromFile?: Record<string, string>;
@@ -329,6 +329,7 @@ export function flowRunner(
         platform: at.platform,
         onFailure: (f) => seenAsItFailed(ctx, s, f, was, o.evidence, answers),
         ...(o.onStep && { onStep: o.onStep }),
+        ...(o.progress && { progress: o.progress }),
         checkpoint: (n, total, st) => {
           throwIfCancelled('run_flow');
           reportProgress(`step ${n} of ${total}: ${st.action}`);
