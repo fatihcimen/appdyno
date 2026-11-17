@@ -150,6 +150,8 @@ The code meets typescript-eslint's type-checked rules by itself: a rule is turne
 
 Every doc is in English and in Turkish, `X.md` and `X.tr.md`, and a change to one is made in both: `docs.test.ts` holds the two to the same lines, code, numbers and links, each in its own language. The changelog is so in each released section, and its Unreleased is in English alone, as [Commits](#commits) says.
 
+In Turkish, the pages and the Mac app's words keep these terms in English: cold launch, warm launch, crash, flow, simulator, emulator, runner, deep link, push, setup, teardown and host, as in `Flow'u Kayda Al`, `Flow'lar` and `Crash'ler`. Common words are Turkish: rapor, ajan, dokunuş, kaydırma. `docs.test.ts` and `words.test.ts` refuse the Turkish words these terms replaced.
+
 Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its own ground, so it reads on any page, and comes as two files, `X.svg` light and `X.dark.svg` dark, which a page shows in a `<picture>` whose `<source media="(prefers-color-scheme: dark)">` picks by GitHub's theme: a media query inside an SVG follows the system's theme, not GitHub's. A Turkish page shows `X.tr.svg` and `X.tr.dark.svg`. To draw one, copy the style block of another and keep to its shapes: blue is your Mac, teal or violet the device, pink whoever is asking. Look at it in both themes.
 
 `packages/appdyno/test/docs.test.ts` holds the diagrams to the code, and every link in the docs to a real target.

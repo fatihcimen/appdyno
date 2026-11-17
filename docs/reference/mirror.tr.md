@@ -234,7 +234,7 @@ Geçerli adım kısa bir cümle ve bir diyagramdır ve telefonun durumu değişt
 | Xiaomi  | USB hata ayıklama (Güvenlik ayarları), USB üzerinden yükleme | `persist.security.adbinput` ve `adbinstall` `1` olarak okunur. İkisi de telefonu bekletmez: öyle okunmadıkları yerde bir kişi İleri ile geçer |
 | iPhone  | Xcode'u edinin, Güvenin, Geliştirici Modu                    | `devicectl`'ın eşleştirme ve Geliştirici Modu durumu                                                                                          |
 
-Derleme numarasının yeri Samsung, Xiaomi ve Pixel için adıyla söylenir; başka bir üreticinin telefonunda nerede olabileceği söylenir. Geliştirici Modu, öncesinde telefonun yeniden başlayacağını söyler. Bir kilit ya da karanlık bir ekran yalnızca telefon okunabildiğinde söylenir. Bu Mac'e izin vermemiş bir telefonda hiçbir şey okunamaz, bu yüzden o adım telefonu uyandırmayı söyler. Bir runner'ın neye ihtiyacı olduğu, yanında Çalıştırıcıyı Derle ile, `doctor`'dan gelir.
+Derleme numarasının yeri Samsung, Xiaomi ve Pixel için adıyla söylenir; başka bir üreticinin telefonunda nerede olabileceği söylenir. Geliştirici Modu, öncesinde telefonun yeniden başlayacağını söyler. Bir kilit ya da karanlık bir ekran yalnızca telefon okunabildiğinde söylenir. Bu Mac'e izin vermemiş bir telefonda hiçbir şey okunamaz, bu yüzden o adım telefonu uyandırmayı söyler. Bir runner'ın neye ihtiyacı olduğu, yanında Runner'ı Derle ile, `doctor`'dan gelir.
 
 Bu yer gösterilirken, sahnede hiçbir cihaz yokken hazır hale gelen bir telefon kendiliğinden açılır. Sahne, neyin deneneceğine dair tek bir cümleye yer açar, Yapay Zekâ İstemcileri bir tık uzaklıktadır; cümle 12 s sonra kendiliğinden gider. Bir kişi başka bir yerdeyken hazır hale gelen bir telefon satırını alır ve hiçbir şey kıpırdamaz; iki telefondan ilki açılır, ikincisi satırını alır. Baştan beri hazır olan bir telefon, diğer her telefon gibi satırını ya da Aç'ı bekler: bir telefona yalnızca bir kişi onunla çalıştığında ya da onu seçtiğinde dokunulur. Sizi Bekleyenler altındaki bir telefon burada, kendi adımında açılır. Bu yer görünürken telefon her 3 s'de bir okunur, görünmezken hiçbir şey okunmaz.
 
@@ -254,7 +254,7 @@ Araçlar, appdyno'nun bir terminalde yaptığını çalıştırır; her satır k
 | Tüm Yapay Zekâ İstemcilerine Ekle                                  | önce `install --dry-run`, sonra `install --yes`       |
 | PATH'e Ekle, PATH'ten Çıkar                                        | `path`, `path --remove`, yalnızca uygulamadan         |
 | Güncellemeleri Denetle, Güncelle                                   | `update --check`, `update`                            |
-| Telefon Bağla içinde Çalıştırıcıyı Derle                           | `ios build`                                           |
+| Telefon Bağla içinde Runner'ı Derle                                | `ios build`                                           |
 
 Hub'ın başka yerlerinde: Doktor Yardım'dadır; kenar çubuğunda `devices`, yeni bir simulator ya da emulator oluşturma ve birini başlatıp kapatma vardır; Yapay Zekâ İstemcileri'nde de `mcp --http` ve her istemcinin `install`'ı vardır.
 

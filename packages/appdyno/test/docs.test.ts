@@ -5,6 +5,7 @@ import { must } from '@appdyno/core';
 import { ALPHA, FLOOR, MIN_BASELINE_RUNS, MIN_SAMPLES, RUN_SDS } from '@appdyno/perf';
 import { SETTLE } from '@appdyno/ops';
 import { describe, expect, it } from 'vitest';
+import { REPLACED_IN_TURKISH } from './turkish-terms.js';
 
 const root = join(import.meta.dirname, '../../..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
@@ -159,6 +160,19 @@ const targetsOf = (page: string, across = false) =>
     .sort();
 
 describe('a page', () => {
+  it('keeps in Turkish the terms the house keeps in English', () => {
+    // a changelog's released section is what was written then
+    const turkish = pages.filter((p) => p.endsWith('.tr.md') && !p.startsWith('CHANGELOG'));
+    expect(turkish.length).toBeGreaterThan(5);
+    expect(
+      turkish.flatMap((p) =>
+        read(p)
+          .split('\n')
+          .flatMap((line, i) => (REPLACED_IN_TURKISH.test(line) ? [`${p}:${i + 1}`] : [])),
+      ),
+    ).toEqual([]);
+  });
+
   it('is in English and in Turkish, every one, the changelog too', () => {
     expect(pairs.length).toBeGreaterThan(1);
     expect(english.filter((p) => !tracked.includes(turkishOf(p)))).toEqual([]);

@@ -555,7 +555,7 @@ Simulator'da `capture_network` probe üzerinden çalışır. `paths` her yolun b
 
 ### İstekleri okumak
 
-Bütün isteklerin bir `read` çağrısı katlanmış gelir: önce başarısız ve reddedilen istekler, her biri bütün olarak; her ana makine bir kez, altında her yöntem ve yol bir kez, sorgu adlarıyla, yinelenenler sayıları, durumları ve ortanca süreleriyle tek satırda; görseller sayılmış olarak. `contains`, `method` ya da `status` (`404`, `4xx`, `failed`) her isteğe kendi satırını verir. Her yanıt son kimliği söyler; `after` yalnızca bir kimlikten sonra başlayanları verir. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur.
+Bütün isteklerin bir `read` çağrısı katlanmış gelir: önce başarısız ve reddedilen istekler, her biri bütün olarak; her host bir kez, altında her yöntem ve yol bir kez, sorgu adlarıyla, yinelenenler sayıları, durumları ve ortanca süreleriyle tek satırda; görseller sayılmış olarak. `contains`, `method` ya da `status` (`404`, `4xx`, `failed`) her isteğe kendi satırını verir. Her yanıt son kimliği söyler; `after` yalnızca bir kimlikten sonra başlayanları verir. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur.
 
 `id` ile `read` tek bir isteğin tamamını verir: oturumun ölçtüğü protokol, adres ve aşamalar (uygulamanın değil, probe'un kendi bağlantısı), ardından başlıklar ve gövdeler; Authorization, Cookie, Set-Cookie ile kimlik bilgisi adı taşıyan başlıklar ve alanlar gizlenir.
 
@@ -563,7 +563,7 @@ Bütün isteklerin bir `read` çağrısı katlanmış gelir: önce başarısız 
 
 ### Mock kuralları
 
-`mock` kuralları koyar: `*` ile `host/path` ya da yol için `regex=`, `method=`, `query=`; ardından `status=`, `type=`, `header=`, `body=` (sunucunun klasörü içinde `body=@file`) ya da `fail=offline|timeout|reset` ya da bu Mac'te veya onun kendi ağında bir ana makineye `to=` (başkası için `--allow-urls` gerekir; yalın bir `localhost`, `http://127.0.0.1` demektir); `delayMs=`, `times=` ve `off` ile birlikte. Verilen kurallar listenin yerini alır, `add` listeye ekler, `[]` temizler, hiçbiri verilmezse her birinin aldıklarıyla listelenir.
+`mock` kuralları koyar: `*` ile `host/path` ya da yol için `regex=`, `method=`, `query=`; ardından `status=`, `type=`, `header=`, `body=` (sunucunun klasörü içinde `body=@file`) ya da `fail=offline|timeout|reset` ya da bu Mac'te veya onun kendi ağında bir host'a `to=` (başkası için `--allow-urls` gerekir; yalın bir `localhost`, `http://127.0.0.1` demektir); `delayMs=`, `times=` ve `off` ile birlikte. Verilen kurallar listenin yerini alır, `add` listeye ekler, `[]` temizler, hiçbiri verilmezse her birinin aldıklarıyla listelenir.
 
 ### Yavaşlatma
 

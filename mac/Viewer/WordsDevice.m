@@ -50,7 +50,7 @@ const MVWordRow MVWordTableDevice[] = {
     {"Accessibility Extra Large", "Erişilebilirlik: Çok Büyük"},
     {"Accessibility Extra Extra Large", "Erişilebilirlik: Daha da Büyük"},
     {"Accessibility Extra Extra Extra Large", "Erişilebilirlik: En Büyük"},
-    {"host:port", "sunucu:port"},
+    {"host:port", "host:port"},
     {"Sent from the window", "Pencereden gönderildi"},
     {"Latitude, longitude", "Enlem, boylam"},
     {"Phone number", "Telefon numarası"},

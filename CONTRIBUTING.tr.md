@@ -150,6 +150,8 @@ Kod typescript-eslint'in tipe dayalı kurallarını kendisi karşılar: bir kura
 
 Her belge İngilizce ve Türkçedir, `X.md` ve `X.tr.md`, ve birindeki bir değişiklik ikisinde de yapılır: `docs.test.ts` ikisini, her biri kendi dilinde, aynı satırlara, koda, sayılara ve bağlantılara bağlı tutar. Değişiklik günlüğü yayımlanmış her bölümünde böyledir, Unreleased bölümü ise [Commit'ler](#commitler) bölümünün dediği gibi yalnızca İngilizcedir.
 
+Türkçede sayfalar ve Mac uygulamasının sözcükleri şu terimleri İngilizce tutar: cold launch, warm launch, crash, flow, simulator, emulator, runner, deep link, push, setup, teardown ve host; `Flow'u Kayda Al`, `Flow'lar` ve `Crash'ler` gibi. Yaygın sözcükler Türkçedir: rapor, ajan, dokunuş, kaydırma. `docs.test.ts` ile `words.test.ts`, bu terimlerin yerini aldığı Türkçe sözcükleri reddeder.
+
 Diyagramlar `docs/images` içinde elle yazılmış SVG'lerdir, üreteç yoktur. Her birinin kendi zemini vardır, böylece her sayfada okunur, ve iki dosya olarak gelir: açık `X.svg` ve koyu `X.dark.svg`; bir sayfa onları, `<source media="(prefers-color-scheme: dark)">`'u GitHub'ın temasına göre seçen bir `<picture>` içinde gösterir: bir SVG'nin içindeki media query GitHub'ın temasını değil, sistemin temasını izler. Türkçe bir sayfa `X.tr.svg` ve `X.tr.dark.svg` gösterir. Bir tane çizmek için başka birinin stil bloğunu kopyalayın ve onun biçimlerine bağlı kalın: mavi sizin Mac'iniz, turkuaz ya da mor cihaz, pembe soran kimse. Ona iki temada da bakın.
 
 `packages/appdyno/test/docs.test.ts` diyagramları koda, belgelerdeki her bağlantıyı da gerçek bir hedefe bağlı tutar.

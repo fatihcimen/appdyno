@@ -10,6 +10,7 @@ import {
   WAKE_AND_OPEN,
 } from '@appdyno/hub';
 import { TRIED } from '../src/hub-services.js';
+import { KEPT_IN_ENGLISH, REPLACED_IN_TURKISH } from './turkish-terms.js';
 
 const viewer = join(import.meta.dirname, '../../../mac/Viewer');
 const source = (file: string) => readFileSync(join(viewer, file), 'utf8');
@@ -54,6 +55,16 @@ describe('the table of words', () => {
   it('numbers what changes where a row has two: each value keeps its own place', () => {
     const places = (s: string) => (s.match(/%(\d\$)?@/g) ?? []).length;
     expect(rows.filter((r) => places(r.tr) > 1 && !r.tr.includes('%1$@'))).toEqual([]);
+  });
+
+  it('keeps in Turkish the terms the docs keep in English, as CONTRIBUTING lists them', () => {
+    const said = (text: string, term: string) => new RegExp(`\\b${term}`, 'i').test(text);
+    expect(
+      rows
+        .filter((r) => KEPT_IN_ENGLISH.some((term) => said(r.en, term) && !said(r.tr, term)))
+        .map((r) => r.en),
+    ).toEqual([]);
+    expect(rows.filter((r) => REPLACED_IN_TURKISH.test(r.tr)).map((r) => r.tr)).toEqual([]);
   });
 
   it('writes Turkish with all its letters', () => {

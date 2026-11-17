@@ -388,7 +388,7 @@ static void checkNeedsYou(MVHub *hub) {
 static void checkWords(void) {
   MVCheck(@"words: a step's count keeps each number in its place", [MVInTurkish(@"Step 1 of 4") isEqual:@"Adım 1 / 4"], MVInTurkish(@"Step 1 of 4"));
   MVCheck(@"words: and so does a duration", [MVInTurkish(@"2 min 5 s") isEqual:@"2 dk 5 sn"], MVInTurkish(@"2 min 5 s"));
-  MVCheck(@"words: and a count of flows, the other way round", [MVInTurkish(@"2 of 3 flows passed.") isEqual:@"3 akıştan 2 tanesi geçti."], MVInTurkish(@"2 of 3 flows passed."));
+  MVCheck(@"words: and a count of flows, the other way round", [MVInTurkish(@"2 of 3 flows passed.") isEqual:@"3 flow'dan 2 tanesi geçti."], MVInTurkish(@"2 of 3 flows passed."));
 }
 
 void MVCheckConnect(void) {
