@@ -117,9 +117,19 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
 });
 
 describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator, over MCP", () => {
-  const call = server(ANDROID, PUSH_APP);
   const adb = (...words: string[]) =>
     execFileSync('adb', ['-s', ANDROID, ...words], { encoding: 'utf8' });
+  // a person installs it, as CONTRIBUTING.md says: on a phone that asks before an install, or holds a copy signed by
+  // another Mac's key, an install here would need a tap or lose that copy's data, and a skip would hide that nothing ran
+  beforeAll(() => {
+    if (!adb('shell', `pm path ${PUSH_APP} 2>&1; true`).includes('package:'))
+      throw new Error(
+        `${PUSH_APP} is not installed on ${ANDROID}: build and install it first, ` +
+          `(cd android && ./gradlew :push-fixture:assembleDebug) && adb -s ${ANDROID} install -r -g ` +
+          'android/push-fixture/build/outputs/apk/debug/push-fixture-debug.apk',
+      );
+  });
+  const call = server(ANDROID, PUSH_APP);
   // a mark in the fixture's own log before each push, as clearing the log would clear it for all on a shared phone
   let mark = '';
   /** What the fixture's code was handed since the last push, a line a message. */

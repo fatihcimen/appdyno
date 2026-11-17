@@ -34,8 +34,9 @@ const on = (provider: DeviceProvider, device: string, apps = [APP], app = APP) =
 };
 
 /**
- * The middle of the first node of the window `pkg` matches whose words `words` match, read for up to 15 s: a window
- * that comes in is not read until it has drawn.
+ * The middle of the first node of the window `pkg` matches whose words, or resource id, `words` match, read for up to
+ * 15 s: a window that comes in is not read until it has drawn. An id holds in any language: a Turkish phone writes the
+ * fixture's button `REQUEST LOCATİON`, and its permission prompt in Turkish.
  */
 async function nodeIn(ctx: ServerContext, pkg: RegExp, words: RegExp) {
   const s = await ctx.session();
@@ -52,7 +53,7 @@ async function nodeIn(ctx: ServerContext, pkg: RegExp, words: RegExp) {
       (x) =>
         pkg.test(tree.windows[x.w]?.pkg ?? '') &&
         x.b[2] > x.b[0] &&
-        words.test(`${x.t ?? ''} ${x.d ?? ''} ${x.h ?? ''}`.trim()),
+        (words.test(`${x.t ?? ''} ${x.d ?? ''} ${x.h ?? ''}`.trim()) || words.test(x.id ?? '')),
     );
     if (n || Date.now() > end)
       return n && { x: Math.round((n.b[0] + n.b[2]) / 2), y: Math.round((n.b[1] + n.b[3]) / 2) };
@@ -102,9 +103,14 @@ function suite(
     expect((await call('open_link', { url: `${LINK}/permission`, read: 'none' })).error).toBe(
       false,
     );
-    const ask = await nodeIn(ctx, /fixture/, /^request location$/i);
+    const ask = await nodeIn(ctx, /fixture/, /^request location$|:id\/ask_permission$/i);
+    expect(ask, "the fixture's button").toBeDefined();
     expect((await call('tap_screen', { ...ask, read: 'none' })).error).toBe(false);
-    const allow = await nodeIn(ctx, /permissioncontroller|springboard/, /while using|^allow/i);
+    const allow = await nodeIn(
+      ctx,
+      /permissioncontroller|springboard/,
+      /while using|^allow|:id\/permission_allow(_foreground_only)?_button$/i,
+    );
     expect(allow, 'the prompt').toBeDefined();
     const answered = await call('tap_screen', { ...allow, read: 'none' });
     expect(answered.error, answered.text).toBe(false);

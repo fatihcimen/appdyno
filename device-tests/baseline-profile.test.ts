@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider } from './workspace.js';
@@ -23,9 +24,26 @@ const DM_FOR_OLDER = join(OUT, 'release/baselineProfiles/1/fixture-release.dm');
 const adb = (...words: string[]) =>
   execFileSync('adb', ['-s', SERIAL, ...words], { encoding: 'utf8' });
 const installed = (...files: string[]) => {
+  // before the uninstall: a build not made leaves the fixture on the device
+  const missing = files.filter((f) => !existsSync(f));
+  if (missing.length > 0)
+    throw new Error(
+      `build the fixture first, (cd android && ./gradlew :fixture:assembleDebug :fixture:assembleRelease): no ${missing.join(', ')}`,
+    );
   // an install that failed before left none to uninstall, and the debug build still goes back at the end
   adb('shell', `pm uninstall ${APP} >/dev/null || true`);
-  adb(files.length > 1 ? 'install-multiple' : 'install', '-g', ...files);
+  try {
+    adb(files.length > 1 ? 'install-multiple' : 'install', '-g', ...files);
+  } catch (e) {
+    const { stdout = '', stderr = '' } = e as { stdout?: string; stderr?: string };
+    // a Xiaomi asks on its screen before each install over USB, and this suite installs by adb, which answers nothing
+    if (`${stdout}${stderr}`.includes('INSTALL_FAILED_USER_RESTRICTED'))
+      throw new Error(
+        `the phone asked on its screen whether to install ${files.join(' and ')} over USB, and no one tapped Install within 10 s: this suite installs by adb, so tap it on the phone at each of its installs`,
+        { cause: e },
+      );
+    throw e;
+  }
 };
 const state = () =>
   /status=[\w-]+\] \[reason=[\w-]+/.exec(adb('shell', 'pm', 'art', 'dump', APP))?.[0];
@@ -102,6 +120,8 @@ describe.skipIf(!SERIAL)('a Baseline Profile', { timeout: 300_000 }, () => {
     try {
       installed(RELEASE, DM_FOR_OLDER);
     } catch (e) {
+      // what this suite says itself, as a build not made, is no word of adb's
+      if (!(e instanceof Error && 'stdout' in e)) throw e;
       // adb 37 exits 1 for the warning it prints of a .dm the device could not load; the app is installed all the same
       const { stdout = '', stderr = '' } = e as { stdout?: string; stderr?: string };
       expect(`${stdout}${stderr}`).toMatch(/Completed with warning/);

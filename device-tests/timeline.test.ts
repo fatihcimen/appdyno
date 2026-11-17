@@ -217,10 +217,19 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
  */
 describe.skipIf(!serial)('the flight recorder', () => {
   const t = opsOn(androidProvider(new Adb(), {}), serial, APP);
-  afterAll(() => leave(t));
+  // no crash dialog left up for the next suite, whose start of the app it would hold
+  afterAll(async () => {
+    await adb(`am force-stop ${APP}`);
+    await leave(t);
+  });
 
-  /** The query makes each link a new intent: one equal to the task's root only brings the task to front. */
+  /**
+   * The query makes each link a new intent: one equal to the task's root only brings the task to front. A new process
+   * each time: a crash before can leave the app held for its "keeps stopping" (a REDMI 15C showed it on the crash of
+   * this suite), which no `am start` restarts and every case after reads as not running.
+   */
   const open = async (screen: string) => {
+    await adb(`am force-stop ${APP}`);
     await fixtureInFront();
     const url = `appdyno-fixture://open/${screen}?n=${Date.now()}`;
     await adb(`am start -W -a android.intent.action.VIEW -d '${url}' ${APP}`);
@@ -261,7 +270,11 @@ describe.skipIf(!serial)('the flight recorder', () => {
         () => '',
       );
       expect(before).not.toBe('');
-      expect(after).not.toBe(before);
+      // or the same process, held for its "keeps stopping", dead until that is answered
+      if (after === before)
+        expect(await (await t.ctx.session()).device.appCrashing?.(APP), 'held for its dialog').toBe(
+          true,
+        );
     });
     console.log(
       JSON.stringify({

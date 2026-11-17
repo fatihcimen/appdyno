@@ -49,7 +49,9 @@ const PROTECT = 'PlayProtectDialogsActivity';
 const CONSENT = 'AdbInstallActivity';
 
 function harness(installAnswers: InstallAnswers) {
-  const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider(new Adb(), { installAnswers })], {
+  // the report's folder is under tmpdir, which a server writes in only when started so
+  const policy = { ...DEFAULT_POLICY, writeDirs: [tmpdir()] };
+  const ctx = new ServerContext(policy, [androidProvider(new Adb(), { installAnswers })], {
     device: serial,
     app: APP,
     claims: { share: false },
@@ -122,9 +124,12 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
     gone(APP);
     const { call } = started(on);
     const dir = join(mkdtempSync(join(tmpdir(), 'appdyno-install-')), 'report');
-    await call('record_session', { kind: 'report', action: 'start', dir });
+    const opened = await call('record_session', { kind: 'report', action: 'start', dir });
+    expect(opened.error, opened.text).toBe(false);
     const r = await call('manage_app', { action: 'install', path: APK });
-    expect(r.error).toBe(false);
+    expect(r.error, r.text).toBe(false);
+    // a person who answers first leaves no tap of the tool's to keep: the report is written all the same
+    expect(r.text, 'the tool tapped, no person first').toMatch(/^tapped "/m);
     await call('record_session', { kind: 'report', action: 'stop' });
     expect(readFileSync(join(dir, 'steps.jsonl'), 'utf8')).toContain('USB install prompt');
   });
@@ -142,6 +147,10 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
     const installing = started(on).call('manage_app', { action: 'install', path: APK });
     // set in the loop below, which the compiler does not follow out of it
     let slept = false as boolean;
+    let done = false as boolean;
+    void installing.finally(() => (done = true));
+    // what the phone did after, so that a failure names its cause: ms since the sleep, wakefulness, focus
+    const after: string[] = [];
     const dark = (async () => {
       for (let i = 0; i < 200 && !slept; i++) {
         if (focus().includes(CONSENT)) {
@@ -149,10 +158,16 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
           slept = true;
         } else await pause(50);
       }
+      const at = Date.now();
+      while (slept && !done) {
+        const awake = sh(`dumpsys power | grep -m1 'mWakefulness=' 2>/dev/null; true`);
+        after.push(`${Date.now() - at} ${awake} ${focus().replace(/.*mCurrentFocus=/, '')}`);
+        await pause(300);
+      }
     })();
     const r = await installing;
     await dark;
-    console.log(`slept: ${String(slept)}\n${r.text}`);
+    console.log(`slept: ${String(slept)}\n${r.text}\n${after.join('\n')}`);
     expect(r.text).toMatch(/^tapped "/m);
     expect(installed(APP)).toBe(true);
   }, 120_000);
