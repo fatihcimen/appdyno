@@ -84,6 +84,26 @@ describe("a screen's web lines", () => {
 });
 
 describe('webview', () => {
+  it('clicks once the page just shown has loaded, as it is about:blank at first, and says how long it looked', async () => {
+    // as a WKWebView's page on iOS 27.2 just after its screen opened: listed, and still blank
+    let asked = 0;
+    const page: WebPage = { id: 'PID:1/1', title: '', url: 'about:blank', visible: true };
+    const web = {
+      pages: () => Promise.resolve([page]),
+      evaluate: (_: unknown, js: string) =>
+        Promise.resolve(
+          js.includes('#pay') && ++asked >= 3 ? { tag: 'button', text: 'Pay' } : null,
+        ),
+    };
+    const { call } = await connect(Object.assign(new FakeDevice(), { web }));
+    expect((await call('inspect_app', { action: 'web_click', selector: '#pay' })).text).toBe(
+      'clicked button "Pay"',
+    );
+    expect((await call('inspect_app', { action: 'web_click', selector: '#none' })).text).toBe(
+      'NOT_FOUND: nothing on the page matches #none after 1500 ms',
+    );
+  });
+
   it('says a page between two loads may be why none is listed, and that one asked for may have changed', async () => {
     // as Safari's, just after a click that navigated
     const pages: WebPage[] = [];

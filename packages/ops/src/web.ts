@@ -1,9 +1,19 @@
-import { asName, fold, onLine, quoted, type Rect, type Screen, type WebPage } from '@appdyno/core';
+import {
+  asName,
+  fold,
+  onLine,
+  quoted,
+  sleep,
+  type Rect,
+  type Screen,
+  type WebPage,
+} from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { checkApp, redactLog } from './policy.js';
 import { WebOut } from './schemas.js';
 import type { Session } from './session.js';
+import { NO_MATCH_WAIT_MS } from './targets.js';
 import { definePart, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ELEMENTS = 200;
@@ -213,11 +223,21 @@ export function webOps(ctx: ServerContext) {
         if (action === 'click') {
           if (!selector)
             throw new ToolError('click needs selector: a CSS selector', 'INVALID_ARGUMENT');
-          const hit = (await web.evaluate(on, CLICK(selector))) as {
-            tag: string;
-            text: string;
-          } | null;
-          if (!hit) throw new ToolError(`nothing on the page matches ${selector}`, 'NOT_FOUND');
+          // waited for as a selector on the screen is: a web view just shown lists its page while it is still
+          // about:blank (iOS 27.2), and a click at once found nothing on it
+          const click = async () =>
+            (await web.evaluate(on, CLICK(selector))) as { tag: string; text: string } | null;
+          const end = Date.now() + NO_MATCH_WAIT_MS;
+          let hit = await click();
+          while (!hit && Date.now() < end) {
+            await sleep(100);
+            hit = await click();
+          }
+          if (!hit)
+            throw new ToolError(
+              `nothing on the page matches ${selector} after ${NO_MATCH_WAIT_MS} ms`,
+              'NOT_FOUND',
+            );
           s.acted();
           const t = `clicked ${hit.tag} ${quoted(clean(hit.text))}`;
           return reply(t, { done: t, page: on.id });
