@@ -67,7 +67,7 @@ function shared(
     const gone = await call('launch_app', { app: 'dev.appdyno.nothere' });
     expect([gone.data.code, gone.text]).toEqual([
       'NOT_FOUND',
-      expect.stringMatching(/^dev\.appdyno\.nothere is not installed on /) as unknown,
+      expect.stringMatching(/^NOT_FOUND: dev\.appdyno\.nothere is not installed on /) as unknown,
     ]);
   });
 
