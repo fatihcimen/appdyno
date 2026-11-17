@@ -347,6 +347,8 @@ static NSString *stateWords(NSDictionary *device) {
   if (message[@"clickOn"]) return [self pokeClick:message[@"clickOn"]];
   if (message[@"clickRow"]) return [self pokeRow:message[@"clickRow"]];
   if (message[@"board"]) return [self pokeBoard];
+  // a width a person may give it, as a test's look at where its parts give way
+  if ([message[@"size"] isKindOfClass:NSArray.class] && [message[@"size"] count] == 2) return [_window setContentSize:NSMakeSize([message[@"size"][0] doubleValue], [message[@"size"][1] doubleValue])];
   if (message[@"ask"]) return [self ask:message[@"ask"]];
   if (message[@"fill"]) return [_tools chooseApp:message[@"fill"] folder:message[@"folder"] ?: @""];
   if ([message[@"press"] isEqual:@"create"]) {

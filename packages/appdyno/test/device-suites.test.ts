@@ -21,6 +21,7 @@ const IPHONE = '00001234-0123456789ABCDEF';
 
 /** Each names its own device, by a variable of its own: nothing here can take it for one device alone. */
 const OWN_GATE = [
+  'hub-clients-dock.test.ts',
   'hub-look.test.ts',
   'hub.clients.test.ts',
   'hub.connect.sim.test.ts',

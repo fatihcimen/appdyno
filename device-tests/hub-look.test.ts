@@ -21,6 +21,8 @@ import { untilWithin } from './until.js';
  * state into the folder APPDYNO_HUB_SHOTS names, with every word it shows beside it. APPDYNO_HUB_LOOK and
  * APPDYNO_HUB_LANGUAGE say how it is drawn. APPDYNO_HUB_MAKE=1 makes a simulator and an emulator by the sheet, as a
  * person does, and starts them: they are named `appdyno-mac-1` and `appdyno-mac-2`, and left for the caller to delete.
+ * APPDYNO_HUB_OURS names ours that run already, by id, serial or name, comma between: each is shown, every pane of its
+ * Inspector pictured, and the window narrowed to where the Inspector and then the sidebar give way.
  *
  * What another runs is no one's to look at: the lists keep to what is shut down and what this run made, no phone is
  * listed, and nothing the window asks of a device that is not ours reaches the hub.
@@ -35,7 +37,20 @@ const until = untilWithin(60_000);
 const quiet = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Ours, by id, serial or name: what this run made, as each is told. */
-const ours = new Set<string>();
+const ours = new Set<string>((process.env.APPDYNO_HUB_OURS ?? '').split(',').filter(Boolean));
+/** Each pane of the Inspector, by the name a real click finds its tab by. */
+const PANES = [
+  'tabPerformance',
+  'tabFlows',
+  'tabApps',
+  'tabActivity',
+  'tabLogs',
+  'tabNetwork',
+  'tabAccessibility',
+  'tabDevice',
+  'tabLinks',
+  'tabPush',
+];
 const isOurs = (...keys: (string | undefined)[]) =>
   keys.some((k) => k !== undefined && ours.has(k));
 
@@ -187,6 +202,58 @@ describe.runIf(shots)('the hub, looked at', () => {
       await clicked({ clickOn: 'cancel' });
     }
   }, 600_000);
+
+  it.runIf(ours.size > 0)(
+    'shows each device of ours live, each pane of its Inspector, and the window narrowed',
+    async () => {
+      const running = () =>
+        (sent.findLast((m) => Array.isArray(m.devices))?.devices ?? []) as {
+          id: string;
+          serial?: string;
+          kind: string;
+          state: string;
+        }[];
+      await until(
+        'our devices listed',
+        () => running().some((d) => isOurs(d.id) && d.state === 'running'),
+        120_000,
+      );
+      for (const device of running().filter(
+        (d) => d.state === 'running' && isOurs(d.id, d.serial),
+      )) {
+        const stage = device.serial ?? device.id;
+        poke({ id: device.id });
+        // live already where it was chosen as the hub opened
+        await until(
+          `${device.kind} live`,
+          () => told.some((m) => m.op === 'first' && m.stage === stage),
+          120_000,
+        );
+        await quiet(4_000);
+        await looked(`live-${device.kind}`);
+        for (const pane of PANES) {
+          const at = told.length;
+          link.send({ op: 'poke', stage, clickOn: pane });
+          await until(
+            `the ${pane} tab`,
+            () => told.slice(at).some((m) => m.op === 'clicked'),
+            30_000,
+          );
+          await quiet(2_500);
+          await looked(`pane-${device.kind}-${pane.slice(3).toLowerCase()}`);
+        }
+      }
+      for (const [w, h] of [
+        [1000, 760],
+        [820, 700],
+      ] as const) {
+        poke({ size: [w, h] });
+        await looked(`narrow-${w}`);
+      }
+      poke({ size: [1240, 820] });
+    },
+    1_200_000,
+  );
 
   it.runIf(make)(
     'makes a simulator and an emulator by the sheet, chooses each and starts it',
