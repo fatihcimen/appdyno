@@ -449,8 +449,8 @@ How this was checked, and on which devices: [the evidence](perf-evidence.md#agai
 | jank          | median janky share of the scroll rounds (rounds under 60 frames left out) above 10 %          | this project's default |
 | memory growth | over 30 % from the second round's end to the last's (the first round loads images and caches) | this project's default |
 
-`measure_performance scroll` reads one round, and three where it is given a `scenario`, for the median a baseline or a
-compare takes; `repeats` asks for others. The gate calls a change only from 5 samples a side, so a run it is to call needs `repeats` of 5 or more. `x` and `y` or a `selector` name the list, as `swipe_screen` takes them, and the swipes go through its middle. Over the jank threshold it scrolls once more under the CPU profiler, which no
+`measure_performance scroll` reads one round, and 5 where it is given a `scenario`, as many as the gate needs on each side to
+call a change; `repeats` asks for others, and fewer than 5 leave a change `few-samples`. `x` and `y` or a `selector` name the list, as `swipe_screen` takes them, and the swipes go through its middle. Over the jank threshold it scrolls once more under the CPU profiler, which no
 round counts, and names the app's top function in that scroll, the first that is not a kernel address, as an emulator hides the kernel's names: on an API 34 emulator, the fixture's heavy list read 94.4 % janky in one round and named `dev.appdyno.fixture.HeavyListActivity.heavyFrame`, 84 % of the samples, in 25 s.
 
 An emulator's numbers depend on the host's load and GPU mode: they are relative and only compared with

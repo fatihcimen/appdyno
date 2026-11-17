@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cannot, must, type ActOptions } from '@appdyno/core';
 import type { ActParams, Tree } from '@appdyno/protocol';
-import { latestRuns, runKeys } from '@appdyno/perf';
+import { latestRuns, MIN_SAMPLES, runKeys } from '@appdyno/perf';
 import { assert, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { MEASUREMENTS, connect } from './shared.js';
@@ -189,7 +189,7 @@ describe('perf tools', () => {
     expect(run?.filter((x) => x.kind === 'launch.ttfd_ms').map((x) => x.value)).toEqual([9900]);
   });
 
-  it('scroll: reads one round where it is asked for a reading, and three for a scenario a baseline is kept under', async () => {
+  it('scroll: reads one round where it is asked for a reading, and as many as the gate needs a side for a scenario', async () => {
     const t = await connect({}, new FakeDevice());
     const rounds = async (args: Record<string, unknown>) =>
       (
@@ -197,7 +197,8 @@ describe('perf tools', () => {
           {}) as { rounds?: unknown[] }
       ).rounds;
     expect(await rounds({ swipes: 1 })).toHaveLength(1);
-    expect(await rounds({ swipes: 1, scenario: 'feed' })).toHaveLength(3);
+    expect(await rounds({ swipes: 1, scenario: 'feed' })).toHaveLength(MIN_SAMPLES);
+    expect(MIN_SAMPLES).toBe(5);
     expect(await rounds({ swipes: 1, repeats: 2 })).toHaveLength(2);
   });
 

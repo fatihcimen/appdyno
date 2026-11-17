@@ -15,7 +15,7 @@ import {
   must,
 } from '@appdyno/core';
 import { DeviceError, type Point } from '@appdyno/protocol';
-import type { Metric } from '@appdyno/perf';
+import { MIN_SAMPLES, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { redact } from '../policy.js';
@@ -32,9 +32,6 @@ const HIDDEN_KERNEL = 'the kernel, whose names this device hides';
 
 /** Jank above this share of frames is worth a finding: this tool's own line, and none of Play's (`vitals.ts`). */
 const JANK_PERCENT = 10;
-
-/** The rounds a run kept under a scenario has, for the median a baseline or a compare takes. */
-const BASELINE_ROUNDS = 3;
 
 /** What a recording around the swipes gives each, and the list's coasting after them. */
 const SECONDS_A_SWIPE = 1.5;
@@ -277,8 +274,8 @@ export function perfScrollOp(ctx: ServerContext) {
           'INVALID_ARGUMENT',
           NAME_AN_ELEMENT,
         );
-      // a reading is one round; what is kept under a name, for a baseline or a compare, has three to take a median of
-      const repeats = asked ?? (scenario ? BASELINE_ROUNDS : 1);
+      // a reading is one round; what is kept under a name is one side of a gate, which calls nothing on fewer samples
+      const repeats = asked ?? (scenario ? MIN_SAMPLES : 1);
       const s = await ctx.session();
       const pkg = measuredApp(s, app);
       await withProbe(s, pkg, probe);

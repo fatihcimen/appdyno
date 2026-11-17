@@ -449,8 +449,8 @@ Bunun nasıl ve hangi cihazlarda sınandığı: [kanıtlar](perf-evidence.tr.md#
 | takılma       | kaydırma turlarının medyan takılan payı (60 karenin altındaki turlar dışarıda) %10'un üstünde | bu projenin varsayılanı |
 | bellek artışı | ikinci turun sonundan sonuncununkine %30'un üstü (ilk tur görselleri ve önbellekleri yükler)  | bu projenin varsayılanı |
 
-`measure_performance scroll` bir tur okur, kendisine bir `scenario` verildiğinde ise bir baseline'ın ya da bir
-karşılaştırmanın aldığı medyan için üç; `repeats` başka sayılar ister. Kapı bir değişikliğe yalnızca her yanda 5 örnekten karar verir, bu yüzden karar vereceği bir çalıştırma 5 ya da daha fazla `repeats` ister. `x` ve `y` ya da bir `selector`, `swipe_screen`'in aldığı gibi listeyi adlandırır ve kaydırmalar onun ortasından geçer. Takılma eşiğinin üstünde, hiçbir turun saymadığı
+`measure_performance scroll` bir tur okur, kendisine bir `scenario` verildiğinde ise kapının bir değişikliğe karar vermek için her
+yanda istediği kadar, 5; `repeats` başka sayılar ister, 5'ten azı da bir değişikliği `few-samples` bırakır. `x` ve `y` ya da bir `selector`, `swipe_screen`'in aldığı gibi listeyi adlandırır ve kaydırmalar onun ortasından geçer. Takılma eşiğinin üstünde, hiçbir turun saymadığı
 bir kez daha CPU profil oluşturucusu altında kaydırır ve uygulamanın o kaydırmadaki en üst fonksiyonunu, çekirdek adresi olmayan ilkini, adlandırır, çünkü bir emulator çekirdeğin adlarını gizler: API 34 bir emulator'da fixture'ın ağır listesi bir turda %94,4 takılmalı okundu ve 25 s'de örneklerin %84'üyle `dev.appdyno.fixture.HeavyListActivity.heavyFrame` adlandırıldı.
 
 Bir emulator'ın sayıları host'un yüküne ve GPU kipine bağlıdır: görelidirler ve yalnızca
