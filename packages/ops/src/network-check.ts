@@ -113,9 +113,14 @@ export async function requestsFrom(s: Session) {
   const { serial, network } = s.device;
   const c = captures.read(serial);
   if (!c?.handle || !network) return () => undefined;
-  const { entries } = await network
-    .read(c.handle, true)
-    .catch(() => ({ entries: [] as NetworkEntry[] }));
+  // with no newest request known, a step would take one from before the run for the run's own
+  const { entries } = await network.read(c.handle, true).catch((e: unknown) => {
+    throw new ToolError(
+      `the capture could not be read as the run began, so a request step cannot tell this run's requests from earlier ones: ${(e as Error).message}`,
+      'CHECK_FAILED',
+      'capture_network read says what the capture holds; capture_network start begins it anew',
+    );
+  });
   const last = entries.at(-1)?.id ?? -1;
   return () => (captures.read(serial)?.since === c.since && last >= 0 ? last : undefined);
 }

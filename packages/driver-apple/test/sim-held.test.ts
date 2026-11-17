@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -280,6 +281,18 @@ describe('a capture by the network probe', () => {
     expect((await network.read(capture)).note).toBe(
       `${APP} runs as a process the probe is not in: its requests since are not seen`,
     );
+  });
+
+  it('reads no log yet as no request, and refuses a capture whose folder is gone', async () => {
+    const simctl = Object.assign(new Simctl({}), {
+      exec: () => Promise.resolve(''),
+      pid: () => Promise.resolve(1),
+    });
+    const network = new SimulatorNetwork(simctl, SIM, new HeldLaunches(SIM));
+    const capture = await network.start('probe', APP);
+    expect((await network.read(capture, true)).entries).toEqual([]);
+    rmSync(String(capture.dir), { recursive: true });
+    await expect(network.read(capture, true)).rejects.toThrow("the capture's folder is gone");
   });
 
   it('numbers a request as it starts, has one with no end yet in flight, and ends it with its process', () => {

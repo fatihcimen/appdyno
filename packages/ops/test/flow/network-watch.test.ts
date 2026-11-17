@@ -145,6 +145,41 @@ describe('a request that failed under an action', () => {
     expect(lax.steps[1]?.warnings).toEqual(['network: POST api.test/v1/pay 500 (id 2)']);
   });
 
+  it('fails an action under strict when the capture cannot be read, and says so where strict is off', async () => {
+    const call = callerOf(context());
+    await call('capture_network', { action: 'mock', strict: true });
+    const { read } = at.probe;
+    const unreadable = () => Promise.reject(new Error('EACCES: log.jsonl'));
+    at.probe.read = unreadable;
+    const e = await refusal(call('tap_screen', TAP));
+    expect(e.code).toBe('CHECK_FAILED');
+    expect(e.message).toMatch(
+      /^tapped .*"Ana sayfa"\nnetwork strict: the capture could not be read: EACCES: log\.jsonl$/,
+    );
+    // in a flow, the step fails: never a pass
+    const r = await flowsFor(context()).replay(at.flowFile('tap text="Ana sayfa"'));
+    expect(r.passed).toBe(false);
+    expect(r.failure?.message).toContain('network strict: the capture could not be read');
+    at.probe.read = read;
+    await call('capture_network', { action: 'mock', strict: false });
+    at.probe.read = unreadable;
+    expect((await call('tap_screen', TAP)).text).toContain(
+      'network: the capture could not be read: EACCES: log.jsonl',
+    );
+  });
+
+  it('refuses a run with request steps whose capture cannot be read as it begins', async () => {
+    const call = callerOf(context());
+    await call('capture_network', { action: 'start', via: 'probe' });
+    at.probe.entries = [later({ status: 200 })];
+    at.probe.read = () => Promise.reject(new Error('EACCES: log.jsonl'));
+    const e = await refusal(
+      flowsFor(context()).replay(at.flowFile('request "/v1/pay" method=POST status=200')),
+    );
+    expect(e.code).toBe('CHECK_FAILED');
+    expect(e.message).toContain("cannot tell this run's requests from earlier ones: EACCES");
+  });
+
   it('records strict as a step, and reads only strict, on or off, after network', async () => {
     const call = callerOf(context());
     const { text } = await recorded(call, async () => {

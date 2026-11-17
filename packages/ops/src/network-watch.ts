@@ -49,10 +49,23 @@ export async function failedSince(
 ): Promise<string[]> {
   const { serial } = s.device;
   const c = captures.read(serial);
-  if (c?.via !== 'probe' || !c.handle || !s.device.network) return [];
-  const { entries } = await s.device.network
-    .read(c.handle, true)
-    .catch(() => ({ entries: [] as NetworkEntry[] }));
+  if (c?.via !== 'probe') return [];
+  let entries: NetworkEntry[];
+  try {
+    const { network } = s.device;
+    if (!c.handle || !network) throw new Error('this device has no capture by the probe to read');
+    ({ entries } = await network.read(c.handle, true));
+  } catch (e) {
+    // a list not read is no list of none that failed: under strict that is no pass
+    const why = `the capture could not be read: ${clean((e as Error).message)}`;
+    if (!c.strict) return [`network: ${why}`];
+    throw new ToolError(
+      [...(done ? [done] : []), `network strict: ${why}`].join('\n'),
+      'CHECK_FAILED',
+      'what it did stands; capture_network read says what the capture holds, capture_network start begins it anew, and capture_network mock strict: false ends this',
+      true,
+    );
+  }
   const ended = entries.filter((e) => !e.inFlight && e.id !== undefined);
   const at = (e: NetworkEntry) => Date.parse(e.at ?? '') - (e.ms ?? 0);
   let seen = looked.get(serial);

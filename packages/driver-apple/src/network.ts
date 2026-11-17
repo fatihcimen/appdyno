@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   run,
   stateDir,
@@ -22,6 +22,21 @@ import { assertBundle, type Simctl } from './simctl.js';
 
 /** The network probe's name among what an app's launches carry. */
 const PROBE = NETWORK_PROBE;
+
+/**
+ * The probe's log: none yet, in the capture's folder, is no request yet. A folder gone or a log that cannot be read is
+ * refused, as a list read as empty would pass what no one checked.
+ */
+const logOf = (h: NetworkHandle) =>
+  readFile(String(h.log), 'utf8').catch((e: unknown) => {
+    const dir = dirname(String(h.log));
+    const gone = (e as NodeJS.ErrnoException).code === 'ENOENT';
+    if (gone && existsSync(dir)) return '';
+    throw new DeviceError(
+      'NOT_FOUND',
+      gone ? `the capture's folder is gone: ${dir}` : (e as Error).message,
+    );
+  });
 
 /** The Mac's HTTP proxy as `host:port`, or `none`: what a simulator's apps go through. */
 export async function macProxy(): Promise<string> {
@@ -96,7 +111,7 @@ export class SimulatorNetwork implements NetworkSource {
   }
 
   async read(h: NetworkHandle, bare = false): Promise<NetworkAnswer> {
-    const text = await readFile(String(h.log), 'utf8').catch(() => '');
+    const text = await logOf(h);
     const entries = probeEntries(text);
     const unseen = probeUnseen(text);
     if (bare) return { entries, ...unseen };
