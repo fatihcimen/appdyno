@@ -1,9 +1,9 @@
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
-import { queryTraceFile, traceTable } from '../src/trace.js';
+import { queryTraceFile, recordTrace, traceTable } from '../src/trace.js';
 import { againHint, stoppedLate } from '../src/trace-read.js';
 
 const TABLE =
@@ -66,6 +66,34 @@ describe('reading a trace', () => {
     expect(againHint(40, 10)).toBe(
       'nothing is wrong with the device: measure again when this Mac is quieter, at load 40 on 10 cores',
     );
+  });
+
+  it('refuses a process the recording tool keeps not finding, saying why and what to do', async () => {
+    const tries = fakeTool(`echo 'Cannot find process for provided pid: 42' >&2\nexit 1`);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const failure = await recordTrace({
+      template: 'Power Profiler',
+      instrument: true,
+      device: 'phone',
+      // the wait for the process has run out by the first look's answer
+      attach: () => {
+        vi.setSystemTime(Date.now() + 241_000);
+        return Promise.resolve(42);
+      },
+      attachedOnly: true,
+      seconds: 1,
+      dir: mkdtempSync(join(tmpdir(), 'appdyno-record-')),
+    }).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(DeviceError);
+    expect(failure).toMatchObject({
+      code: 'TIMEOUT',
+      message: 'the trace tool did not find process 42 for 240 s, though it runs',
+      hint: "a phone's trace tool does not find a process for minutes after a recording attached to it: measure again in a few minutes",
+    });
+    expect(tries()).toBe(1);
   });
 
   it('reads the list of tables again too', async () => {

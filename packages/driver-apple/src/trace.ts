@@ -106,6 +106,8 @@ async function recordInTurn(r: TraceRecording): Promise<string> {
         throw new DeviceError(
           'TIMEOUT',
           `the trace tool did not find process ${pid} for ${FIND_PROCESS_MS / 1000} s, though it runs`,
+          // without its own, the agent would read the device's: that it did not answer
+          "a phone's trace tool does not find a process for minutes after a recording attached to it: measure again in a few minutes",
         );
       await sleep(FIND_RETRY_MS);
       throwIfCancelled('the recording');

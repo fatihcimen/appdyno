@@ -226,6 +226,9 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   }, 300_000);
 
   it('network: a system app is read too, attached with no debugger', async () => {
+    // a process no recording attached to yet: the leaks case attached to the one running, and the trace tool may not
+    // find a process for minutes after (on iOS 27.2 with Xcode 27.2, Settings was not found for 240 s here)
+    await d.terminate(SETTINGS);
     await d.launch(SETTINGS);
     const n = (await d.measure.network(SETTINGS, 1_000)).value;
     console.log('network of Settings', JSON.stringify(n));
