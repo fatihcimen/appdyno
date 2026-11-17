@@ -2,6 +2,7 @@ export {
   connect,
   type Answer,
   type Appdyno,
+  type CallOptions,
   type ConnectOptions,
   type ErrorCode,
   type Policy,
@@ -10,8 +11,10 @@ export {
   type ReplayOptions,
   type ReplayResult,
   type ReplayStep,
+  type ScreenNode,
   type Signing,
   type StepEvent,
+  type StopSignal,
   type ToolName,
   type Tools,
 } from './library.js';
