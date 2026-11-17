@@ -219,6 +219,8 @@ for (const t of targets)
         for (const held of [ops.measurements, project])
           rmSync(held, { recursive: true, force: true });
       }
+      // the session's end lets its frame probe go: closed alone, ios-perf's launches of the app carried it
+      await ops.ctx.end();
       ops.ctx.close();
     });
 

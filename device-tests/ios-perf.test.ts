@@ -48,6 +48,9 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   beforeAll(async () => {
     await new Simctl().install(udid, SIM_FIXTURE);
     d = new IosSimulatorDevice(udid);
+    // a probe a suite before held and left with no session's end would go into every launch here: none is the case
+    // "without the probe" stands on
+    d.holds.letGo();
     // the runner does not stay on a shared simulator after the run, nor after an open that failed; nor does the frame
     // probe, held with no session to let it go, which every later launch of the fixture would carry
     return () => {
