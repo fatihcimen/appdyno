@@ -158,6 +158,28 @@ describe('the simulator smoke', () => {
     expect(r.summary).toContain('| ios.test.ts | 1 | 1 | 0 | 61 |');
   });
 
+  it('is said in the docs at the number of cases it runs', () => {
+    const page = (path: string) => readFileSync(join(root, path), 'utf8');
+    // what a changelog says of the release to come: once released it is what was true then, and the next may not say it
+    const unreleased = (path: string) =>
+      /^## (?:Unreleased|Yayımlanmamış)\n([^]*?)^## /m.exec(page(path))?.[1] ?? '';
+    const said: [string, string, RegExp][] = [
+      ['ci.md', page('docs/reference/ci.md'), /smoke: (\d+) cases|The cases are (\d+)/g],
+      ['ci.tr.md', page('docs/reference/ci.tr.md'), /lerinden (\d+) durum|Durumlar (\d+) tanedir/g],
+      ['CHANGELOG.md', unreleased('CHANGELOG.md'), /runs (\d+) named cases/g],
+      ['CHANGELOG.tr.md', unreleased('CHANGELOG.tr.md'), /adı yazılı (\d+) durum/g],
+    ];
+    const cases = String(CASES.reduce((a, b) => a + b));
+    for (const [where, text, words] of said) {
+      const counts = [...text.matchAll(words)].map((m) => m[1] ?? m[2]);
+      expect(
+        counts.filter((n) => n !== cases),
+        where,
+      ).toEqual([]);
+      expect(where.startsWith('CHANGELOG') ? [0, 2] : [2], where).toContain(counts.length);
+    }
+  });
+
   it("has a row of the tested versions in the summary's own form, so that one reads against the other", () => {
     for (const page of ['tools-tested.md', 'tools-tested.tr.md'])
       expect(readFileSync(join(root, 'docs/reference', page), 'utf8')).toMatch(

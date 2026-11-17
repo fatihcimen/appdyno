@@ -6,7 +6,7 @@ What [the tools](tools.md) were run on, and what each run showed. The device sui
 
 ## Tested versions
 
-Each device, OS and Xcode that a run on this page names whole, newest first. The simulator smoke of [CI and releases](ci.md) writes the same four columns at the top of its `device-summary.md`, which each release holds as a file: a row there that is not here names a pair that only the smoke's suites ran on.
+Each device, OS and Xcode that a run on this page names whole, newest first. The simulator smoke of [CI and releases](ci.md) writes the same four columns at the top of its `device-summary.md`, which each release holds as a file: a row there that is not here names a pair that only the smoke's suites ran on. The smoke ran 18 cases in its rows here; from 1.3.0 it runs 21, the keys with a modifier among them, and no run of the 21 on GitHub's runner is recorded yet.
 
 | device              | OS                                      | Xcode         | date       | what ran                                                                                                                                                                              |
 | ------------------- | --------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

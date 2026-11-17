@@ -6,7 +6,7 @@
 
 ## Test edilen sürümler
 
-Bu sayfadaki bir çalıştırmanın eksiksiz adlandırdığı her cihaz, işletim sistemi ve Xcode, en yeniden eskiye. [CI ve sürümler](ci.tr.md) sayfasındaki simulator smoke'u aynı dört sütunu, her sürümün bir dosya olarak taşıdığı `device-summary.md` dosyasının başına yazar: orada olup burada olmayan bir satır, yalnızca smoke'un suite'lerinin çalıştığı bir ikiliyi adlandırır.
+Bu sayfadaki bir çalıştırmanın eksiksiz adlandırdığı her cihaz, işletim sistemi ve Xcode, en yeniden eskiye. [CI ve sürümler](ci.tr.md) sayfasındaki simulator smoke'u aynı dört sütunu, her sürümün bir dosya olarak taşıdığı `device-summary.md` dosyasının başına yazar: orada olup burada olmayan bir satır, yalnızca smoke'un suite'lerinin çalıştığı bir ikiliyi adlandırır. Smoke buradaki satırlarında 18 durum çalıştırdı; 1.3.0'dan bu yana değiştirici tuşlu tuşlar da içinde olmak üzere 21 durum çalıştırır ve 21 durumun GitHub'ın runner'ında bir çalıştırması henüz kayıtlı değildir.
 
 | cihaz                 | işletim sistemi                         | Xcode         | tarih      | ne çalıştı                                                                                                                                                                   |
 | --------------------- | --------------------------------------- | ------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
