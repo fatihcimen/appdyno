@@ -340,7 +340,11 @@ describe('a capture by the network probe', () => {
   });
 
   it('keeps all of a capture in one folder of its own, for this user alone, and leaves none of it', async () => {
-    const simctl = Object.assign(new Simctl({}), { exec: () => Promise.resolve(`${APP}: 1`) });
+    // the app's process as the neighbours give it: a look at this Mac's own list is no part of a capture
+    const simctl = Object.assign(new Simctl({}), {
+      exec: () => Promise.resolve(`${APP}: 1`),
+      pid: () => Promise.resolve(1),
+    });
     const network = new SimulatorNetwork(simctl, SIM, new HeldLaunches(SIM));
     const capture = await network.start('probe', APP, true);
     const dir = String(capture.dir);
