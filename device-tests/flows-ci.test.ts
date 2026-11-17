@@ -318,11 +318,24 @@ for (const [platform, serial] of targets)
         expect(existsSync(join(kept('a-steps.flow'), 'after.png'))).toBe(true);
         expect(existsSync(join(kept('b-fails.flow'), 'after.png'))).toBe(true);
         expect(existsSync(join(kept('b-fails.flow'), 'attempt-2', 'screen.jpg'))).toBe(true);
-        // the turn a-steps made was put back once the file had run
-        const info = await appdyno(
-          ...['list-devices', '--device', serial, '--json', '{"selected":true}'],
-        );
-        expect(info.out).toContain('rotation 0');
+        if (platform === 'ios') {
+          // a simulator has no rotation lock to write down, so its turn is not put back, and with the home screen
+          // in front, as the teardown leaves it, the list reads rotation 0 turned or not: upright again, for what
+          // runs next
+          const upright = [
+            '--device',
+            serial,
+            '--json',
+            '{"name":"orientation","value":"portrait"}',
+          ];
+          expect((await appdyno('set-device', ...upright)).code).toBe(0);
+        } else {
+          // the turn a-steps made was put back once the file had run
+          const info = await appdyno(
+            ...['list-devices', '--device', serial, '--json', '{"selected":true}'],
+          );
+          expect(info.out).toContain('rotation 0');
+        }
       },
       LONG_MS,
     );
