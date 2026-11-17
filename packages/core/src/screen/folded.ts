@@ -50,6 +50,7 @@ const clickable = (e: ScreenElement) => e.flags.includes('clickable');
  */
 export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
   const around = holders(list);
+  const parts = toggleParts(list);
   const rows = list.filter(
     (e) => e.label && (clickable(e) || e.role === 'textField') && !around.has(e),
   );
@@ -78,6 +79,7 @@ export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
     list.filter(
       (e, i) =>
         around.has(e) ||
+        parts.has(e) ||
         (e.label &&
           ((plain(e) &&
             (rows.some((r) => within(e.rect, r.rect) && holds(r.label, e.label)) ||
@@ -85,6 +87,36 @@ export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
             list.slice(0, i).some((r) => sameAs(e, r)))),
     ),
   );
+}
+
+const TOGGLES = new Set(['switch', 'checkbox']);
+
+/**
+ * What a named toggle says of its row, as SwiftUI gives one Toggle as four: the switch inside it that a touch on it goes
+ * to (an iOS 26 switch stands 2 past the row), a control of its words inside it, and the cell around it named by its
+ * words and its state, as "Bold Text 0".
+ */
+function toggleParts(list: ScreenElement[]): Set<ScreenElement> {
+  const area = (e: ScreenElement) => e.rect.width * e.rect.height;
+  const centred = (e: ScreenElement, r: ScreenElement) =>
+    e.x >= r.rect.x &&
+    e.x <= r.rect.x + r.rect.width &&
+    e.y >= r.rect.y &&
+    e.y <= r.rect.y + r.rect.height;
+  const out = new Set<ScreenElement>();
+  for (const t of list.filter((e) => TOGGLES.has(e.role) && e.label)) {
+    const inner = list.filter((e) => e !== t && centred(e, t) && area(e) * 2 <= area(t));
+    const own = inner.filter((e) => e.role === t.role);
+    // its words as a control of their own are its label where it holds its own switch: elsewhere they may do more
+    for (const e of own.length ? inner : [])
+      if (e.role === t.role || (clickable(e) && once(e.label) === once(t.label))) out.add(e);
+    // a cell no larger than its toggle is a row with a state of its own beside it
+    for (const c of list)
+      if (c.role === 'cell' && area(t) < area(c) && within(t.rect, c.rect))
+        if (holds(c.label, t.label) && /^\s*\d*\s*$/.test(uncut(c.label).replace(t.label, '')))
+          out.add(c);
+  }
+  return out;
 }
 
 /**

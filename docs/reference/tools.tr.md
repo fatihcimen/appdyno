@@ -242,6 +242,7 @@ Bir ref bir öğeyi ne olduğuyla adlandırır, bu yüzden kaydırmalarda ve yen
 Bir yanıttaki bütün bir ekran, tekrar edeni katlar.
 
 - Etiketi kendisini zaten içeren bir satırın içindeki düz bir metin ya da görsel ayrı bir satır almaz; bir web bağlantısının kendi metni ve bir dipnotun işaretleri de almaz. Satırla aynı adı taşıyan ve satırın tam yerinde duran bir kontrol, uygulamanın bir yerde iki kez verdiği bir öğe ve içindeki düz bir metnin sözleriyle adlanan düz bir öğe de almaz; bir uyarının başlığıyla adlanması gibi, bunlar başlığın yerinde söylenir. İlk satır katlananları sayar.
+- Kendi anahtarını içeren bir toggle, SwiftUI'ninki gibi, tek satırdır: içindeki anahtar, içindeki kendi sözlerinden bir kontrol ve onu çevreleyen, sözleri ve durumuyla adlanan hücre ("Bold Text 0") satır almaz; kendi sözlerinden bir toggle'ı çevreleyen bir hücre de almaz.
 - İçindeki sözlerle adlanan bir satır, aynısının hemen ardından gelen bir adı bir kez söyler; harfsiz ya da tek karakterli bir değer, 3'e 3 biten bir skor gibi, kaç kez varsa o kadar kalır.
 - Art arda gelen, birbirine benzeyen üç ya da daha fazla satır tek bir başlığı paylaşır (`cell x=201 clickable: ref "label" y`).
 - Yalnızca bağlamlarının ayırdığı satırlar da bir başlığı paylaşır; her biri bağlamını yerinden sonra taşır (`button x=339 clickable: ref "label" y — context`, ardından `@d62s "Add" 137 — Product 35`).

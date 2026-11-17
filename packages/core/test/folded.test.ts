@@ -74,6 +74,26 @@ describe('what repeats in an answer', () => {
     expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@same', '@twice']);
   });
 
+  it("says a toggle row once, by its toggle, as SwiftUI's four parts of one Toggle say it", () => {
+    // as Settings' Display & Text Size reads on iOS 26: the cell, the toggle, its label as a button, its switch
+    const at = (x: number, y: number, width: number, height: number) => ({
+      rect: { x, y, width, height },
+      x: Math.round(x + width / 2),
+      y: Math.round(y + height / 2),
+    });
+    const clickable: Partial<ScreenElement> = { flags: ['clickable'] };
+    const list = [
+      element('@c', 'cell', 'Bold Text 0', 160, { ...at(20, 134, 362, 53), ...clickable }),
+      element('@t', 'switch', 'Bold Text', 160, { ...at(36, 146, 330, 28), ...clickable }),
+      element('@b', 'button', 'Bold Text', 160, { ...at(36, 150, 71, 20), ...clickable }),
+      element('@s', 'switch', '0', 160, { ...at(305, 146, 63, 28), ...clickable }),
+      element('@o', 'cell', 'On/Off Labels', 319, { ...at(20, 293, 362, 52), ...clickable }),
+      element('@p', 'switch', 'On/Off Labels', 319, { ...at(299, 305, 63, 28), ...clickable }),
+      element('@l', 'cell', 'Larger Text, Off', 213, { ...at(20, 187, 362, 53), ...clickable }),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref).sort()).toEqual(['@b', '@c', '@o', '@s']);
+  });
+
   it('keeps the first of two alike at the same place', () => {
     const twice = [
       element('@one', 'button', 'Dictate', 100, { flags: ['clickable'] }),

@@ -242,6 +242,7 @@ A ref names an element by what it is, so it holds across scrolls and redraws; a 
 A whole screen in an answer folds what repeats.
 
 - A plain text or image inside a row whose label already holds it gets no line of its own, as a web link's own text and a footnote's marks do not, nor does a control named as the row at the row's very place, an element the app gives twice at one place, or a plain element named by the words of a plain text inside it, as an alert by its title, which is said at the title; the first line counts what was folded.
+- A toggle that holds its own switch, as SwiftUI's, is one line: the switch inside it, a control of its words inside it, and the cell around it named by its words and its state ("Bold Text 0") get none, nor does a cell around a toggle of its words.
 - A row named by the words inside it says a name that comes right after the same once; a value with no letter or of one character, as a score of 3 to 3, stays as many times as it is there.
 - Three or more like rows in a sequence share one header (`cell x=201 clickable: ref "label" y`).
 - Rows that only their context tells apart share one too, each with its context after its place (`button x=339 clickable: ref "label" y — context`, then `@d62s "Add" 137 — Product 35`).
