@@ -152,7 +152,8 @@ The shortest path, by how you will use appdyno:
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | appdyno in your MCP client              | `npx -y appdyno install`, then restart the client. It asks which clients, and `--dry-run` shows the change first                                                                                                                                                    |
 | the desktop extension, with no terminal | download `appdyno-<version>.mcpb` from the [latest release](https://github.com/fatihcimen/appdyno/releases/latest) and open it in Claude Desktop. `scripts/check-mcpb.mjs` runs the server the file unpacks to; opening the file in the app has not been tried here |
-| the Mac app, with no terminal           | download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases), drag it to Applications, and choose Add to MCP Clients in its menu bar                                                                                  |
+| the Mac app, with no terminal           | download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases), drag it to Applications, and choose Add to MCP Clients in its menu bar, then restart the client                                                         |
+| the Mac app, by Homebrew                | download `appdyno.rb` from the [latest release](https://github.com/fatihcimen/appdyno/releases/latest) and install it from a tap of your own: see [The Mac app](docs/guides/clients.md#the-mac-app)                                                                 |
 | the library, in a TypeScript project    | `npm install appdyno`, then `import { connect } from 'appdyno'`: see [Library](docs/reference/library.md)                                                                                                                                                           |
 
 Each needs a Mac, and a device to drive: [step 4](#4-get-a-device-ready) gets one ready. A client that runs `npx -y appdyno` asks npm for the latest release at every start: steps 2 and 3 install one version and keep it. The steps below are the same paths in full.
@@ -171,7 +172,7 @@ Each needs a Mac, and a device to drive: [step 4](#4-get-a-device-ready) gets on
 npm install -g appdyno     # installs the appdyno command
 ```
 
-Or take the Mac app, which needs no terminal: download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases) and drag it to Applications. It runs on Apple silicon with macOS 13.5 or newer, and Add to MCP Clients in its menu bar does step 3. See [The Mac app](docs/guides/clients.md#the-mac-app). To build appdyno from a checkout instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
+Or take the Mac app, which needs no terminal: download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases) and drag it to Applications. It runs on Apple silicon with macOS 13.5 or newer. Add to MCP Clients in its menu bar does step 3, and Put appdyno on the PATH there gives your terminal the `appdyno` command that step 5 runs. See [The Mac app](docs/guides/clients.md#the-mac-app). To build appdyno from a checkout instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### 3. Add it to your MCP client
 

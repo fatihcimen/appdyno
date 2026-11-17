@@ -2,7 +2,7 @@
 
 [English](clients.md)
 
-appdyno, Mac'inizde, kullandığı telefonun ya da simulator'ın yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
+appdyno, Mac'inizde, kullandığı telefonun ya da simulator'ın yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır, örneğin Claude Code ya da Cursor; appdyno'ya MCP, yani Model Context Protocol ile ulaşır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
 
 İstemcilerin çoğu appdyno'yu Mac'inizde kendisi başlatır ve appdyno kurulduktan sonra bunun için ağ gerekmez. Tek istisna: Mac uygulaması olmadan, ilk Android trace'i kendi trace processor'ını bir kez indirir. Tarayıcıda çalışan bir istemci ise Mac'inizde hiçbir şey başlatamaz. Zor olan durum budur.
 
@@ -23,11 +23,12 @@ Sonra cihazınızı hazırlayın: [Android](#android-telefon-veya-emulator), [iP
 
 ### Mac uygulaması
 
-Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node, Xcode ya da terminal gerekmez: uygulama kendi Node'unu, Android ajanını ve penceresini içinde taşır.
+Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node ya da terminal gerekmez, uygulamanın kendisi de Xcode istemez: kendi Node'unu, Android ajanını ve penceresini içinde taşır. Bir iOS simulator'ı ya da bir iPhone yine de Xcode, Android de adb ister; ikisi de aşağıda.
 
 1. `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip açın.
 2. Appdyno'yu Applications klasörüne sürükleyin.
 3. Appdyno'yu açın. Hub açılır, menü çubuğunda cihazlarınızla birlikte bir simge kalır. Dock'ta Appdyno yalnızca bir pencere açıkken görünür.
+4. Menü çubuğunda Add to MCP Clients'ı seçin. İstemcinizi yeniden başlatın ve ondan cihazları listelemesini isteyin.
 
 **İlk açılış.** Bir sürüm Developer ID ile imzalıdır ve Apple'ın noter onayından geçmiştir, bu yüzden çift tıklamayla açılır. macOS internetten gelen bir uygulamayı açmak isteyip istemediğinizi bir kez sorar: Open'a tıklayın.
 
@@ -37,7 +38,7 @@ Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node, Xcode y
 
 **Menü çubuğunda**, Put appdyno on the PATH `/usr/local/bin/appdyno` konumuna bir bağlantı koyarak `appdyno` komutunun her terminalde çalışmasını sağlar, macOS parolanızı sorabilir. Add to MCP Clients neyi değiştireceğini gösterir ve `appdyno install` ile aynı işi yapar. Uygulamayı taşırsanız istemcileriniz ve bağlantı bir sonraki açılışta onu izler.
 
-**Homebrew ile.** Her sürüm bir cask dosyası taşır: `appdyno.rb`. Onu kendi tap'inize kopyalayın:
+**Homebrew ile.** Her sürüm bir cask dosyası taşır: `appdyno.rb`. Onu [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirin, ardından kendi tap'inize kopyalayın; burada `you/tools`, sizin seçeceğiniz herhangi bir addır:
 
 ```sh
 brew tap-new you/tools
@@ -45,6 +46,8 @@ mkdir -p "$(brew --repository you/tools)/Casks"
 cp appdyno.rb "$(brew --repository you/tools)/Casks/"
 brew install --cask you/tools/appdyno
 ```
+
+Ardından yukarıdaki 3. adımdan devam edip Appdyno'yu açın.
 
 ### npm paketi
 
@@ -232,7 +235,7 @@ Antigravity, Haziran 2026'da Gemini CLI'ın yerini aldı.
 
 ### Zed
 
-1. `appdyno install` çalıştırın ya da `settings.json` dosyasına şunu ekleyin:
+1. `appdyno install` çalıştırın ya da `~/.config/zed/settings.json` dosyasına şunu ekleyin:
 
    ```json
    {

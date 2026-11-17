@@ -57,7 +57,7 @@ On an emulator with API 37 on 2026-11-08 the same test passed, the `.dm` of anot
 
 ## The gate
 
-**Why that method.** Samples of one run share its load and heat, so two runs of an unchanged app differ "significantly". Across 72
+**Why that method.** Samples of one run share its load and heat, so two runs of an unchanged app differ "significantly". Across the
 ordered pairs of unchanged runs, a rank test alone and a 10 % difference of medians alone would have alarmed:
 
 | device, clean runs                           | pairs | rank test alone | 10 % of medians alone | the gate's calls, 6 runs |

@@ -48,7 +48,7 @@ Where to look next:
 ## How a call runs
 
 - On this page a _window_ is a live window of a device, which `show_mirror`, the hub or the Mac app opens.
-- The _runner_ is appdyno's helper app on an iPhone or a simulator, and the _agent_ is its helper on Android.
+- The _runner_ is appdyno's helper app on an iPhone or a simulator, and the _agent_ is its helper on Android. The _fixture_ is appdyno's own test app, `dev.appdyno.fixture`.
 - A _condition_ is a device setting that appdyno changed and puts back.
 - The _allow list_ is what `--allow-devices`, `--allow-apps` and `--allow-urls` let this server touch.
 
@@ -743,7 +743,7 @@ On a simulator, with an app given or selected, `locale` holds that app in a lang
 
 ## Sharing a device
 
-A process that drives a device holds it: a file in the state directory with its pid and start time. A dead owner's claim is free. A second process is refused `DEVICE_CLAIMED`, with the owner's pid and name, unless it asks to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
+A process that drives a device holds it: a file in the state folder with its pid and start time. A dead owner's claim is free. A second process is refused `DEVICE_CLAIMED`, with the owner's pid and name, unless it asks to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
 
 `list_devices` shows who holds what. There is no daemon. The process that puts back what an ended server left holds the device as `appdyno put-back` while it does, and a session that starts meanwhile waits for it, up to 40 s, where it is refused at once by any other holder.
 

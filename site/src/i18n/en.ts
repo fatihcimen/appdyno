@@ -134,7 +134,8 @@ export const en = {
       },
     ],
     download: 'Download the Mac app',
-    after: 'Apple silicon, macOS 13.5 or newer. The app updates itself.',
+    after:
+      'Apple silicon, macOS 13.5 or newer: the .dmg file of the release. The app updates itself once you say so.',
     shot: 'The hub in its dark look: an iPhone simulator live in Settings while an AI client scrolls it, and the Performance pane reading the picture at 84 frames a second, CPU and memory',
   },
   source: {
@@ -162,7 +163,7 @@ export const en = {
       },
       {
         q: 'What do I need to run it?',
-        a: 'A Mac, and Node 22 or newer. The Mac app carries its own Node, and runs on Apple silicon with macOS 13.5 or newer.',
+        a: 'A Mac, and Node 22 or newer. The Mac app carries its own Node, and runs on Apple silicon with macOS 13.5 or newer. iOS takes Xcode, and Android takes adb.',
       },
       {
         q: 'Is it free, and where does my data go?',

@@ -22,7 +22,7 @@ Her çalıştırma geldiği ham çıktıyla birlikte saklanır. Mac'inizden hiç
 
 ## Baseline ve kapı
 
-Bir kapı, bir çalıştırmayı daha önce sakladığınızla karşılaştırır. Uygulamanızın kendi kendine ne kadar oynadığını bilmek için üç çalıştırmaya ihtiyaç duyar.
+Bir kapı, bir çalıştırmayı daha önce sakladığınızla karşılaştırır. Uygulamanızın kendi kendine ne kadar oynadığını bilmek için üç çalıştırmaya ihtiyaç duyar. Çalıştırmalar scenario'ya, yani ölçülen şeyin adına göre saklanır: cold launch için `launch-cold`, bir snapshot için `idle`; `--scenario` da birini seçer.
 
 ```sh
 appdyno measure-performance launch --app A --mode cold --repeats 6  # üç kez, sonra:
@@ -56,7 +56,7 @@ Karar veremeyen bir kapı geçit vermez. `few-samples`, `noisy` ve `refused`, ü
 
 ## Bir yolculuk
 
-Uygulamanızın içinden geçen bütün bir yolu ölçmek için bir [flow](flows.tr.md) kaydedin ve [onu `--measure` ile çalıştırın](flows.tr.md#ölçülen-ve-kapıyla-denetlenen-bir-yolculuk). Her adım kendi süresini alır, böylece kapı yavaşlayan adımı adıyla söyleyebilir.
+Uygulamanızın içinden geçen bütün bir yolu ölçmek için bir [flow](flows.tr.md) kaydedin ve [onu `--measure` ile çalıştırın](flows.tr.md#ölçülen-ve-kapıyla-denetlenen-bir-yolculuk). Her adım kendi süresini alır, böylece kapı yavaşlayan adımı adıyla söyleyebilir. Çalıştırmaları `journey-` ve flow'un deposundaki yolundan oluşan scenario olarak saklanır; her `/` yerine `-` gelir ve `.flow` düşer.
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # üç kez, sonra:

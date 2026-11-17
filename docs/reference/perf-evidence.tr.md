@@ -57,7 +57,7 @@ Profilli ve profilsiz açılışlar sırayla ölçülür. Önce birinin hepsini,
 
 ## Kapı
 
-**Neden bu yöntem.** Bir çalıştırmanın örnekleri onun yükünü ve ısısını paylaşır, bu yüzden değişmemiş bir uygulamanın iki çalıştırması "anlamlı" biçimde farklıdır. Değişmemiş çalıştırmaların 72
+**Neden bu yöntem.** Bir çalıştırmanın örnekleri onun yükünü ve ısısını paylaşır, bu yüzden değişmemiş bir uygulamanın iki çalıştırması "anlamlı" biçimde farklıdır. Değişmemiş çalıştırmaların aşağıdaki
 sıralı çiftinde, tek başına bir sıra testi ve tek başına medyanlarda %10'luk bir fark şu kadar alarm verirdi:
 
 | cihaz, temiz çalıştırmalar                           | çiftler | yalnızca sıra testi | yalnızca medyanların %10'u | kapının kararları, 6 çalıştırma |

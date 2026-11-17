@@ -22,7 +22,7 @@ Each run is kept with the raw output it came from. Nothing leaves your Mac.
 
 ## A baseline and a gate
 
-A gate compares a run against what you kept before. It needs three runs to know how far your app moves by itself.
+A gate compares a run against what you kept before. It needs three runs to know how far your app moves by itself. Runs are kept by scenario, a name for what was measured: `launch-cold` for a cold launch, `idle` for a snapshot, and `--scenario` picks one.
 
 ```sh
 appdyno measure-performance launch --app A --mode cold --repeats 6  # three times, then:
@@ -56,7 +56,7 @@ A gate that cannot judge does not pass. `few-samples`, `noisy` and `refused` all
 
 ## A journey
 
-To measure a whole path through your app, record a [flow](flows.md) and [run it with `--measure`](flows.md#a-journey-measured-and-gated). Each step gets its own time, so the gate can name the step that got slower.
+To measure a whole path through your app, record a [flow](flows.md) and [run it with `--measure`](flows.md#a-journey-measured-and-gated). Each step gets its own time, so the gate can name the step that got slower. Its runs are kept as the scenario `journey-` and the flow's path in its repository, with `-` for each `/` and no `.flow`.
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # three times, then:

@@ -2,7 +2,7 @@
 
 [Türkçe](clients.tr.md)
 
-appdyno runs on your Mac, beside the phone or simulator it drives. A client is the app you talk to. This page says how to join the two, client by client, and how to get a phone ready from nothing. What each client offers was read from its own documentation on 2026-11-04. They change often, so if a menu has moved, trust the client's page. Phone settings are named as stock Android and iOS name them; a maker or a version may name them otherwise.
+appdyno runs on your Mac, beside the phone or simulator it drives. A client is the app you talk to, such as Claude Code or Cursor, and it reaches appdyno by MCP, the Model Context Protocol. This page says how to join the two, client by client, and how to get a phone ready from nothing. What each client offers was read from its own documentation on 2026-11-04. They change often, so if a menu has moved, trust the client's page. Phone settings are named as stock Android and iOS name them; a maker or a version may name them otherwise.
 
 Most clients start appdyno themselves on your Mac, and once it is installed that needs no network. There is one exception: without the Mac app, the first Android trace downloads its trace processor, once. A client that lives in a browser cannot start anything on your Mac, and that is the hard case.
 
@@ -23,11 +23,12 @@ The Mac app is for most people, and needs no terminal. The npm package is for CI
 
 ### The Mac app
 
-You need a Mac with Apple silicon and macOS 13.5 or newer. You do not need Node, Xcode or a terminal: the app carries its own Node, the Android agent and its window.
+You need a Mac with Apple silicon and macOS 13.5 or newer. You do not need Node or a terminal, and the app itself needs no Xcode: it carries its own Node, the Android agent and its window. An iOS simulator or an iPhone still needs Xcode, and Android needs adb, as below.
 
 1. Download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases) and open it.
 2. Drag Appdyno to Applications.
 3. Open Appdyno. The hub opens, and an icon stays in the menu bar with your devices. The Dock shows Appdyno only while a window is open.
+4. In the menu bar, choose Add to MCP Clients. Restart your client, and ask it to list the devices.
 
 **The first open.** A release is signed with a Developer ID and notarized by Apple, so a double click opens it. macOS asks once whether to open an app from the internet: click Open.
 
@@ -37,7 +38,7 @@ You need a Mac with Apple silicon and macOS 13.5 or newer. You do not need Node,
 
 **In the menu bar**, Put appdyno on the PATH makes `appdyno` work in every terminal, with a link at `/usr/local/bin/appdyno`, and macOS may ask for your password. Add to MCP Clients shows what it would change and does what `appdyno install` does. If you move the app, your clients and the link follow it the next time you open it.
 
-**With Homebrew.** A release carries a cask, `appdyno.rb`. Copy it into a tap of your own:
+**With Homebrew.** A release carries a cask, `appdyno.rb`. Download it from the [latest release](https://github.com/fatihcimen/appdyno/releases/latest), then copy it into a tap of your own, here `you/tools`, any name of yours:
 
 ```sh
 brew tap-new you/tools
@@ -45,6 +46,8 @@ mkdir -p "$(brew --repository you/tools)/Casks"
 cp appdyno.rb "$(brew --repository you/tools)/Casks/"
 brew install --cask you/tools/appdyno
 ```
+
+Then open Appdyno, from step 3 above.
 
 ### The npm package
 
@@ -232,7 +235,7 @@ Antigravity replaced Gemini CLI in June 2026.
 
 ### Zed
 
-1. Run `appdyno install`, or add this to `settings.json`:
+1. Run `appdyno install`, or add this to `~/.config/zed/settings.json`:
 
    ```json
    {

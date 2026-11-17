@@ -85,7 +85,7 @@ düz bir alana yazılmış bir gizli değer onda görülebilir.
 
 ## Yeniden oynatma
 
-Bir yeniden oynatma her adımı, bir ajanın çağırdığı işlemin aynısıyla, onun durulmasıyla çalıştırır. Bir hedef dokunulmadan önce
+Bir yeniden oynatma her adımı, bir ajanın çağırdığı işlemin aynısıyla, onun durulmasıyla çalıştırır: ekranın 200 ms durgun kalmasını, en çok 3 s bekler. Bir hedef dokunulmadan önce
 300 ms boyunca yerinde durmalıdır, çünkü hâlâ kayan bir liste dokunuşu "dur" olarak alır. Bir hedefin gelmesi için
 10 s, bir `assert`'ün tutması için 10 s vardır (`timeoutMs=` bunu değiştirir); sonra çalıştırma durur. İkinci bir deneme ya da yakın bir eşleşme bir tahmin olurdu. Bir hata `file:line`'ı, adım numarasını, en yakın adayları ve ekranı verir. Birden çok
 eşleşme de reddedilir. Uygulamanın sırasında öldüğü bir adım, crash'in nedeniyle başarısız olur. Bir flow'un bütün satırları
@@ -233,7 +233,7 @@ Adımlardan önce `tag smoke login`; `--tag smoke` adı verilen etiketlerden her
 
 ## Bir flow'un bir başkasını çalıştırması
 
-`run shared/login.flow` o dosyanın adımlarını kendi yerine koyar; yolu, onu anan dosyaya göre alınır. Adımlar ilk adım iş yapmadan önce okunur; böylece eksik bir dosya, bozuk bir satır ya da doğrudan ya da başka dosyalar üzerinden kendini çalıştıran bir dosya, döngü adıyla söylenerek reddedilir ve hiçbir şey çalışmaz. Bir ad hepsinde tek bir şey anlamına gelir, çünkü hepsi değerlerini tek bir yerden alır. Tek bir çalıştırmaya değer geçiremezsiniz ve bir dosyada gizli olan bir ad hepsinde gizlidir. Başka bir uygulamaya ait bir dosya reddedilir. Bir hata, bulunduğu dosyayı ve satırı adıyla söyler; adımlar `--from`, rapor ve bir yolculuğun türleri için çalıştıkça sayılır. Bir dışa aktarma adımları yerinde yazar. Bir etiket içinde bulunduğu dosyaya aittir.
+`run shared/login.flow` o dosyanın adımlarını kendi yerine koyar; yolu, onu anan dosyaya göre alınır. Adımlar ilk adım iş yapmadan önce okunur; böylece eksik bir dosya, bozuk bir satır ya da doğrudan ya da başka dosyalar üzerinden kendini çalıştıran bir dosya, döngü adıyla söylenerek reddedilir ve hiçbir şey çalışmaz. Bir ad hepsinde tek bir şey anlamına gelir, çünkü hepsi değerlerini tek bir yerden alır. Tek bir çalıştırmaya değer geçiremezsiniz ve bir dosyada gizli olan bir ad hepsinde gizlidir. Başka bir uygulamaya ait bir dosya reddedilir. Bir hata, bulunduğu dosyayı ve satırı adıyla söyler; adımlar `--from`, rapor ve [bir yolculuğun](#ölçülen-ve-kapıyla-denetlenen-bir-yolculuk) türleri için çalıştıkça sayılır. Bir dışa aktarma adımları yerinde yazar. Bir etiket içinde bulunduğu dosyaya aittir.
 
 ## Kurulum ve temizlik
 

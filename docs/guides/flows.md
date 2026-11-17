@@ -85,7 +85,7 @@ secret typed into a plain field can be seen in it.
 
 ## Replay
 
-A replay runs each step through the same operation an agent calls, with its settle. A target must hold its
+A replay runs each step through the same operation an agent calls, with its settle: the wait until the screen has held still for 200 ms, at most 3 s. A target must hold its
 place for 300 ms before it is touched, because a list still coasting takes a touch as "stop". A target gets 10 s to
 come, an `assert` 10 s to hold (`timeoutMs=` changes it); then the run stops. A second try or a near match would be a guess. A failure gives `file:line`, the step number, the nearest candidates and the screen. Several
 matches refuse too. A step during which the app died fails with the crash's reason. A flow's lines are all
@@ -233,7 +233,7 @@ While a capture by the network probe runs on a simulator, a step under which a r
 
 ## One flow running another
 
-`run shared/login.flow` puts that file's steps in its place, its path taken from the file that names it. They are read before the first step acts, so a missing file, a bad line or a file that runs itself, directly or through other files, is refused with the loop named, and nothing runs. A name means one thing in all of them, because all take their values from one place. You cannot pass a value to one run, and a name that is secret in one file is secret in all. A file for another app is refused. A failure names the file and line it is on, and steps are counted as they run, for `--from`, the report and a journey's kinds. An export writes the steps in place. A tag belongs to the file it is in.
+`run shared/login.flow` puts that file's steps in its place, its path taken from the file that names it. They are read before the first step acts, so a missing file, a bad line or a file that runs itself, directly or through other files, is refused with the loop named, and nothing runs. A name means one thing in all of them, because all take their values from one place. You cannot pass a value to one run, and a name that is secret in one file is secret in all. A file for another app is refused. A failure names the file and line it is on, and steps are counted as they run, for `--from`, the report and the kinds of [a journey](#a-journey-measured-and-gated). An export writes the steps in place. A tag belongs to the file it is in.
 
 ## Setup and teardown
 

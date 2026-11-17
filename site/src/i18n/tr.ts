@@ -136,7 +136,8 @@ export const tr: Words = {
       },
     ],
     download: 'Mac uygulamasını indirin',
-    after: 'Apple silicon, macOS 13.5 ya da üstü. Uygulama kendini günceller.',
+    after:
+      'Apple silicon, macOS 13.5 ya da üstü: sürümdeki .dmg dosyası. Uygulama, siz onaylayınca kendini günceller.',
     shot: 'Karanlık görünümüyle hub: bir yapay zekâ istemcisi kaydırırken Ayarlar’da canlı bir iPhone simulator’ı; Performans paneli görüntüyü 89 FPS olarak, CPU’yu ve memory’yi okuyor',
   },
   source: {
@@ -164,7 +165,7 @@ export const tr: Words = {
       },
       {
         q: 'Çalıştırmak için ne gerekir?',
-        a: 'Bir Mac ve Node 22 ya da daha yenisi. Mac uygulaması kendi Node’unu taşır; Apple silicon üzerinde macOS 13.5 ya da daha yenisiyle çalışır.',
+        a: 'Bir Mac ve Node 22 ya da daha yenisi. Mac uygulaması kendi Node’unu taşır; Apple silicon üzerinde macOS 13.5 ya da daha yenisiyle çalışır. iOS için Xcode, Android için adb gerekir.',
       },
       {
         q: 'Ücretsiz mi, verilerim nereye gidiyor?',

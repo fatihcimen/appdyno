@@ -48,7 +48,7 @@ Sonra nereye bakmalı:
 ## Bir çağrı nasıl çalışır
 
 - Bu sayfada _pencere_, bir cihazın `show_mirror`'ın, hub'ın ya da Mac uygulamasının açtığı canlı penceresidir.
-- _Runner_, appdyno'nun bir iPhone'daki ya da simulator'daki yardımcı uygulaması, _ajan_ ise Android'deki yardımcısıdır.
+- _Runner_, appdyno'nun bir iPhone'daki ya da simulator'daki yardımcı uygulaması, _ajan_ ise Android'deki yardımcısıdır. _Fixture_, appdyno'nun kendi test uygulaması `dev.appdyno.fixture`'dır.
 - _Koşul_, appdyno'nun değiştirdiği ve geri koyduğu bir cihaz ayarıdır.
 - _İzin listesi_, `--allow-devices`, `--allow-apps` ve `--allow-urls` seçeneklerinin bu sunucunun dokunmasına izin verdiği şeylerdir.
 

@@ -152,7 +152,8 @@ appdyno'yu nasıl kullanacağınıza göre en kısa yol:
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | MCP istemcinizde appdyno            | `npx -y appdyno install`, ardından istemciyi yeniden başlatın. Hangi istemcilere ekleneceğini sorar; `--dry-run` değişikliği önce gösterir                                                                                                         |
 | terminalsiz, masaüstü eklentisi     | `appdyno-<version>.mcpb` dosyasını [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirin ve Claude Desktop'ta açın. Dosyadan çıkan sunucuyu `scripts/check-mcpb.mjs` çalıştırır; dosyayı uygulamada açmak burada denenmedi |
-| terminalsiz, Mac uygulaması         | `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirin, Applications'a sürükleyin ve menü çubuğundan Add to MCP Clients'ı seçin                                                    |
+| terminalsiz, Mac uygulaması         | `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirin, Applications'a sürükleyin ve menü çubuğundan Add to MCP Clients'ı seçin, ardından istemciyi yeniden başlatın               |
+| Homebrew ile, Mac uygulaması        | `appdyno.rb` dosyasını [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirin ve kendi tap'inizden kurun: bkz. [Mac uygulaması](docs/guides/clients.tr.md#mac-uygulaması)                                                   |
 | bir TypeScript projesinde kütüphane | `npm install appdyno`, ardından `import { connect } from 'appdyno'`: bkz. [Kütüphane](docs/reference/library.tr.md)                                                                                                                                |
 
 Her biri bir Mac ve kullanılacak bir cihaz ister: [4. adım](#4-cihazı-hazırlayın) bir cihazı hazırlar. `npx -y appdyno` çalıştıran bir istemci her açılışta npm'e son sürümü sorar: 2. ve 3. adımlar tek bir sürümü kurar ve onu korur. Aşağıdaki adımlar aynı yolların ayrıntılı halidir.
@@ -171,7 +172,7 @@ Her biri bir Mac ve kullanılacak bir cihaz ister: [4. adım](#4-cihazı-hazırl
 npm install -g appdyno     # appdyno komutunu kurar
 ```
 
-Ya da terminal istemeyen Mac uygulamasını alın: `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip Applications'a sürükleyin. Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac'te çalışır; menü çubuğundaki Add to MCP Clients da 3. adımı yapar. Bkz. [Mac uygulaması](docs/guides/clients.tr.md#mac-uygulaması). appdyno'yu bunun yerine kaynak koddan derlemek için bkz. [CONTRIBUTING.tr.md](CONTRIBUTING.tr.md).
+Ya da terminal istemeyen Mac uygulamasını alın: `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip Applications'a sürükleyin. Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac'te çalışır. Menü çubuğundaki Add to MCP Clients 3. adımı yapar, aynı yerdeki Put appdyno on the PATH da 5. adımın çalıştırdığı `appdyno` komutunu terminalinize verir. Bkz. [Mac uygulaması](docs/guides/clients.tr.md#mac-uygulaması). appdyno'yu bunun yerine kaynak koddan derlemek için bkz. [CONTRIBUTING.tr.md](CONTRIBUTING.tr.md).
 
 ### 3. MCP istemcinize ekleyin
 
