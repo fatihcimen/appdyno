@@ -59,7 +59,7 @@ const MVWordRow MVWordTableConnect[] = {
     {"To drive an iPhone by its screen, appdyno puts a small runner on it. That takes Xcode and a signing team.", "appdyno, iPhone'u ekranından yönetmek için üzerine küçük bir runner kurar. Bunun için Xcode ve imzalama ekibi gerekir."},
     {"Build Runner", "Runner'ı Derle"},
     {"No Phone?", "Telefon Yok mu?"},
-    {"A simulator or an emulator needs none of this.", "Simülatör ya da emülatör için bunların hiçbiri gerekmez."},
+    {"A simulator or an emulator needs none of this.", "Simulator ya da emulator için bunların hiçbiri gerekmez."},
     {"Get Started", "Başlayın"},
     // what a step's mark says to a person who hears it
     {"Current step", "Şimdiki adım"},

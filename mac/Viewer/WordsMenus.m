@@ -68,11 +68,11 @@ const MVWordRow MVWordTableMenus[] = {
     {"Report an Issue…", "Sorun Bildir…"},
     {"Appdyno Help", "Appdyno Yardımı"},
     {"Choose a running device first.", "Önce çalışan bir cihaz seçin."},
-    {"Choose a simulator or an emulator first.", "Önce bir simülatör ya da emülatör seçin."},
+    {"Choose a simulator or an emulator first.", "Önce bir simulator ya da emulator seçin."},
     {"Shake", "Salla"},
     {"Shaken", "Sallandı"},
     {"Shaken: %@", "Sallandı: %@"},
-    {"Only an Android emulator can be shaken from here", "Buradan yalnızca bir Android emülatör sallanabilir"},
+    {"Only an Android emulator can be shaken from here", "Buradan yalnızca bir Android emulator sallanabilir"},
 };
 
 const size_t MVWordCountMenus = sizeof MVWordTableMenus / sizeof MVWordTableMenus[0];

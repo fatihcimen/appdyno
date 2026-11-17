@@ -4,7 +4,7 @@
 
 const MVWordRow MVWordTableHelp[] = {
     {"Help", "Yardım"},
-    {"appdyno lets an AI client see and drive your iPhones, Android phones, simulators and emulators from this Mac. It taps, types, reads the screen and measures how fast your app really is, and it shows all of that here as it happens. Everything runs on this Mac, with no account and no telemetry.", "appdyno, bir yapay zekâ istemcisinin bu Mac üzerinden iPhone'larınızı, Android telefonlarınızı, simülatörlerinizi ve emülatörlerinizi görmesini ve yönetmesini sağlar. Dokunur, yazar, ekranı okur, uygulamanızın gerçekte ne kadar hızlı olduğunu ölçer ve bunların hepsini olurken burada gösterir. Her şey bu Mac'te çalışır: hesap gerekmez, veri toplanmaz."},
+    {"appdyno lets an AI client see and drive your iPhones, Android phones, simulators and emulators from this Mac. It taps, types, reads the screen and measures how fast your app really is, and it shows all of that here as it happens. Everything runs on this Mac, with no account and no telemetry.", "appdyno, bir yapay zekâ istemcisinin bu Mac üzerinden iPhone'larınızı, Android telefonlarınızı, simulator'larınızı ve emulator'larınızı görmesini ve yönetmesini sağlar. Dokunur, yazar, ekranı okur, uygulamanızın gerçekte ne kadar hızlı olduğunu ölçer ve bunların hepsini olurken burada gösterir. Her şey bu Mac'te çalışır: hesap gerekmez, veri toplanmaz."},
     {"What You Can Ask an AI to Do", "Yapay Zekâdan Neler İsteyebilirsiniz"},
     {"Copy one into your AI client. Any prompt works in any client, and each says what it does to the device.", "Birini yapay zekâ istemcinize kopyalayın. Her istem her istemcide çalışır ve her biri cihaza ne yaptığını söyler."},
     // what a prompt is filled with
@@ -36,7 +36,7 @@ const MVWordRow MVWordTableHelp[] = {
     {"Changes the device: it installs each build, and restarts the app to measure it.", "Cihazı değiştirir: her derlemeyi kurar, ölçmek için uygulamayı yeniden başlatır."},
     // what each word means
     {"What Each Panel and Number Means", "Her Panel ve Sayı Ne Anlama Gelir"},
-    {"A real device is needed for real measurement. A simulator or an emulator measures this Mac, so its numbers compare only with themselves. Real frame rates, frozen frames, hitches and energy need a phone.", "Gerçek ölçüm için gerçek cihaz gerekir. Simülatör ya da emülatör bu Mac'i ölçer, bu yüzden sayıları yalnızca kendileriyle karşılaştırılabilir. Gerçek kare hızı, donan kareler, takılmalar ve enerji için telefon gerekir."},
+    {"A real device is needed for real measurement. A simulator or an emulator measures this Mac, so its numbers compare only with themselves. Real frame rates, frozen frames, hitches and energy need a phone.", "Gerçek ölçüm için gerçek cihaz gerekir. Simulator ya da emulator bu Mac'i ölçer, bu yüzden sayıları yalnızca kendileriyle karşılaştırılabilir. Gerçek kare hızı, donan kareler, takılmalar ve enerji için telefon gerekir."},
     {"How the screen moves, what the app in front uses, and what was measured on this device before.", "Ekranın nasıl hareket ettiği, öndeki uygulamanın ne kullandığı ve bu cihazda daha önce ne ölçüldüğü."},
     {"Records what you do on the device as steps that an AI client or a test can run again.", "Cihazda yaptıklarınızı, bir yapay zekâ istemcisinin ya da testin yeniden çalıştırabileceği adımlar olarak kaydeder."},
     {"Lists, launches, quits and removes the apps on the device.", "Cihazdaki uygulamaları listeler, açar, kapatır ve kaldırır."},
@@ -96,8 +96,8 @@ const MVWordRow MVWordTableHelp[] = {
     {"Three things to do first", "Önce yapılacak üç şey"},
     {"Connect your AI client", "Yapay zekâ istemcinizi bağlayın"},
     {"So it can see and drive your devices.", "Cihazlarınızı görebilsin ve yönetebilsin."},
-    {"Start a simulator", "Bir simülatör başlatın"},
-    {"Or an Android emulator: it shows here, live.", "Ya da bir Android emülatörü: burada canlı görünür."},
+    {"Start a simulator", "Bir simulator başlatın"},
+    {"Or an Android emulator: it shows here, live.", "Ya da bir Android emulator'ı: burada canlı görünür."},
     {"Connect a phone", "Bir telefon bağlayın"},
     {"An iPhone or Android phone, by cable or Wi-Fi.", "Kabloyla ya da Wi-Fi ile bir iPhone veya Android telefon."},
 };

@@ -14,4 +14,6 @@ export const KEPT_IN_ENGLISH = [
   'runner',
   'deep link',
   'host',
+  'simulator',
+  'emulator',
 ];

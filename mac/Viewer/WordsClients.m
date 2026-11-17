@@ -78,8 +78,8 @@ const MVWordRow MVWordTableClients[] = {
     {"appdyno tools install adb --accept-license, or install the Android SDK platform-tools and set ANDROID_HOME (Android only)", "appdyno tools install adb --accept-license çalıştırın ya da Android SDK platform-tools kurup ANDROID_HOME'u ayarlayın (yalnızca Android için)"},
     {"install what a warning above names, for the platform you test", "test ettiğiniz platform için yukarıdaki bir uyarının adını verdiğini kurun"},
     {"accept the USB debugging prompt on the phone", "telefondaki USB hata ayıklama isteğini onaylayın"},
-    {"reconnect the cable, or restart the emulator", "kabloyu yeniden takın ya da emülatörü yeniden başlatın"},
-    {"start the emulator with -gpu host: software rendering makes every read many times slower", "emülatörü -gpu host ile başlatın: yazılımla çizim her okumayı kat kat yavaşlatır"},
+    {"reconnect the cable, or restart the emulator", "kabloyu yeniden takın ya da emulator'ı yeniden başlatın"},
+    {"start the emulator with -gpu host: software rendering makes every read many times slower", "emulator'ı -gpu host ile başlatın: yazılımla çizim her okumayı kat kat yavaşlatır"},
     {"import the profile's development certificate into the keychain", "profilin geliştirme sertifikasını anahtar zincirine aktarın"},
     {"add the phone's UDID to the profile and download it again", "telefonun UDID'sini profile ekleyip profili yeniden indirin"},
 };

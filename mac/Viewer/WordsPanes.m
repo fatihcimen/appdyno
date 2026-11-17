@@ -30,9 +30,9 @@ const MVWordRow MVWordTablePanes[] = {
     {"No crash reports of this app.", "Bu uygulamanın crash raporu yok."},
     {"The whole report: %@", "Raporun tamamı: %@"},
     {"Named by its symbols: %@", "Sembolleriyle adlandırılmış hâli: %@"},
-    {"left out %@ of another simulator", "başka bir simülatörün %@ raporu dışarıda bırakıldı"},
-    {"left out %@ that name no simulator, so none could be told to be this one's", "simülatör adı geçmeyen %@ rapor dışarıda bırakıldı: hiçbirinin bu simülatöre ait olduğu söylenemez"},
-    {"left out %@ of another simulator, and %@ that name no simulator, so none could be told to be this one's", "başka bir simülatörün %1$@ raporu ve simülatör adı geçmeyen %2$@ rapor dışarıda bırakıldı: bunların hiçbirinin bu simülatöre ait olduğu söylenemez"},
+    {"left out %@ of another simulator", "başka bir simulator'ın %@ raporu dışarıda bırakıldı"},
+    {"left out %@ that name no simulator, so none could be told to be this one's", "simulator adı geçmeyen %@ rapor dışarıda bırakıldı: hiçbirinin bu simulator'a ait olduğu söylenemez"},
+    {"left out %@ of another simulator, and %@ that name no simulator, so none could be told to be this one's", "başka bir simulator'ın %1$@ raporu ve simulator adı geçmeyen %2$@ rapor dışarıda bırakıldı: bunların hiçbirinin bu simulator'a ait olduğu söylenemez"},
     // Network
     {"Probe", "Sonda"},
     {"Bytes", "Baytlar"},
