@@ -316,7 +316,7 @@ Bir seçici, onu alan her araçta ve adımda, aralarında `read_screen` ve `chec
 
 ### Bir uygulamayı başlatmak
 
-`launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler; `restart`, `args`, `env` ya da `language` ile çalışan birini önce durdurur ve uygulamayı başlattığını mı, yeniden mi başlattığını söyler. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `manage_app list` vardır. Başlarken sona eren bir uygulama, `read` ne olursa olsun ve hangi uygulama seçili olursa olsun, crash raporunun nedeni ve son günlük satırlarıyla `APP_NOT_RUNNING` ile reddedilir; nedenini söyleyen satır bütün verilir.
+`launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler; `restart`, `args`, `env` ya da `language` ile çalışan birini önce durdurur ve uygulamayı başlattığını mı, yeniden mi başlattığını söyler. iOS'ta uygulamayı başlatan bir açılış, ekranı durgunlaştıktan sonra 1 sn daha izler; o sırada toplu gelen, bir ilk açılış kâğıdı ya da yüklenen bir ızgara, beklenip 2 sn daha izlenir: yanıt onu gösterir. Cihazda olmayan bir uygulama iki platformda da `NOT_FOUND` olarak reddedilir; ipucunda `manage_app list` vardır. Başlarken sona eren bir uygulama, `read` ne olursa olsun ve hangi uygulama seçili olursa olsun, crash raporunun nedeni ve son günlük satırlarıyla `APP_NOT_RUNNING` ile reddedilir; nedenini söyleyen satır bütün verilir.
 
 ### Bir değişiklik geri okunur
 

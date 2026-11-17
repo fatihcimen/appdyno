@@ -53,6 +53,8 @@ export type PlatformScreen = {
   readonly typesBlind?: boolean;
   /** An actionable tap that changed nothing is watched for a late reaction by the device itself: else by the host. */
   readonly watchesTaps?: boolean;
+  /** What a launch that starts the app shows may come in bulk after its screen held still, as a first-run sheet. */
+  readonly lateAfterLaunch?: boolean;
 };
 
 /** What makes a tree a screen: its platform's rules, and the app it is read for. */

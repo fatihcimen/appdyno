@@ -89,6 +89,26 @@ export async function noticed(s: Session, screen: Screen, lookFurther = true) {
   return person ? needsPerson(person) : '';
 }
 
+/** How long a launch that started its app is watched for what comes in bulk after its screen held still. */
+const LAUNCH_WATCH_MS = 1_000;
+
+/**
+ * What a launch that started its app shows within LAUNCH_WATCH_MS of its settle, where the platform says such comes: content
+ * in bulk, as a first-run sheet over the whole screen or a grid that loads, settled again and watched for once more, twice
+ * as long, as an app whose content came late is still starting (a photo app's grid came 1 s after its settle, and its sheet
+ * 1 to 2 s after the grid). A part that changes under one view, a carousel, brings too little to count.
+ */
+export async function lateContent(s: Session, screen: Screen, settled: boolean) {
+  const bulk = (from: Screen) => (x: Screen) => {
+    const d = diffScreens(from.list, x.list);
+    return d.added.length + d.removed.length >= Math.max(3, from.list.length / 2);
+  };
+  let now = { screen, settled };
+  for (let i = 0; i < 2 && (await s.until(bulk(now.screen), (i + 1) * LAUNCH_WATCH_MS)).met; i++)
+    now = await s.settle(SETTLE_DEFAULT.quietMs, SETTLE_DEFAULT.maxMs);
+  return now;
+}
+
 /** How long an actionable tap that changed nothing is watched for a late reaction, as an iOS device watches itself. */
 const LATE_WATCH_MS = 800;
 

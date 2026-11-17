@@ -390,7 +390,13 @@ function launchOp(
       if (!restart && !args && !env && !language && !withProbe) {
         const { was } = await changing(s, () => s.device.launch(pkg).catch(notThere(s, pkg)));
         const said = [launchSaid(pkg, ran), noProbe].filter(Boolean).join('; ');
-        const out = await afterChange(s, was, said, read, pkg);
+        const out = await afterChange(
+          s,
+          ran === false ? { ...was, started: true } : was,
+          said,
+          read,
+          pkg,
+        );
         // a recording writes a start as a start, so that its replay starts where this did
         return ran === undefined ? out : { ...out, data: { ...out.data, wasRunning: ran } };
       }
@@ -422,7 +428,7 @@ function launchOp(
         met: (x: Screen) => x.foreground === pkg,
         otherwise: `${pkg} is not in front yet`,
       };
-      return afterChange(s, was, done, read, pkg, front);
+      return afterChange(s, { ...was, started: true }, done, read, pkg, front);
     },
   });
 }

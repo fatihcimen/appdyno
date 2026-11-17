@@ -23,7 +23,7 @@ import {
 } from './app-death.js';
 import type { ServerContext } from './context.js';
 import { failedSince } from './network-watch.js';
-import { broughtUp, lateReaction, noticed, type TappedAt } from './noticed.js';
+import { broughtUp, lateContent, lateReaction, noticed, type TappedAt } from './noticed.js';
 import { redact, redactLog } from './policy.js';
 import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
@@ -341,7 +341,7 @@ const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said
  * What a change is compared with, whether the selected app was in front as it began, and when it began; `seen`: the
  * action confirmed its effect itself, which the screen's list may not show.
  */
-type Was = { before: Shown; base: Shown; ran: boolean; since: number; seen?: true };
+type Was = { before: Shown; base: Shown; ran: boolean; since: number; seen?: true; started?: true };
 
 /**
  * A change on the device by its call alone, as a launch, a link or a turn, and what its answer compares with: the newest
@@ -359,7 +359,7 @@ async function afterChange(
   clean: Clean,
   cleanLog: Clean,
   s: Session,
-  { before, base, ran: wasInFront, since, seen }: Was,
+  { before, base, ran: wasInFront, since, seen, started: fresh }: Was,
   said: Said,
   read: ReadMode,
   launched?: string,
@@ -385,7 +385,12 @@ async function afterChange(
     );
   }
   reportProgress('waiting for the screen to settle');
-  const { screen, settled } = await settleRead(s, maxMs);
+  const first = await settleRead(s, maxMs);
+  // what a launch that started the app shows: a first-run sheet may come once its first screen held still
+  const { screen, settled } =
+    fresh && s.device.platformScreen.lateAfterLaunch
+      ? await lateContent(s, first.screen, first.settled)
+      : first;
   return afterAction(clean, cleanLog, s, saidOf(said, screen), read, screen, {
     app,
     before,

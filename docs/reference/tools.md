@@ -316,7 +316,7 @@ A selector goes in `selector` in every tool and step that takes one, `read_scree
 
 ### Launching an app
 
-`launch_app` says whether it started the app or brought a running one to the front, on the screen it was on; with `restart`, `args`, `env` or `language` it stops a running one first, and says whether it started the app or restarted it. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `manage_app list` in its hint. An app that ends as it starts is refused with `APP_NOT_RUNNING`, whatever `read` is and whichever app is selected, with the crash report's reason and its last log lines; the line that says why is given whole.
+`launch_app` says whether it started the app or brought a running one to the front, on the screen it was on; with `restart`, `args`, `env` or `language` it stops a running one first, and says whether it started the app or restarted it. On iOS a launch that starts the app watches its screen 1 s more once it held still, and what comes in bulk then, a first-run sheet or a grid that loads, is settled and watched for 2 s more: the answer shows it. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `manage_app list` in its hint. An app that ends as it starts is refused with `APP_NOT_RUNNING`, whatever `read` is and whichever app is selected, with the crash report's reason and its last log lines; the line that says why is given whole.
 
 ### A change is read back
 

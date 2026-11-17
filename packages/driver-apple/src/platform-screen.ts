@@ -218,6 +218,9 @@ export const iosScreen: PlatformScreen = {
   // its runner and a simulator's settle watch 0.8 s for an alert after a tap that changed nothing
   watchesTaps: true,
 
+  // a first-run sheet, or a grid's content, comes some time after a started app's screen held still
+  lateAfterLaunch: true,
+
   /** The navigation bars across the screen that begin where the status bar ends, at most as tall as it gets. */
   topBars(elements) {
     return elements.flatMap((e, i) =>
