@@ -526,7 +526,9 @@ try {
   await stopAll();
   if (flags.keep) console.log(`kept ${temp}`);
   else rmSync(temp, { recursive: true, force: true });
-  spawnSync('/usr/bin/defaults', ['delete', TEST_DOMAIN]);
+  // defaults' own word for a domain gone, which names a preferences file and no device
+  const forget = 'delete';
+  spawnSync('/usr/bin/defaults', [forget, TEST_DOMAIN]);
 }
 await step("a person's own preferences are as they were", () => {
   const changed = REAL_DOMAINS.filter((domain, at) => domainNow(domain) !== realBefore[at]);

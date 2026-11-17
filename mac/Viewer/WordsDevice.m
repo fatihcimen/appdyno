@@ -137,7 +137,7 @@ const MVWordRow MVWordTableDevice[] = {
     {"The tool that lists them gave no answer in 60 s", "Onları listeleyen araç 60 sn içinde yanıt vermedi"},
     {"wait, then try again; where it lasts, restart the Mac", "bekleyin, sonra yeniden deneyin; sürerse Mac'i yeniden başlatın"},
     {"Nothing of this kind can be made on this Mac", "Bu Mac'te bu türden bir cihaz oluşturulamaz"},
-    {"the Android emulator is not installed: %@", "Android emulator'ı kurulu değil: %@"},
+    {"the Android emulator is not installed", "Android emulator kurulu değil"},
     {"Android Studio's SDK Manager installs it, under SDK Tools", "Android Studio'nun SDK Manager'ı onu SDK Tools altında kurar"},
 };
 

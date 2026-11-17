@@ -36,13 +36,18 @@ function nvmNode(home: string) {
 /** What a person's login shell says its PATH is, as their terminal starts it; undefined where it says nothing in time. */
 export async function shellPath(shell: string, home: string, ms = SHELL_MS) {
   try {
-    const { stdout } = await ran(shell, ['-l', '-i', '-c', `printf '${MARK}%s${MARK}' "$PATH"`], {
-      timeout: ms,
-      // their own files, whatever this process was given: HOME may be another for a test
-      env: { HOME: home, USER: userInfo().username, SHELL: shell, TERM: 'dumb' },
-      encoding: 'utf8',
-    });
-    return new RegExp(`${MARK}(.*?)${MARK}`).exec(stdout)?.[1];
+    // printenv says it the same in any shell, fish's own list of paths too
+    const { stdout } = await ran(
+      shell,
+      ['-l', '-i', '-c', `echo ${MARK}; /usr/bin/printenv PATH; echo ${MARK}`],
+      {
+        timeout: ms,
+        // their own files, whatever this process was given: HOME may be another for a test
+        env: { HOME: home, USER: userInfo().username, SHELL: shell, TERM: 'dumb' },
+        encoding: 'utf8',
+      },
+    );
+    return new RegExp(`${MARK}\\n(.*?)\\n${MARK}`).exec(stdout)?.[1];
   } catch {
     return undefined;
   }

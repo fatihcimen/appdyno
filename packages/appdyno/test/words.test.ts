@@ -132,7 +132,7 @@ describe('the table of words', () => {
       NOT_SHAKEN,
       'Shaken',
       'Shaken: the reading is back',
-      'the Android emulator is not installed: spawn emulator ENOENT',
+      'the Android emulator is not installed',
       "Android Studio's SDK Manager installs it, under SDK Tools",
     ];
     expect(said.filter((w) => !known(w))).toEqual([]);

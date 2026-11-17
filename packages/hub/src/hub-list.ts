@@ -42,8 +42,8 @@ type Hardware = (serial: string) => Promise<DeviceHardware | undefined>;
 
 /** How long a refresh waits for a kind's tool before it says it waits: simctl's first answer after a boot takes seconds. */
 const WAIT_MS = 3_000;
-/** What made the last empty list empty, asked again only after this. */
-const WHY_EMPTY_MS = 30_000;
+/** What made the last empty list empty, asked again only after this: an emulator's catalog starts a JVM. */
+const WHY_EMPTY_MS = 300_000;
 
 /** Where a driver's tools are missing altogether, as its catalog says by having none. */
 export const NO_TOOLS: Record<VirtualDevices['kind'], Problem> = {
