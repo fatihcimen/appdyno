@@ -124,19 +124,25 @@ describe.runIf(udid || serial)("a window's live numbers", () => {
     rmSync(runs, { recursive: true, force: true });
   });
 
-  // a fact of the layout, not of the numbers: at the window's opening width, 780 pt, an Android device's bar holds four
-  // device buttons and, once its capsule says the picture's rate, folds Show Performance into its » overflow, where no
-  // click on the bar reaches it
-  it.runIf(!udid)("folds Show Performance into the bar's overflow on Android", async () => {
-    await until('a picture rate', () => heard.some((m) => m.op === 'stats' && m.decoded > 0));
-    await new Promise((r) => setTimeout(r, 1_500));
-    session.tell({ op: 'poke', clickOn: 'hud' });
-    await until('the answer to the click', () => heard.some((m) => m.op === 'clicked'));
-    const clicked = heard.find((m) => m.op === 'clicked');
-    // one that landed turned the numbers on, which the next case must find off
-    if (clicked?.found) control('hud');
-    expect(clicked).toMatchObject({ name: 'hud', found: false });
-  });
+  // a fact of the layout, not of the numbers: a phone's tall picture opens the window at its least width, 780 pt, where
+  // an Android device's bar holds four device buttons and, once its capsule says the picture's rate, folds Show
+  // Performance into its » overflow, where no click on the bar reaches it
+  it.runIf(!udid)(
+    "folds Show Performance into the bar's overflow on an Android phone's shape",
+    async (t) => {
+      const first = heard.find((m) => m.op === 'first');
+      // an open foldable's picture is near square: its window opens wider, and holds the whole bar
+      if (first && first.h < first.w * 1.5) return t.skip();
+      await until('a picture rate', () => heard.some((m) => m.op === 'stats' && m.decoded > 0));
+      await new Promise((r) => setTimeout(r, 1_500));
+      session.tell({ op: 'poke', clickOn: 'hud' });
+      await until('the answer to the click', () => heard.some((m) => m.op === 'clicked'));
+      const clicked = heard.find((m) => m.op === 'clicked');
+      // one that landed turned the numbers on, which the next case must find off
+      if (clicked?.found) control('hud');
+      expect(clicked).toMatchObject({ name: 'hud', found: false });
+    },
+  );
 
   it(
     "reads nothing until asked, then a real app's numbers, and nothing after",
