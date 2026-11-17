@@ -149,6 +149,16 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Düzeltilenler
 
+- **Büyük gerçek uygulamalar ilk seferde doğru sürülüyor.** Android 16'da intent'lerini filtrelerine bağlayan bir uygulama artık açılıyor: `launch_app`, bir push'un dokunuşu ve ölçülen bir açılış launcher'ın action ve category'sini gönderiyor; yalın bir component "does not exist" diye reddediliyordu.
+- Android'de tepkisi durulma süresinden sonra gelen bir dokunuş, iOS'taki gibi o tepkiyle yanıtlanıyor. Hiçbir şeyi değiştirmeyen bir kontrole dokunuş 0,8 sn daha izleniyor, bu yüzden 0,8 sn geç yanıt veriyor.
+- Ekran klavyesinin altındaki bir öğeye dokunuş hiçbir zaman tuş olarak yazılmıyor. Önce klavye kapatılıyor, iOS'ta bir web formunun klavyesinin üstündeki çubuğun Done'ı ile; klavye açık kalırsa dokunuş `UNSUPPORTED` ile reddediliyor.
+- Hiçbir uygulamanın tutmadığı bir web bağlantısıyla `open_link`, bıraktığı ekranla değil tarayıcı ve sayfasıyla, ya da sitenin bağlantılarını alan uygulamayla yanıt veriyor; bunun için en çok 3 sn bekliyor.
+- Ağacında hiç söz olmayan bir ekran, örneğin bir geçişin ortasında, resmi okunmadan önce bir kez daha okunuyor; yanıtta resimden okunan sözler değil kontroller oluyor.
+- Bir ekranın web satırları yalnızca ekranda olanı tutuyor. Yanıt vermeyen bir inspector 30 sn tekrar sorulmuyor; seçili uygulama yoksa yalnızca öndeki uygulama soruluyor. Web view'lu bir ekranın Android'de okunması yaklaşık 3 sn'den 0,1 sn'nin altına indi.
+- Adı olan bir alan tuttuğunu söylüyor (`textField "Search" ="shoes"`), placeholder'ını asla; düzenlenebilir bir web metin alanı bir alan.
+- Benzer öğeler kendi satırlarının adıyla ayırt ediliyor; biri değişince ref'leri artık kaymıyor.
+- Aynı sözleri taşıyan bir simge ve yanındaki metin, `AMBIGUOUS` değil tek bir hedef.
+- Ekranın metni yalnızca listelenenleri tutan görünümleri dışarıda bırakıyor; kendi anahtarını içeren bir toggle dört değil tek satır.
 - iPhone: trace aracının uygulamanın sürecini 240 s boyunca bulamadığı bir ölçüm artık ne yapılacağını söyler (birkaç dakika sonra yeniden ölçmek); önceden cihazın yanıt vermediğini ve ekranı okumayı söylüyordu.
 - Mac uygulamasının Ağ bölmesinde bir kuralı kaydetmek, kaldırmak ya da açıp kapatmak, listenin o anki hâlinde yalnızca o kuralı değiştirir; böylece bir yapay zekâ istemcisinin o arada eklediği kural durur ve başka bir yerden yapılan değişiklik söylenir. Liste, daha çok isteğin son 200'ünü gösterdiğinde bunu söyler. Durdur'dan sonra liste hâlâ aranabilir; süren bir yakalama gerektirenler kapalıdır ve nedenini söyler. Süzgeç `failed`, `başarısız`, `5xx`, `mocked` sözcüklerini ve bir isteğin numarasını (`#12`) iki dilde de, büyük harfle de, harflerin işaretleri olmadan da bulur. Bir isteğin ayrıntısı pencerenin dilindedir.
 

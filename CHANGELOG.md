@@ -149,6 +149,16 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Fixed
 
+- **Big real apps drive right first time.** On Android 16, an app that holds its intents to their filters now starts: `launch_app`, a push's tap and a measured launch send the launcher's action and category, where a bare component was refused as "does not exist".
+- An Android tap whose reaction comes after the settle's window is answered with that reaction, as on iOS. A tap on a control that changes nothing is watched 0.8 s more, so it answers 0.8 s later.
+- A touch on an element under the on-screen keyboard is never typed as a key. The keyboard is closed first, on iOS by the Done of the bar over a web form's keyboard; where it stays open, the touch is refused as `UNSUPPORTED`.
+- `open_link` with a web link no app holds answers with the browser and its page, or with the app that takes the site's links, not with the screen it left. It waits up to 3 s for that.
+- A screen with no words in its tree, as in the middle of a transition, is read once more before its picture is, so the answer has controls, not picture words.
+- A screen's web lines hold only what is on the screen. An inspector that does not answer is not asked again for 30 s, and with no app selected only the app in front is asked; an Android read of a screen with web views went from about 3 s to under 0.1 s.
+- A named field says what it holds (`textField "Search" ="shoes"`), never its placeholder; an editable web text area is a field.
+- Like elements are told apart by their own row's name, so their refs no longer move when one changes.
+- An icon and the text beside it, of the same words, are one target, not `AMBIGUOUS`.
+- The screen's text leaves out views that only hold what is listed, and a toggle that holds its own switch is one line instead of four.
 - iPhone: a measure whose trace tool keeps not finding the app's process for 240 s says what to do, measure again in a few minutes, where it said the device had not answered and to read the screen.
 - In the Mac app's Network pane, saving, removing or switching a rule changes that one rule in the list as it stands, so a rule an AI client added meanwhile is kept, and a change made elsewhere is said. The list says when it shows the latest 200 of more requests. After Stop the list can still be searched, and what needs a running capture is off and says why. The filter finds `failed`, `başarısız`, `5xx`, `mocked` and a request's number (`#12`) in either language, in capitals and without the marks on a letter. A request's detail is in the window's language.
 
