@@ -561,7 +561,11 @@ describe.runIf(emulator && avd)('an emulator killed under its stream', () => {
       60_000,
     );
     const back = seen.length;
-    await new AndroidEmulators(adb).boot(avd);
+    // booted as the serial it ran as, once adb no longer lists it offline: a port listed is taken, and another serial is
+    // another device to the stream
+    const listed = async () => (await adb.devices()).some((d) => d.serial === serial);
+    await until('the emulator gone from adb', async () => !(await listed()), 60_000);
+    await new AndroidEmulators(adb).boot(avd, serial);
     await until('a new picture', () => seen.slice(back).some((s) => s.state === 'live'), 240_000);
     expect(session.status.picture?.codec).toBe('pixels');
     expect(session.status.note).toBeUndefined();
