@@ -84,6 +84,16 @@ export type IosDeviceOps = {
 };
 
 /**
+ * A device's turn, which its runner alone reads and makes: `start` brings the runner up, `now` reads the turn where it
+ * is up and nothing where it is not, and `set` turns it.
+ */
+export type RunnerTurn = {
+  start(): Promise<void>;
+  now(): Promise<number | undefined>;
+  set(rotation: 0 | 1 | 2 | 3): Promise<void>;
+};
+
+/**
  * An iOS device driven through the runner: every command has a timeout, commands never overlap,
  * failures are typed DeviceErrors. App lifecycle, links and location go through the device's own
  * tool (`ops`). Coordinates are points.
@@ -120,6 +130,18 @@ export abstract class IosDevice extends RpcDevice implements Device {
   };
 
   /** Before a new runner starts: the device must be up (a new runner would boot a shut-down simulator). */
+  /** The turn by the runner, for settings that write it down: a read alone starts no runner. */
+  protected runnerTurn(): RunnerTurn {
+    return {
+      start: () => this.queue.run(() => this.ensure()).then(() => undefined),
+      now: async () =>
+        this.agentUp
+          ? (await this.call('orientation.get', {}, TIMEOUTS.read)).result.rotation
+          : undefined,
+      set: (rotation) => this.setOrientation(rotation),
+    };
+  }
+
   protected async prepareStart(): Promise<void> {
     if (!(await this.ops.up()))
       throw new DeviceError(

@@ -46,6 +46,17 @@ extension Device {
                   pad: UIDevice.current.userInterfaceIdiom == .pad)
     }
 
+    /// The device's turn as `orientation` takes it: 0 upright, 1 landscape left, 2 upside down, 3 landscape right;
+    /// one lying flat, or not known, is 0.
+    static func rotation() -> Int {
+        switch XCUIDevice.shared.orientation {
+        case .landscapeLeft: return 1
+        case .portraitUpsideDown: return 2
+        case .landscapeRight: return 3
+        default: return 0
+        }
+    }
+
     func orientation(_ rotation: Int) {
         XCUIDevice.shared.orientation = [.portrait, .landscapeLeft, .portraitUpsideDown, .landscapeRight][rotation & 3]
     }

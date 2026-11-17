@@ -348,6 +348,10 @@ lock and the user rotation it found (`accelerometer_rotation`, `user_rotation`) 
 it found when UI automation last connected once the agent lets it go, so the agent writes back a turn sent with
 `kept`, which the host wrote down; any other goes back to how it was before it, as a person's turn in a window.
 
+`orientation.get` (iOS) answers `{rotation}`, the device's turn as `orientation.set` takes it, 0 for one lying flat. On a
+simulator, which has no rotation lock, the host writes that turn down before a turn and puts it back with
+`orientation.set`, as it puts the lock back on Android.
+
 ### Accessibility audit
 
 `audit` (host API `device.audit()`) answers the screen's accessibility issues, each with its `type`, the

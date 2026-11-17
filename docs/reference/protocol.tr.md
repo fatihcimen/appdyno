@@ -348,6 +348,10 @@ ve kullanıcı dönüşünü (`accelerometer_rotation`, `user_rotation`) bir ko�
 automation'ı bıraktığında onun son bağlandığında bulduğu dönüşü geri koyar, bu yüzden ajan host'un not ettiği,
 `kept` ile gelen bir dönüşü ondan sonra yeniden yazar; başka biri, bir penceredeki kişinin dönüşü gibi, önceki haline döner.
 
+`orientation.get` (iOS), cihazın dönüşünü `orientation.set`'in aldığı biçimde `{rotation}` olarak yanıtlar; düz yatan bir
+cihaz için 0. Döndürme kilidi olmayan bir simulator'da host bir dönüşten önce bu dönüşü not eder ve Android'de kilidi
+nasıl geri koyuyorsa onu da `orientation.set` ile geri koyar.
+
 ### Erişilebilirlik denetimi
 
 `audit` (host API'si `device.audit()`) ekranın erişilebilirlik sorunlarını yanıtlar; her birinde `type`, motorun

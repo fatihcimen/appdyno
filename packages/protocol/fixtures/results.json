@@ -151,6 +151,7 @@
   "clipboard.get": { "method": "clipboard.get", "result": { "text": "a" } },
   "animations.wait": { "method": "animations.wait", "result": { "ms": 40 } },
   "orientation.set": { "method": "orientation.set", "result": {} },
+  "orientation.get": { "method": "orientation.get", "result": { "rotation": 1 } },
   "audit": {
     "method": "audit",
     "result": {

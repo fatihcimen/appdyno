@@ -1,7 +1,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type Tree } from '@appdyno/protocol';
+import { ORIENTATIONS } from '@appdyno/core';
+import { DeviceError, type Tree } from '@appdyno/protocol';
 import { describe, expect, it, onTestFinished } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { SCREENS, tree } from '@appdyno/testing/fake-screens.js';
@@ -244,4 +245,52 @@ describe('a turn of the screen', () => {
       expect((await call('read_screen')).text).toMatch(/"Ana sayfa" 1200,150/);
     }),
   );
+});
+
+describe("a simulator's turn", () => {
+  /** As a simulator's runner reads and makes it: the turn itself is written down, with no lock, found turned. */
+  class Simulator extends FakeDevice {
+    turns: 0 | 1 | 2 | 3 = 1;
+    up = false;
+    override settings = {
+      get: (name: string) =>
+        name !== 'orientation'
+          ? Promise.resolve('none')
+          : this.up
+            ? Promise.resolve(ORIENTATIONS[this.turns])
+            : Promise.reject(new DeviceError('UNSUPPORTED', 'its runner is not up')),
+      set: async (name: string, value: string) => {
+        if (name === 'orientation')
+          await this.setOrientation(
+            ORIENTATIONS.indexOf(value as (typeof ORIENTATIONS)[number]) as 0 | 1 | 2 | 3,
+          );
+        return undefined;
+      },
+      willChange: (name: string) => {
+        if (name === 'orientation') this.up = true;
+        return Promise.resolve();
+      },
+    };
+    override setOrientation(r: 0 | 1 | 2 | 3) {
+      this.up = true;
+      this.turns = r;
+      return super.setOrientation(r);
+    }
+  }
+
+  it('is put back as found, by restore and at the session’s end', async () => {
+    const d = new Simulator('sim-turned');
+    const { call, ctx } = await connect(d);
+    await call('set_device', { name: 'orientation', value: 'portrait', read: 'none' });
+    expect(d.turns).toBe(0);
+    expect((await call('set_device', { name: 'restore' })).text).toContain(
+      'orientation: landscape_left',
+    );
+    expect(d.turns).toBe(1);
+    await call('set_device', { name: 'orientation', value: 'upside_down', read: 'none' });
+    await call('set_device', { name: 'orientation', value: 'landscape_right', read: 'none' });
+    expect(d.turns).toBe(3);
+    expect(await ctx.end()).toEqual([]);
+    expect(d.turns).toBe(1);
+  });
 });

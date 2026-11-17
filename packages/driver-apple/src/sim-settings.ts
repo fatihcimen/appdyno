@@ -1,5 +1,6 @@
-import type { DeviceSettings, SettingName } from '@appdyno/core';
+import { ORIENTATIONS, type DeviceSettings, type SettingName } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import type { RunnerTurn } from './device.js';
 import { macProxy } from './network.js';
 import { SIM_CANNOT } from './sim-events.js';
 import { SimulatorFold } from './sim-fold.js';
@@ -13,7 +14,13 @@ export class SimulatorSettings implements DeviceSettings {
     private readonly simctl: Simctl,
     private readonly udid: string,
     private readonly fold = new SimulatorFold(udid),
+    private readonly turn?: RunnerTurn,
   ) {}
+
+  /** The runner comes up before a turn is written down, where a read alone would not start it. */
+  async willChange(name: SettingName) {
+    if (name === 'orientation') await this.turn?.start();
+  }
 
   async choices(name: SettingName) {
     return name === 'fold' ? this.fold.poses() : undefined;
@@ -75,8 +82,17 @@ export class SimulatorSettings implements DeviceSettings {
         throw new DeviceError('UNSUPPORTED', SIM_CANNOT.radio);
       case 'screen_lock':
         throw new DeviceError('UNSUPPORTED', 'a simulator has no screen lock to set');
-      case 'orientation':
-        throw new DeviceError('UNSUPPORTED', 'a simulator has no rotation lock to set');
+      case 'orientation': {
+        // the device's turn, written down and put back as Android's rotation lock is
+        const turns = await this.turn?.now();
+        const name = turns === undefined ? undefined : ORIENTATIONS[turns];
+        if (!name)
+          throw new DeviceError(
+            'UNSUPPORTED',
+            "a simulator's turn is read by its runner, which is not up",
+          );
+        return name;
+      }
       case 'fold':
         return this.fold.get();
       case 'thermal':
@@ -145,6 +161,13 @@ export class SimulatorSettings implements DeviceSettings {
         throw new DeviceError('UNSUPPORTED', await this.followsMac());
       case 'fold':
         return this.fold.set(value);
+      case 'orientation': {
+        const turns = ORIENTATIONS.indexOf(value as (typeof ORIENTATIONS)[number]);
+        if (!this.turn || turns < 0)
+          throw new DeviceError('INVALID_ARGUMENT', `orientation: as get reads it, not ${value}`);
+        await this.turn.set(turns as 0 | 1 | 2 | 3);
+        return;
+      }
       default:
         await this.get(name);
     }

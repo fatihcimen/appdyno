@@ -214,6 +214,13 @@ export const METHODS = {
     }),
     result: z.object({}),
   },
+  /** iOS: the device's turn as `orientation.set` takes it, which no app's own drawing tells: one lying flat is 0. */
+  'orientation.get': {
+    params: z.object({}),
+    result: z.object({
+      rotation: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+    }),
+  },
   /** iOS: the platform accessibility audit of the app in front. */
   audit: {
     params: z.object({

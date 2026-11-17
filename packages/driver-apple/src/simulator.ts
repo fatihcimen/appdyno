@@ -84,7 +84,7 @@ export class IosSimulatorDevice extends IosDevice {
       await helperSeesFront(this.direct, app, LAUNCH_FRONT_MS);
       this.acts.transitionEnds = Date.now() + TRANSITION_MS;
     });
-    this.settings = new SimulatorSettings(simctl, serial);
+    this.settings = new SimulatorSettings(simctl, serial, undefined, this.runnerTurn());
     this.events = new SimulatorEvents(simctl, serial, () =>
       this.foreground().catch(() => undefined),
     );

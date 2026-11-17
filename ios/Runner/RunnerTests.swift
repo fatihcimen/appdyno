@@ -50,14 +50,7 @@ final class RunnerTests: XCTestCase {
     @MainActor private static func hello(_ env: [String: String]) -> [String: Any] {
         // the home screen app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480
         let b = XCUIApplication(bundleIdentifier: Device.springboardId).frame
-        let rotation: Int = {
-            switch XCUIDevice.shared.orientation {
-            case .landscapeLeft: return 1
-            case .portraitUpsideDown: return 2
-            case .landscapeRight: return 3
-            default: return 0
-            }
-        }()
+        let rotation = Device.rotation()
         // the scale by traits, as iOS 26 deprecates UIScreen.main and the runner has no window of its own to ask
         return Hello(agentVersion: agentVersion, osVersion: UIDevice.current.systemVersion,
                      model: env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
@@ -142,6 +135,7 @@ final class RunnerTests: XCTestCase {
             d.orientation(try OneValue.rotation(job.params))
             return Reply(result: [:])
         },
+        "orientation.get": { _, _, _ in Reply(result: ["rotation": Device.rotation()]) },
         "shutdown": { _, _, pump in
             pump.stop()
             return Reply(result: [:])

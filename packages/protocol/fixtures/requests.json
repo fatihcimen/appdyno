@@ -129,6 +129,7 @@
   "clipboard.get": { "method": "clipboard.get", "params": {} },
   "animations.wait": { "method": "animations.wait", "params": { "x": 10, "y": 20 } },
   "orientation.set": { "method": "orientation.set", "params": { "rotation": 1 } },
+  "orientation.get": { "method": "orientation.get", "params": {} },
   "audit": { "method": "audit", "input": {}, "params": { "maxIssues": 50 } },
   "audit.types": {
     "method": "audit",
