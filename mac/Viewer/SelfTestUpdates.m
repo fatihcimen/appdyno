@@ -25,7 +25,8 @@ static void checkWords(void) {
 }
 
 static void checkMenu(void) {
-  NSMenu *app = MVHubMenu().itemArray.firstObject.submenu;
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  NSMenu *app = MVHubMenu(hub).itemArray.firstObject.submenu;
   NSMenuItem *about = itemTitled(app, @"About Appdyno"), *check = itemTitled(app, @"Check for Updates…"), *settings = itemTitled(app, @"Settings…");
   NSMenuItem *hide = itemTitled(app, @"Hide Appdyno"), *others = itemTitled(app, @"Hide Others"), *quit = itemTitled(app, @"Quit Appdyno");
   BOOL own = about.target == MVAppItems.shared && check.target == MVAppItems.shared && settings.target == MVAppItems.shared;

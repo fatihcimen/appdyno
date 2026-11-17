@@ -163,7 +163,10 @@ NSString *MVControlSymbol(NSString *name);
 /// One menu of the table; with `names`, only what they list.
 NSMenu *MVControlMenu(NSString *title, NSArray<NSString *> *_Nullable names);
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names);
-NSMenu *MVHubMenu(void);
+/// The hub's: the Device menu is read as it opens, from the device chosen, by `devices`.
+NSMenu *MVHubMenu(id<NSMenuDelegate> devices);
+/// What a device does, then what is taken of its screen.
+void MVFillDeviceMenu(NSMenu *menu, NSArray<NSString *> *_Nullable names);
 
 typedef NS_ENUM(NSInteger, MVLiveState) { MVLiveNeutral,
                                           MVLiveGood,
@@ -323,6 +326,8 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 @property(nonatomic, copy, nullable) NSDictionary *_Nullable (^rowOf)(NSString *serial);
 /// A stage took the bar and the Inspector: the sidebar says it is the one they speak of.
 @property(nonatomic, copy, nullable) void (^tookBar)(NSString *serial);
+/// The window of the stage that has the bar: what the menu bar's items of a device go to.
+@property(nonatomic, weak, nullable) id holder;
 /// What takes the room in place of a device.
 @property(nonatomic, nullable) NSView *place;
 /// What lies over a device for a moment.
@@ -392,7 +397,7 @@ NSString *MVSystemName(NSDictionary *row);
 @class MVPlace;
 
 /// The window of `appdyno hub`: what its parent says is there, and what a person asks of it.
-@interface MVHub : NSObject <NSWindowDelegate, NSSearchFieldDelegate>
+@interface MVHub : NSObject <NSWindowDelegate, NSSearchFieldDelegate, NSMenuDelegate>
 - (instancetype)initWithShow:(MVShow)how poses:(BOOL)poses;
 /// Where the device chosen stands.
 @property(nonatomic, readonly) NSView *room;

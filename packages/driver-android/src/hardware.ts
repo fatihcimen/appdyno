@@ -38,7 +38,8 @@ export async function androidHardware(read: Read, virtual: boolean) {
   const name = virtual ? 'Android emulator' : await soldAs(read);
   return {
     platform: 'android' as const,
-    controls: ANDROID_CONTROLS,
+    // an emulator's accelerometer takes a shake; a phone's is a hand's
+    controls: virtual ? [...ANDROID_CONTROLS, 'shake'] : ANDROID_CONTROLS,
     ...(model && { model }),
     ...(name && { name }),
   };

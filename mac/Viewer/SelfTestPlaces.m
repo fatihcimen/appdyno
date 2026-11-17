@@ -174,7 +174,7 @@ static void checkHelp(MVHub *hub) {
                                     @"detail": @"22"}]}];
   MVPump(0.1);
   MVCheck(@"help: its checks stand there, with what to do", [wordsOf(hub) containsString:@"get it"], nil);
-  NSMenu *bar = MVHubMenu();
+  NSMenu *bar = MVHubMenu(hub);
   NSMenuItem *item = [bar.itemArray.lastObject.submenu itemAtIndex:0];
   MVCheck(@"help: command-? opens it", [item.keyEquivalent isEqual:@"?"] && item.action == @selector(openHelp:), nil);
 }

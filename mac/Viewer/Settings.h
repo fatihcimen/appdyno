@@ -20,6 +20,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)about:(nullable id)sender;
 - (void)checkForUpdates:(nullable id)sender;
 - (void)settings:(nullable id)sender;
+/// The project's own pages: its guide, its tools, and where to say what went wrong.
+- (void)openDocs:(nullable id)sender;
+- (void)openTools:(nullable id)sender;
+- (void)reportIssue:(nullable id)sender;
 @end
 
 @interface MVHub (Updates)

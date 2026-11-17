@@ -13,13 +13,12 @@ typedef struct {
 } MVControlRow;
 
 static const MVControlRow kControls[] = {
-    {"screenshot", "Save Screenshot", "camera", 's', kCmd, "File"},
-    {"copy", "Copy Screen", "doc.on.doc", 'c', kCmd, "File"},
-    {"record", "Record Screen", "record.circle", 'r', kCmd | kOpt, "File"},
-    {"recordFlow", "Record Flow", "hand.tap", 't', kCmd | kOpt, "File"},
+    {"screenshot", "Save Screenshot", "camera", 's', kCmd, "Capture"},
+    {"copy", "Copy Screen", "doc.on.doc", 'c', kCmd | kShift, "Capture"},
+    {"record", "Record Screen", "record.circle", 'r', kCmd | kOpt, "Capture"},
+    {"recordFlow", "Record Flow", "hand.tap", 't', kCmd | kOpt, "Capture"},
     {"openLink", "Open Link…", "link", 'o', kCmd, "File"},
     {"push", "Send Push…", "bell.badge", 'p', kCmd | kShift, "File"},
-    {"paste", "Paste", "doc.on.clipboard", 'v', kCmd, "Edit"},
     {"find", "Find in Requests", "magnifyingglass", 'f', kCmd, "Edit"},
     {"zoomFit", "Zoom to Fit", "arrow.up.left.and.down.right.magnifyingglass", '9', kCmd, "View"},
     {"zoomActual", "Actual Size", "1.magnifyingglass", '0', kCmd, "View"},
@@ -48,6 +47,7 @@ static const MVControlRow kControls[] = {
     {"spotlight", "Spotlight", "magnifyingglass", 'f', kCmd | kCtl, "Device"},
     {"rotateLeft", "Rotate Left", "rotate.left", NSLeftArrowFunctionKey, kCmd, "Device"},
     {"rotateRight", "Rotate Right", "rotate.right", NSRightArrowFunctionKey, kCmd, "Device"},
+    {"shake", "Shake", "iphone.radiowaves.left.and.right", 'z', kCmd | kCtl, "Device"},
 };
 
 static const MVControlRow *rowNamed(NSString *name) {
@@ -122,38 +122,98 @@ static NSMenu *appMenu(void) {
   return menu;
 }
 
+/// The system's own, to whatever has the keyboard: a field's words, or the device, which takes a paste as typing. Then
+/// what a window's own table puts here.
+static NSMenu *editMenu(void) {
+  NSMenu *menu = [NSMenu new];
+  add(menu, @"Undo", NSSelectorFromString(@"undo:"), @"z", kCmd);
+  add(menu, @"Redo", NSSelectorFromString(@"redo:"), @"z", kCmd | kShift);
+  [menu addItem:NSMenuItem.separatorItem];
+  add(menu, @"Cut", @selector(cut:), @"x", kCmd);
+  add(menu, @"Copy", @selector(copy:), @"c", kCmd);
+  add(menu, @"Paste", @selector(paste:), @"v", kCmd);
+  add(menu, @"Select All", @selector(selectAll:), @"a", kCmd);
+  [menu addItem:NSMenuItem.separatorItem];
+  for (NSMenuItem *item in MVControlMenu(@"Edit", nil).itemArray) [menu addItem:[item copy]];
+  return menu;
+}
+
 static NSMenu *windowMenu(void) {
   NSMenu *menu = [NSMenu new];
-  [menu addItemWithTitle:MVWord(@"Minimize") action:@selector(performMiniaturize:) keyEquivalent:@"m"];
-  [menu addItemWithTitle:MVWord(@"Zoom") action:@selector(performZoom:) keyEquivalent:@""];
-  [menu addItemWithTitle:MVWord(@"Close") action:@selector(performClose:) keyEquivalent:@"w"];
+  add(menu, @"Minimize", @selector(performMiniaturize:), @"m", kCmd);
+  add(menu, @"Zoom", @selector(performZoom:), @"", 0);
+  [menu addItem:NSMenuItem.separatorItem];
+  add(menu, @"Bring All to Front", @selector(arrangeInFront:), @"", 0);
   NSApp.windowsMenu = menu;
   return menu;
 }
 
+/// Where to read more, on the project's own pages, and how to say what went wrong.
+static NSMenu *helpMenu(BOOL hub) {
+  NSMenu *menu = [NSMenu new];
+  MVAppItems *own = MVAppItems.shared;
+  // the hub's Help is a place of its own, a key away
+  if (hub) add(menu, @"Appdyno Help", NSSelectorFromString(@"openHelp:"), @"?", kCmd);
+  if (hub) add(menu, @"Welcome", NSSelectorFromString(@"openWelcome:"), @"", 0);
+  add(menu, @"Documentation", @selector(openDocs:), @"", 0).target = own;
+  add(menu, @"Tools Reference", @selector(openTools:), @"", 0).target = own;
+  add(menu, @"Report an Issue…", @selector(reportIssue:), @"", 0).target = own;
+  NSApp.helpMenu = menu;
+  return menu;
+}
+
+/// What a device does, then what is taken of its screen: the same items in a window of its own and in the hub's.
+void MVFillDeviceMenu(NSMenu *menu, NSArray<NSString *> *_Nullable names) {
+  for (NSMenuItem *item in MVControlMenu(@"Device", names).itemArray) [menu addItem:item];
+  [menu addItem:NSMenuItem.separatorItem];
+  for (NSMenuItem *item in MVControlMenu(@"Capture", nil).itemArray) [menu addItem:item];
+}
+
+static NSMenu *closing(NSMenu *file) {
+  [file addItem:NSMenuItem.separatorItem];
+  add(file, @"Close Window", @selector(performClose:), @"w", kCmd);
+  return file;
+}
+
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names) {
   NSMenu *bar = [NSMenu new];
-  menuOf(bar, @"appdyno", appMenu());
-  menuOf(bar, @"File", MVControlMenu(@"File", nil));
-  menuOf(bar, @"Edit", MVControlMenu(@"Edit", nil));
+  menuOf(bar, @"Appdyno", appMenu());
+  menuOf(bar, @"File", closing(MVControlMenu(@"File", nil)));
+  menuOf(bar, @"Edit", editMenu());
   menuOf(bar, @"View", MVControlMenu(@"View", nil));
-  menuOf(bar, @"Device", MVControlMenu(@"Device", names));
+  NSMenu *device = [NSMenu new];
+  MVFillDeviceMenu(device, names);
+  menuOf(bar, @"Device", device);
   menuOf(bar, @"Window", windowMenu());
+  menuOf(bar, @"Help", helpMenu(NO));
   return bar;
 }
 
-NSMenu *MVHubMenu(void) {
+/// The hub's: what it makes and opens, then the device chosen's own items, which go to it, and its sidebar.
+NSMenu *MVHubMenu(id<NSMenuDelegate> devices) {
   NSMenu *bar = [NSMenu new];
-  menuOf(bar, @"appdyno", appMenu());
-  NSMenu *file = [[NSMenu alloc] initWithTitle:@"File"];
+  menuOf(bar, @"Appdyno", appMenu());
+  NSMenu *file = [NSMenu new];
   // to the first that answers, which is the hub, as its window's delegate
-  [file addItemWithTitle:MVWord(@"Open in New Window") action:NSSelectorFromString(@"openWindow:") keyEquivalent:@"N"];
-  menuOf(bar, @"File", file);
+  add(file, @"New Simulator…", NSSelectorFromString(@"newSimulator:"), @"n", kCmd);
+  add(file, @"New Emulator…", NSSelectorFromString(@"newEmulator:"), @"n", kCmd | kOpt);
+  add(file, @"Connect a Phone…", NSSelectorFromString(@"connectPhone:"), @"", 0);
+  [file addItem:NSMenuItem.separatorItem];
+  add(file, @"Open in New Window", NSSelectorFromString(@"openWindow:"), @"n", kCmd | kShift);
+  add(file, @"Open Report…", NSSelectorFromString(@"openReport:"), @"o", kCmd | kShift);
+  [file addItem:NSMenuItem.separatorItem];
+  for (NSMenuItem *item in MVControlMenu(@"File", nil).itemArray) [file addItem:item];
+  menuOf(bar, @"File", closing(file));
+  menuOf(bar, @"Edit", editMenu());
+  NSMenu *view = MVControlMenu(@"View", nil);
+  [view addItem:NSMenuItem.separatorItem];
+  add(view, @"Show Sidebar", @selector(toggleSidebar:), @"s", kCmd | kCtl);
+  menuOf(bar, @"View", view);
+  // the device chosen's, read as it opens
+  NSMenu *device = [NSMenu new];
+  device.delegate = devices;
+  menuOf(bar, @"Device", device);
   menuOf(bar, @"Window", windowMenu());
-  NSMenu *help = [[NSMenu alloc] initWithTitle:@"Help"];
-  [help addItemWithTitle:MVWord(@"appdyno Help") action:NSSelectorFromString(@"openHelp:") keyEquivalent:@"?"];
-  [help addItemWithTitle:MVWord(@"Welcome") action:NSSelectorFromString(@"openWelcome:") keyEquivalent:@""];
-  menuOf(bar, @"Help", help);
-  NSApp.helpMenu = help;
+  menuOf(bar, @"Help", helpMenu(YES));
   return bar;
 }

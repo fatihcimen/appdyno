@@ -7,6 +7,7 @@ import {
   CREATE_REFUSED,
   NO_TOOLS,
   NOTHING_MADE,
+  NOT_SHAKEN,
   SLOW,
   MEASURE_YOURS,
   PERSON_HINTS,
@@ -128,6 +129,9 @@ describe('the table of words', () => {
       SLOW.said,
       SLOW.fix ?? '',
       NOTHING_MADE,
+      NOT_SHAKEN,
+      'Shaken',
+      'Shaken: the reading is back',
       'the Android emulator is not installed: spawn emulator ENOENT',
       "Android Studio's SDK Manager installs it, under SDK Tools",
     ];

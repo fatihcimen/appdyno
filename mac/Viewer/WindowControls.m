@@ -23,6 +23,7 @@
   [self holdInspector];
   if (_window.toolbar == _toolbar) return;
   if (_room.tookBar) _room.tookBar(_root.stage ?: @"");
+  _room.holder = self;
   _window.toolbar = _toolbar;
   _window.toolbarStyle = NSWindowToolbarStyleUnified;
   _window.titleVisibility = NSWindowTitleHidden;
@@ -36,7 +37,8 @@
   NSMenu *menu = [[NSMenu alloc] initWithTitle:MVWord(@"More Controls")];
   // what the bar has; a room has no menu bar of a device's, so all the rest must stand here
   NSArray<NSString *> *shown = @[@"back", @"home", @"appSwitch", @"lock", @"screenshot", @"record", @"recordFlow"];
-  for (NSMenuItem *item in [[_view deviceMenu].itemArray arrayByAddingObjectsFromArray:MVControlMenu(@"File", nil).itemArray])
+  NSArray<NSMenuItem *> *taken = [MVControlMenu(@"Capture", nil).itemArray arrayByAddingObjectsFromArray:MVControlMenu(@"File", nil).itemArray];
+  for (NSMenuItem *item in [[_view deviceMenu].itemArray arrayByAddingObjectsFromArray:taken])
     if (![shown containsObject:item.representedObject]) [menu addItem:[item copy]];
   [menu addItem:NSMenuItem.separatorItem];
   if (_hosted) {
@@ -90,8 +92,7 @@
   if ([name isEqual:@"frame"]) return [self setFrameShown:!_frame.showsFrame];
   if ([name isEqual:@"inspector"]) return [self toggleInspector];
   if ([name isEqual:@"hud"]) return [self toggleHud];
-  if ([@[@"screenshot", @"copy", @"record", @"recordFlow", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmitFrom(_view, @{@"op": @"control", @"name": name});
-  if ([name isEqual:@"paste"]) return [_view paste:self];
+  if ([@[@"screenshot", @"copy", @"record", @"recordFlow", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard", @"shake"] containsObject:name]) return MVEmitFrom(_view, @{@"op": @"control", @"name": name});
   // the Network pane's filter takes the keyboard: a key typed anywhere else goes to the device
   if ([name isEqual:@"find"]) {
     [self showPane:MVPaneNetwork];

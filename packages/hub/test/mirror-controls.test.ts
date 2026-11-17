@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must, type Device, type InputEvent } from '@appdyno/core';
 import { afterAll, describe, expect, it, vi, type Mock } from 'vitest';
-import { stamp, windowControls, windowLook, type WindowSession } from '../src/controls.js';
+import {
+  NOT_SHAKEN,
+  stamp,
+  windowControls,
+  windowLook,
+  type WindowSession,
+} from '../src/controls.js';
 import { MEASURE_YOURS, WAKE_AND_OPEN } from '../src/measures.js';
 import { DEFAULT_POLICY, PROBE_HINT, type JourneyAnswer, type Policy } from '@appdyno/ops';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
@@ -195,6 +201,22 @@ describe("a window's captures", () => {
     const copied = told.find((m) => m.op === 'copied') as { file: string };
     expect(copied.file).toContain(join(home, 'Desktop'));
     expect(existsSync(copied.file)).toBe(true);
+  });
+
+  it('shakes what its driver can shake, and says where it cannot', async () => {
+    const shake = vi.fn(() => Promise.resolve(undefined));
+    const emulator = fixture('android', { shake });
+    emulator.controls.onWindow({ op: 'control', name: 'shake' });
+    await vi.waitFor(
+      () => expect(emulator.told).toContainEqual({ op: 'note', text: 'Shaken' }),
+      WAIT,
+    );
+    const simulator = fixture('ios');
+    simulator.controls.onWindow({ op: 'control', name: 'shake' });
+    await vi.waitFor(
+      () => expect(simulator.told).toContainEqual({ op: 'note', text: NOT_SHAKEN }),
+      WAIT,
+    );
   });
 
   it('takes a picture with no agent where the device has its own way', async () => {

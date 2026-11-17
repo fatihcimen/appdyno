@@ -157,6 +157,16 @@ function windowApps({ device, hardware, session, ready }: WindowParts, policy: P
  * What a window's controls do that is not one key to one device: gestures, captures and the Apps pane, which keeps to
  * `policy`'s apps as the Links and Push panes do.
  */
+/** A shake, as an emulator's accelerometer reads one: only what its driver can shake offers it. */
+async function shaken(device: Device, note: (text: string) => void) {
+  if (!device.shake) throw new Error(NOT_SHAKEN);
+  const said = await device.shake();
+  note(said ? `Shaken: ${said}` : 'Shaken');
+}
+
+/** Said where a device has no shake of its own, as a simulator has none a tool can send. */
+export const NOT_SHAKEN = 'Only an Android emulator can be shaken from here';
+
 export function windowControls(
   device: Device,
   hardware: DeviceHardware | undefined,
@@ -241,6 +251,7 @@ export function windowControls(
       else if (m.name === 'dashboard') trying(measures.dashboard);
       else if (m.name === 'screenshot' || m.name === 'copy')
         trying(() => screenshotOf(parts, m.name === 'copy'));
+      else if (m.name === 'shake') trying(() => shaken(device, note));
     },
 
     /** A movie still being made ends with the window, and keeps what it has. */

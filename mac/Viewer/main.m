@@ -203,8 +203,8 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 }
 
 - (void)openHub:(BOOL)focus {
-  NSApp.mainMenu = MVHubMenu();
   _hub = [[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
+  NSApp.mainMenu = MVHubMenu(_hub);
   if (!_behind) [_hub welcomeOnce];
   [self forget:@""];
 }

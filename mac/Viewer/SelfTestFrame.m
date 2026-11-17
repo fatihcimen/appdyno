@@ -1,7 +1,9 @@
 // The maths of a window, with no window: frames, zoom, the controls' table, gestures and composed text.
+#import "HubParts.h"
 #import "SelfTest.h"
 #import "Window.h"
 #import "WindowParts.h"
+#import "Words.h"
 
 static BOOL near(double a, double b) {
   return fabs(a - b) < 0.01;
@@ -309,6 +311,49 @@ static void checkClicks(void) {
   }
 }
 
+/// Every key of a menu and those under it, by what it is pressed with: each is one item's alone.
+static void addKeys(NSMenu *menu, NSMutableArray<NSString *> *keys) {
+  for (NSMenuItem *item in menu.itemArray) {
+    if (item.keyEquivalent.length) [keys addObject:[NSString stringWithFormat:@"%lu+%@", (unsigned long)item.keyEquivalentModifierMask, item.keyEquivalent.lowercaseString]];
+    if (item.submenu) addKeys(item.submenu, keys);
+  }
+}
+
+/// The hub's menu bar, as a Mac app's: a device's items go to the device chosen, and without one say why they wait.
+static void checkMenuBar(void) {
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  NSMenu *bar = MVHubMenu(hub);
+  NSArray *titles = [[bar.itemArray valueForKey:@"title"] subarrayWithRange:NSMakeRange(1, bar.numberOfItems - 1)];
+  NSArray *named = @[MVWord(@"File"), MVWord(@"Edit"), MVWord(@"View"), MVWord(@"Device"), MVWord(@"Window"), MVWord(@"Help")];
+  MVCheck(@"menu bar: File, Edit, View, Device, Window and Help, after the app's own", [titles isEqual:named], [titles componentsJoinedByString:@"|"]);
+  NSMenu *device = [bar itemWithTitle:MVWord(@"Device")].submenu;
+  [hub menuNeedsUpdate:device];
+  NSMutableArray<NSString *> *keys = [NSMutableArray array];
+  addKeys(bar, keys);
+  MVCheck(@"menu bar: each key is one item's alone", keys.count > 20 && [NSSet setWithArray:keys].count == keys.count, [keys componentsJoinedByString:@" "]);
+  NSMenuItem *shot = [device itemAtIndex:[device indexOfItemWithRepresentedObject:@"screenshot"]];
+  NSMenuItem *shake = [device itemWithTitle:MVWord(@"Shake")];
+  MVCheck(@"menu bar: a device's item waits for one, and says why", ![hub validateMenuItem:shot] && [shot.toolTip isEqual:MVWord(@"Choose a running device first.")] && !shake.action && shake.toolTip.length, shot.toolTip);
+  NSMenuItem *power = [device itemAtIndex:0];
+  MVCheck(@"menu bar: and so does Start", ![hub validateMenuItem:power] && power.toolTip.length, power.toolTip);
+  NSMenu *file = [bar itemWithTitle:MVWord(@"File")].submenu;
+  BOOL answers = YES;
+  for (NSMenuItem *item in file.itemArray)
+    if (item.action && item.action != @selector(control:) && item.action != @selector(performClose:)) answers = answers && [hub respondsToSelector:item.action];
+  MVCheck(@"menu bar: what File makes and opens, the hub does", answers && [file itemWithTitle:MVWord(@"New Simulator…")].keyEquivalent.length, nil);
+  [hub show:@{@"devices": @[@{@"id": @"u", @"serial": @"u", @"kind": @"simulator", @"state": @"running", @"name": @"U"}]}];
+  MVAskedWindow *window = [[MVAskedWindow alloc] initInRoom:hub.room];
+  window.asked = [NSMutableArray array];
+  window.behind = YES;
+  [window configure:@{@"title": @"menu bar",
+                      @"look": @{@"controls": @[@"home", @"rotateLeft"]}}];
+  [window useToolbar];
+  [hub menuNeedsUpdate:device];
+  NSMenuItem *turn = [device itemAtIndex:[device indexOfItemWithRepresentedObject:@"rotateLeft"]];
+  [hub control:turn];
+  MVCheck(@"menu bar: with a device chosen, its items go to it, and Start says Shut Down", [hub validateMenuItem:turn] && [window.asked isEqual:@[@"rotateLeft"]] && [hub validateMenuItem:[device itemAtIndex:0]] && [[device itemAtIndex:0].title isEqual:MVWord(@"Shut Down")], [window.asked componentsJoinedByString:@" "]);
+}
+
 /// More's items, fired by the menu itself, on a window of its own and on one in a room: no menu opens here, as one would on
 /// a person's screen. What the room's window answers to is the hub, and no item may rest on that.
 static void checkMenus(void) {
@@ -373,6 +418,7 @@ void MVCheckFrame(void) {
   checkPair();
   checkClicks();
   checkMenus();
+  checkMenuBar();
   checkHubChoice();
   MVCheckMood();
   checkGestures();

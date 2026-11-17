@@ -100,7 +100,8 @@ type Control =
         | 'reconnect'
         | 'record'
         | 'recordFlow'
-        | 'screenshot';
+        | 'screenshot'
+        | 'shake';
     }
   | {
       name: 'deviceSet' | 'deviceLocation' | 'deviceRestore' | 'push';

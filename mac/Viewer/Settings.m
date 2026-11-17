@@ -9,6 +9,8 @@
 #import <sys/sysctl.h>
 
 static BOOL gByItselfHere = YES;
+/// The project's home, whose pages the Help menu opens.
+static NSString *const kHome = @"https://github.com/fatihcimen/appdyno";
 static NSMutableArray<NSArray *> *gTold;
 
 BOOL MVInTheApp(void) {
@@ -156,6 +158,24 @@ NSDictionary *MVAboutOptions(void) {
 
 - (void)settings:(id)sender {
   [MVSettings.shared show];
+}
+
+/// The project's pages, a Turkish one where the Mac speaks Turkish: each page has one.
+static void openPage(NSString *english, NSString *turkish) {
+  BOOL inTurkish = [MVWord(@"Help") isEqual:MVInTurkish(@"Help")];
+  MVOpenOutside([kHome stringByAppendingString:inTurkish ? turkish : english]);
+}
+
+- (void)openDocs:(id)sender {
+  openPage(@"#readme", @"/blob/main/README.tr.md");
+}
+
+- (void)openTools:(id)sender {
+  openPage(@"/blob/main/docs/reference/tools.md", @"/blob/main/docs/reference/tools.tr.md");
+}
+
+- (void)reportIssue:(id)sender {
+  openPage(@"/issues/new", @"/issues/new");
 }
 
 /// What cannot be done says why, where a person points at it.
