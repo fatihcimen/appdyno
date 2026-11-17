@@ -93,6 +93,22 @@ describe("typing by a simulator's keys", () => {
     expect(f.sent[1]).toEqual({ kind: 'key', key: 'A', modifiers: ['shift'] });
   });
 
+  it("types at once where a new simulator's slide-to-type introduction stands in the keyboard's place", async () => {
+    // iOS 26.5, the first keyboard of a simulator: the field had the focus and no keyboard for 5 s, then the runner typed
+    const f = field();
+    const read = async () => {
+      const t = await f.keyboard.read();
+      const nodes = t.nodes.map((n) =>
+        n.c === 'Keyboard' ? { ...n, c: 'Other', id: 'UIContinuousPathIntroductionView' } : n,
+      );
+      return { ...t, nodes };
+    };
+    const began = Date.now();
+    const r = await typeByKeys('Ada', { at: AT }, { ...f.keyboard, read });
+    expect(r).toMatchObject({ mode: 'keys', verified: true });
+    expect(Date.now() - began).toBeLessThan(1_000);
+  });
+
   it('reads the screen three times for a field that takes its keys: before, at its focus and once back', async () => {
     // each read of a big app with its keyboard coming up took 0.5 to 1.1 s on a simulator: one more is seconds
     const f = field();

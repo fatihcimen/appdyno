@@ -38,6 +38,14 @@ const focused = (n: Node | undefined) => !!n && (n.f & F.focused) !== 0;
 const fieldOf = (t: Tree | undefined, at?: Point) =>
   t?.nodes.find((n) => editable(n) && (at ? inside(n, at) : focused(n)));
 
+/**
+ * A new simulator's first keyboard shows its slide-to-type introduction in the keyboard's place, until a person taps
+ * Continue: keys typed then go into the field.
+ */
+const INTRODUCED = 'UIContinuousPathIntroductionView';
+const keysTaken = (k: Keyboard, t: Tree) =>
+  k.keyboardOpen(t) || t.nodes.some((n) => n.id === INTRODUCED);
+
 /** One field wherever it stands, by what it is and not by its place or what it holds. */
 const sameField = (a: Node, b: Node) => a.c === b.c && a.id === b.id && a.h === b.h && a.d === b.d;
 
@@ -115,7 +123,7 @@ export async function typeByKeys(
   if (!focused(field)) {
     if (!at || !(await k.send({ kind: 'tap', ...at }))) return undefined;
     // the keys wait for that field to have the focus, and its keyboard to be up
-    while (!focused(field) || !t || !k.keyboardOpen(t)) {
+    while (!focused(field) || !t || !keysTaken(k, t)) {
       if (Date.now() - start > FOCUS_MS) return undefined;
       await sleep(50);
       t = await k.read();
