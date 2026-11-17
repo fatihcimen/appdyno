@@ -138,9 +138,12 @@ export class IosSimulatorDevice extends IosDevice {
     return !this.direct.status().input.startsWith('runner');
   }
 
-  /** Only a runner waits on the device: the helper is read. */
+  /**
+   * Only a runner waits on the device, and only where the helper cannot read: its snapshot of an app just in front took
+   * 0.6 s and more where the helper's read took 0.1 s.
+   */
   protected override get waits() {
-    return this.runnerUp;
+    return this.runnerUp && !this.direct.reads;
   }
 
   warm(app?: string) {

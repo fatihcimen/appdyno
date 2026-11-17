@@ -279,6 +279,21 @@ describe('what is in front of a simulator with no runner', () => {
   it('is nothing yet when the helper has no answer, and no refusal', async () => {
     await expect(withFront(undefined).foreground()).resolves.toBeUndefined();
   });
+
+  it('is waited on by reads of the helper, not by the runner’s wait, where the helper reads', async () => {
+    const waits = (reads: boolean) => {
+      const device = new IosSimulatorDevice(UDID, new Listed(''), { reads } as never);
+      Object.defineProperty(device, 'runnerUp', { value: true });
+      const callNow = vi.fn(() => Promise.resolve({ result: { sig: 's' } }));
+      Object.assign(device, { callNow });
+      return { device, callNow };
+    };
+    const helper = waits(true);
+    await expect(helper.device.waitChange(undefined, 0)).resolves.toBeUndefined();
+    expect(helper.callNow).not.toHaveBeenCalled();
+    const runner = waits(false);
+    await expect(runner.device.waitChange(undefined, 0)).resolves.toMatchObject({ sig: 's' });
+  });
 });
 
 describe('a runner up on a simulator with no app named', () => {
