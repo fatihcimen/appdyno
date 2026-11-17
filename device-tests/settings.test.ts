@@ -173,15 +173,17 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
   });
 
   it('turns mobile data off and on, read back, and the device loses this Mac', async () => {
-    await set(call, 'wifi', 'on');
+    // with Wi-Fi off: an emulator's Wi-Fi reaches this Mac by itself, with mobile data off or on
+    await set(call, 'wifi', 'off');
     expect(await value(call, 'mobile_data')).toBe('on');
-    expect(reaches()).toBe(true);
+    await until('this Mac by mobile data', reaches);
     await set(call, 'mobile_data', 'off');
     expect(await value(call, 'mobile_data')).toBe('off');
     await until('the network gone', () => !reaches());
     const r = await call('set_device', { name: 'restore' });
     expect(r.text).toContain('mobile_data: on');
     expect(await value(call, 'mobile_data')).toBe('on');
+    expect(await value(call, 'wifi')).toBe('on');
     await until('the network back', reaches);
   });
 
