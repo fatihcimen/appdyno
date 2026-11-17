@@ -4,7 +4,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { REVISIONS } from '@appdyno/testing/calls.js';
-import { refIn, toolCaller } from './helpers.js';
+import { shownRef, toolCaller } from './helpers.js';
 import { IosSimulatorDevice } from './workspace.js';
 
 /**
@@ -24,7 +24,7 @@ for (const revision of REVISIONS)
       let client: Client;
       const stderr: string[] = [];
       const call = toolCaller(() => client);
-      const ref = refIn;
+      const ref = shownRef;
 
       beforeAll(async () => {
         const transport = new StdioClientTransport({

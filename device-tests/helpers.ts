@@ -2,6 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { assert } from 'vitest';
 import { iphoneProvider, Devicectl } from './workspace.js';
 import type { DeviceProvider } from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
@@ -76,6 +77,13 @@ export const toolCaller =
 /** The ref a screen's text gives the element with this label. */
 export const refIn = (text: string, label: string) =>
   new RegExp(`(@[a-z0-9-]+) (?:\\w+ )?"${label}"`).exec(text)?.[1];
+
+/** The ref of the element with this label, which the screen must show: one it does not fails here, by its label. */
+export const shownRef = (text: string, label: string) => {
+  const ref = refIn(text, label);
+  assert(ref, `no element "${label}" on the screen:\n${text}`);
+  return ref;
+};
 
 /**
  * A push service's credentials made up here, in a state folder of the suite's own, so that this Mac's own is never read:

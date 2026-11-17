@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { refIn, toolCaller } from './helpers.js';
+import { shownRef, toolCaller } from './helpers.js';
 import { IosPhoneDevice } from './workspace.js';
 
 /** The built MCP server over stdio on a real iPhone (APPDYNO_IPHONE_UDID), on Settings: read, open General, screenshot. */
@@ -13,7 +13,7 @@ const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.me
 describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
   let client: Client;
   const call = toolCaller(() => client);
-  const ref = refIn;
+  const ref = shownRef;
 
   beforeAll(async () => {
     const transport = new StdioClientTransport({
@@ -45,6 +45,8 @@ describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
 
   it('lists the phone and drives Settings: launch, read, tap by ref, screenshot', async () => {
     expect((await call('list_devices')).text).toContain(`${udid} usb iPhone`);
+    // a known start: a launch brings a running Settings back on whatever page another suite left it
+    expect((await call('manage_app', { action: 'stop' })).error).toBe(false);
     expect((await call('launch_app')).error).toBe(false);
     const home = await call('read_screen');
     expect(home.text).toContain(`foreground: ${APP}`);
