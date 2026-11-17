@@ -208,6 +208,9 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
   it("says when it may show no notification, and refuses FCM's own names and an image file", async () => {
     adb('shell', 'pm', 'revoke', PUSH_APP, 'android.permission.POST_NOTIFICATIONS');
     try {
+      // a revoke ends the app, and a phone that treats that as a force stop (a REDMI with HyperOS 3) gives its
+      // receiver no message until it is launched again, as FCM would not: launched, the push is the case asked
+      await inFront();
       expect(await pushed({ type: 'alert', title: 'T' })).toContain(
         'or would: the app is not allowed notifications',
       );
