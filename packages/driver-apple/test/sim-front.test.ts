@@ -156,6 +156,19 @@ describe('an app just opened on a simulator', () => {
     expect(await touchFrom(false)).toBeGreaterThanOrEqual(TRANSITION_MS);
   });
 
+  it('started afresh is waited for in front by the helper, so that no read goes to a runner meanwhile', async () => {
+    const fronts = ['com.apple.springboard', 'com.apple.springboard', 'dev.app'];
+    const front = vi.fn(() => Promise.resolve(fronts.shift() ?? 'dev.app'));
+    const direct = { reads: true, front, close: vi.fn() };
+    const simctl = Object.assign(new Listed(''), { restart: vi.fn(() => Promise.resolve()) });
+    const device = new IosSimulatorDevice(UDID, simctl, direct as never);
+    const callNow = vi.fn(() => Promise.reject(new Error('the runner is starting')));
+    Object.assign(device, { callNow });
+    await device.apps.launchWith('dev.app', {});
+    expect(front).toHaveBeenCalledTimes(3);
+    expect(callNow).not.toHaveBeenCalled();
+  });
+
   it('is not waited for by the runner once the home screen stays and its process is gone', async () => {
     vi.useFakeTimers();
     const runner = vi.spyOn(

@@ -78,7 +78,11 @@ export class IosSimulatorDevice extends IosDevice {
     this.direct = direct ?? new DirectSim(serial);
     this.holds = new HeldLaunches(serial);
     this.viewProbe = new SimulatorViews(simctl, serial, this.holds);
-    this.apps = new SimulatorApps(simctl, serial, this.viewProbe, (app) => this.target(app));
+    // a restart's app is waited for in front by the helper, as a launch's: a read before then waited on the runner
+    this.apps = new SimulatorApps(simctl, serial, this.viewProbe, async (app) => {
+      await this.target(app);
+      await this.untilFront(app);
+    });
     this.settings = new SimulatorSettings(simctl, serial);
     this.events = new SimulatorEvents(simctl, serial, () =>
       this.foreground().catch(() => undefined),
