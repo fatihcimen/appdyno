@@ -40,7 +40,7 @@ A tool's command is its name with dashes, and its action and what else it is tol
 | `appdyno wait-for --selector '{...}'`    | `appdyno check-element --selector '{...}' --timeout-ms 5000` |
 | `appdyno record start`                   | `appdyno record-session video start`                         |
 | `appdyno network stop`                   | `appdyno capture-network stop`                               |
-| `appdyno app stop`                       | `appdyno manage-app stop`                                    |
+| `appdyno terminate-app`                  | `appdyno manage-app stop`                                    |
 | `appdyno flow run a.flow`                | `appdyno run-flow run a.flow`                                |
 
 `appdyno test`, `perf compare|why|reference|baseline|budget|functions|prune`, `perf dashboard|survey|comment`, `push setup`, `mirror`, `hub`, `timeline`, `flight`, `devices`, `doctor`, `install` and `update` keep their words. `appdyno <command> --help` lists a command's flags, and [Command line](../reference/cli.md) has every one.

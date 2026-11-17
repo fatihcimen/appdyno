@@ -40,7 +40,7 @@ Bir aracın komutu, tirelerle yazılmış adıdır; eylemi ve bir listeden söyl
 | `appdyno wait-for --selector '{...}'`    | `appdyno check-element --selector '{...}' --timeout-ms 5000` |
 | `appdyno record start`                   | `appdyno record-session video start`                         |
 | `appdyno network stop`                   | `appdyno capture-network stop`                               |
-| `appdyno app stop`                       | `appdyno manage-app stop`                                    |
+| `appdyno terminate-app`                  | `appdyno manage-app stop`                                    |
 | `appdyno flow run a.flow`                | `appdyno run-flow run a.flow`                                |
 
 `appdyno test`, `perf compare|why|reference|baseline|budget|functions|prune`, `perf dashboard|survey|comment`, `push setup`, `mirror`, `hub`, `timeline`, `flight`, `devices`, `doctor`, `install` ve `update` sözcüklerini korur. `appdyno <command> --help` bir komutun bayraklarını listeler; [Komut satırı](../reference/cli.tr.md) hepsini verir.
