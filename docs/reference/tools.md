@@ -584,7 +584,7 @@ A message of several lines is one line of the answer, and `limit` never starts i
 
 `contains` keeps the lines that hold its words, whatever their case, matched after secrets are hidden. `since`, here and with `source: crashes`, is an ISO 8601 time or how long ago, as `30s`, `5m` or `2h`. With no `since` it reads from when the last action began, as what a push or a tap sets off is logged while it runs.
 
-On Android it reads the app's process and the last one that died, by the pid exit info gives: a phone ends a crashed process at once, where an emulator's crash dialog holds it, and may start the app anew, so the crash's own lines are read after it.
+On Android it reads the app's process and the last one that died, by the pid exit info gives. The system may end a crashed process at once and start the app anew, or hold it, with its pid, behind its "keeps stopping" dialog until that is answered, as an emulator and a Xiaomi REDMI 15C both did: appdyno reads a process held so as a crash. Either way the crash's own lines are read after it.
 
 ### Crashes
 

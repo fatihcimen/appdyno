@@ -584,7 +584,7 @@ Birkaç satırlık bir ileti yanıtın tek satırıdır ve `limit` hiçbirinin o
 
 `contains`, sözcüklerini büyük küçük harf fark etmeksizin taşıyan satırları tutar; eşleşme gizli değerler saklandıktan sonra yapılır. `since`, burada da `source: crashes` ile de, bir ISO 8601 zamanı ya da ne kadar önce olduğudur: `30s`, `5m` ya da `2h`. `since` verilmezse son işlemin başladığı andan okur, çünkü bir push'un ya da bir dokunuşun tetiklediği şey o sürerken loglanır.
 
-Android'de uygulamanın sürecini ve ölen son sürecini, exit info'nun verdiği pid ile okur: bir telefon çöken süreci hemen bitirir, bir emulator'ın crash penceresi ise onu tutar, ve uygulamayı yeniden başlatabilir; böylece crash'in kendi satırları ondan sonra da okunur.
+Android'de uygulamanın sürecini ve ölen son sürecini, exit info'nun verdiği pid ile okur. Sistem çöken bir süreci hemen bitirip uygulamayı yeniden başlatabilir ya da onu, pid'iyle birlikte, "keeps stopping" ("sürekli olarak duruyor") penceresi yanıtlanana kadar tutabilir; bir emulator da bir Xiaomi REDMI 15C de böyle yaptı: appdyno böyle tutulan bir süreci crash olarak okur. Her iki durumda da crash'in kendi satırları ondan sonra da okunur.
 
 ### Crash'ler
 

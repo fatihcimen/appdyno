@@ -2,6 +2,7 @@ import type { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidApps } from '../src/apps.js';
+import { stopIfHeld } from '../src/crashes.js';
 import { AndroidDevice } from '../src/device.js';
 import { linkFilters, linkStates } from '../src/links.js';
 
@@ -146,6 +147,20 @@ describe('a link the system did not open', () => {
     } as unknown as Adb);
   const unresolved = (pkg = '') =>
     `Error: Activity not started, unable to resolve Intent { act=android.intent.action.VIEW dat=https://example.com/... flg=0x10000000 xflg=0x4${pkg && ` pkg=${pkg}`} }\n`;
+
+  it('stops first the app it is held to where the system holds that for its crash dialog, which no start reaches', async () => {
+    const asked: string[] = [];
+    const d = new AndroidDevice('emulator-5640', {
+      exec: (_s: string, c: string) => (asked.push(c), Promise.resolve('Status: ok\n')),
+    } as unknown as Adb);
+    await d.openUrl('demo://x', 'dev.app');
+    await d.openUrl('https://example.com/');
+    // only a process held so, in the same command as the start: `am start -W` waited 10 s on one, its dialog still up
+    expect(asked).toEqual([
+      `${stopIfHeld('dev.app')}; am start -W -a android.intent.action.VIEW -d 'demo://x' -p dev.app 2>&1`,
+      "am start -W -a android.intent.action.VIEW -d 'https://example.com/' 2>&1",
+    ]);
+  });
 
   it('says in words that the app it was held to does not open it, or that no app here does', async () => {
     await expect(

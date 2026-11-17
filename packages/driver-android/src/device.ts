@@ -28,7 +28,7 @@ import {
   type SystemView,
 } from '@appdyno/core';
 import { Adb, amStartError, assertPkg, assertSerial, shq, wholeAnswer } from './adb.js';
-import { androidCrashes, androidCrashing, androidRunning } from './crashes.js';
+import { androidCrashes, androidCrashing, androidRunning, stopIfHeld } from './crashes.js';
 import { androidLogs } from './logs.js';
 import { auditAndroid } from './audit.js';
 import { AndroidAgentLauncher } from './agent.js';
@@ -280,10 +280,13 @@ export class AndroidDevice extends RpcDevice implements Device {
     return { ...r, read: { tree, traversal } };
   }
 
-  /** Opens a link (`am start -W` with VIEW); `pkg` keeps it in that app. */
+  /**
+   * Opens a link (`am start -W` with VIEW); `pkg` keeps it in that app, stopped first if the system holds it for its
+   * crash dialog, which no start reaches.
+   */
   async openUrl(url: string, pkg?: string) {
     const out = await this.shell(
-      `am start -W -a android.intent.action.VIEW -d ${shq(url)}${pkg ? ` -p ${assertPkg(pkg)}` : ''} 2>&1`,
+      `${pkg ? `${stopIfHeld(pkg)}; ` : ''}am start -W -a android.intent.action.VIEW -d ${shq(url)}${pkg ? ` -p ${assertPkg(pkg)}` : ''} 2>&1`,
       TIMEOUTS.app,
     );
     const error = amStartError(out);
