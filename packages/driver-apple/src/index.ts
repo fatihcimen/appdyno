@@ -1,4 +1,6 @@
 export { iosChecks, simulatorProvider } from './provider.js';
+export { NO_RUNTIME } from './simulators.js';
+export { NOT_READY } from './xcode-said.js';
 export { iphoneProvider } from './phone-provider.js';
 export { IosDevice, type IosDeviceOps } from './device.js';
 export { ALERT_WORDS, iosScreen, promptButton } from './platform-screen.js';

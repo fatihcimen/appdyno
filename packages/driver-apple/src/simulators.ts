@@ -8,6 +8,13 @@ const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{
 /** Kinds of simulator this Mac may have that nothing here drives. */
 const NOT_DRIVEN = /Apple-(Watch|TV|Vision)/;
 
+/** Where no runtime can make a simulator, and what to do. */
+export const NO_RUNTIME = {
+  said: 'No iOS runtime is installed',
+  unusable: 'No iOS runtime can be used: %@',
+  fix: 'Xcode, Settings, Components: get iOS, then try again',
+};
+
 /** A runtime's id as people name it: iOS 27.2, for a runtime of one model's own too (iOS-27-2-iPhone19-4). */
 const runtimeName = (runtime: string) => {
   const m = /SimRuntime\.([A-Za-z]+)((?:-\d+)+)/.exec(runtime);
@@ -37,20 +44,42 @@ export class Simulators implements VirtualDevices {
     private readonly endRunner = (udid: string) => new IosRunnerLauncher(udid).killServing(),
   ) {}
 
+  /** What can be made: each system with the models it runs, as most pairs fail, and none at all said as such. */
   async catalog() {
     const { devicetypes, runtimes } = JSON.parse(
       await this.simctl.exec(['list', 'devicetypes', 'runtimes', '-j']),
     ) as {
       devicetypes: { name: string; identifier: string; productFamily?: string }[];
-      runtimes: { name: string; identifier: string; isAvailable?: boolean; platform?: string }[];
+      runtimes: {
+        name: string;
+        identifier: string;
+        isAvailable?: boolean;
+        availabilityError?: string;
+        platform?: string;
+        supportedDeviceTypes?: { identifier: string }[];
+      }[];
     };
+    const ios = runtimes.filter((r) => r.platform === 'iOS');
+    const systems = ios
+      .filter((r) => r.isAvailable !== false)
+      .map((r) => ({
+        id: r.identifier,
+        name: r.name,
+        ...(r.supportedDeviceTypes && { models: r.supportedDeviceTypes.map((t) => t.identifier) }),
+      }));
+    if (!systems.length)
+      throw new DeviceError(
+        'UNSUPPORTED',
+        ios[0]?.availabilityError
+          ? NO_RUNTIME.unusable.replace('%@', ios[0].availabilityError)
+          : NO_RUNTIME.said,
+        NO_RUNTIME.fix,
+      );
     return {
       models: devicetypes
         .filter((t) => t.productFamily === 'iPhone' || t.productFamily === 'iPad')
         .map((t) => ({ id: t.identifier, name: t.name })),
-      systems: runtimes
-        .filter((r) => r.platform === 'iOS' && r.isAvailable !== false)
-        .map((r) => ({ id: r.identifier, name: r.name })),
+      systems,
     };
   }
 

@@ -15,7 +15,8 @@ export type Startable = {
 /** What a new virtual device is made from, by the ids a driver's own tools take. */
 export type VirtualCatalog = {
   models: { id: string; name: string }[];
-  systems: { id: string; name: string }[];
+  /** `models`: the ids of the models it runs, where its driver can tell; any model where it cannot. */
+  systems: { id: string; name: string; models?: string[] }[];
 };
 
 export type NewDevice = { name: string; model: string; system: string };
@@ -28,7 +29,7 @@ export type VirtualDevices = {
   /** Starts it and answers its serial once it can be driven; `serial`: the one it ran as, taken again where it is free. */
   boot(id: string, serial?: string): Promise<string>;
   shutdown(id: string): Promise<void>;
-  /** What can be made; none where the tools that make one are missing. */
+  /** What can be made; none where the tools that make one are missing, and a refusal where nothing can be. */
   catalog?(): Promise<VirtualCatalog | undefined>;
   /** Makes one and answers its id; with no `system` on the newest that runs the model, where a driver can tell. */
   create?(device: NewDevice): Promise<string>;

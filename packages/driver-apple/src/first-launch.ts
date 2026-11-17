@@ -1,10 +1,10 @@
 import { run, type Check } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv, xcodeTool } from './simctl.js';
+import { FIRST_LAUNCH_FIX as FIX } from './xcode-said.js';
 
 const NOT_DONE =
   "Xcode's first-launch setup is not done: devicectl would start it, and it asks for an administrator's password on this Mac";
-const FIX = 'run `sudo xcodebuild -runFirstLaunch` in a terminal, or open Xcode once';
 
 /**
  * Whether Xcode's first-launch setup is done, by the check that is instant and asks nothing: undefined where it cannot

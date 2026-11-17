@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { sleep, run, callSignal, cancelled, must, type LaunchOptions } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { heldLaunch } from './sim-held.js';
+import { xcodeNotReady } from './xcode-said.js';
 
 /** An app with no process, where one was to be read. */
 export const notRunning = (bundle: string) =>
@@ -265,6 +266,9 @@ export class Simctl {
       if (err.killed)
         throw new DeviceError('TIMEOUT', `simctl ${command} took over ${timeoutMs} ms`);
       const msg = simctlSaid(err.stderr || err.message);
+      // Xcode that cannot answer fails every simulator alike: said as that, with what to do
+      const unready = xcodeNotReady(err.stderr || err.message);
+      if (unready) throw unready;
       throw new DeviceError(
         /Invalid device|not found/i.test(msg) ? 'NOT_FOUND' : 'INTERNAL',
         `simctl ${command}: ${msg}`,
