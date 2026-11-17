@@ -93,6 +93,15 @@ describe("typing by a simulator's keys", () => {
     expect(f.sent[1]).toEqual({ kind: 'key', key: 'A', modifiers: ['shift'] });
   });
 
+  it('reads the screen three times for a field that takes its keys: before, at its focus and once back', async () => {
+    // each read of a big app with its keyboard coming up took 0.5 to 1.1 s on a simulator: one more is seconds
+    const f = field();
+    let reads = 0;
+    const read = () => (reads++, f.keyboard.read());
+    await typeByKeys('Ada Lovelace', { at: AT }, { ...f.keyboard, read });
+    expect(reads).toBe(3);
+  });
+
   it('types into the field it touched where the keyboard lifts the form and brings another under the point', async () => {
     // a phone on its side: "Your name" at the point, then the password field there once the keyboard is up
     let up = false;
