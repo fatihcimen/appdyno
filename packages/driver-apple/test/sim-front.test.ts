@@ -18,17 +18,18 @@ const folder = (bundle: string) =>
     ? `${RUNTIME}/${bundle}.app`
     : `/Users/me/Library/Developer/CoreSimulator/Devices/${UDID}/data/Containers/Bundle/Application/${bundle}/App.app`;
 
-/** A simulator with this launchctl list, and this Mac with these processes. */
+/** A simulator with this launchctl list, and this Mac with these processes, and these with their parents. */
 class Listed extends Simctl {
   constructor(
     private readonly listing: string,
     private readonly ps = '',
+    private readonly parents = '',
   ) {
     super({});
   }
   override exec = (args: string[]) =>
     Promise.resolve(args[0] === 'get_app_container' ? `${folder(args[2] ?? '')}\n` : this.listing);
-  override processes = () => Promise.resolve(this.ps);
+  override processes = (parents = false) => Promise.resolve(parents ? this.parents : this.ps);
 }
 
 const LISTING = [
@@ -53,8 +54,24 @@ describe('a running app on a simulator', () => {
     expect(await new Listed(LISTING, RUNNING).pid(UDID, 'dev.app')).toBe(29658);
   });
 
-  it("is asked of the simulator when it is the system's, which every simulator of the runtime runs from one folder", async () => {
+  it("is asked of the simulator when it is the system's and the Mac's list has no launchd_sim of it", async () => {
     expect(await new Listed(LISTING, RUNNING).pid(UDID, 'com.apple.Preferences')).toBe(7712);
+  });
+
+  it("is found as a child of this simulator's launchd_sim when it is the system's, with no look into the simulator", async () => {
+    const parents = [
+      '  300     1 S    launchd_sim /Users/me/Library/Developer/CoreSimulator/Devices/FAC55233-3F44-498D-A3A6-9EE0DE3EAFFF/data/var/run/launchd_bootstrap.plist',
+      `  301     1 S    launchd_sim /Users/me/Library/Developer/CoreSimulator/Devices/${UDID}/data/var/run/launchd_bootstrap.plist`,
+      `  999   300 Ss   ${folder('com.apple.Preferences')}/Preferences`,
+      ` 7712   301 Ss   ${folder('com.apple.Preferences')}/Preferences`,
+      ` 7713   301 Ss   ${folder('com.apple.Preferences')}/PlugIns/Widget.appex/Widget`,
+    ].join('\n');
+    // launchctl would say another pid: it is not asked
+    const listed = new Listed(LISTING.replace('7712', '1'), '', parents);
+    expect(await listed.pid(UDID, 'com.apple.Preferences')).toBe(7712);
+    await expect(listed.pid(UDID, 'com.apple.Maps')).rejects.toThrow(
+      'com.apple.Maps is not running',
+    );
   });
 
   it('includes the home screen, which is a service with a label of its own', async () => {

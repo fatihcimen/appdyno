@@ -109,6 +109,25 @@ export type Simulator = {
 const HOME_SCREEN = 'com.apple.springboard';
 
 /**
+ * The processes of one simulator in the Mac's list with parents (`ps -o pid=,ppid=,stat=,command=`), as `pidOfApp` reads
+ * them: those its `launchd_sim` started. Undefined where none is that simulator's, as one shut down has none.
+ */
+export function ofSimulator(processes: string, udid: string): string | undefined {
+  const rows = processes
+    .split('\n')
+    .map((line) => /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/.exec(line))
+    .filter((r): r is RegExpExecArray => !!r);
+  const launchd = rows.find(
+    (r) => r[4]?.startsWith('launchd_sim ') && r[4].includes(`/Devices/${udid}/`),
+  )?.[1];
+  if (!launchd) return undefined;
+  return rows
+    .filter((r) => r[2] === launchd)
+    .map((r) => `${r[1] ?? ''} ${r[3] ?? ''} ${r[4] ?? ''}`)
+    .join('\n');
+}
+
+/**
  * The app's own process in the Mac's list (`ps -o pid=,stat=,command=`), by the folder its app is installed in on this
  * Mac: the executable right in that folder, not an extension's further in. One that is ending (`E`, `Z`) is left out,
  * and of two the newer is the one that runs now, as one just stopped is listed beside the one started after it.
@@ -172,13 +191,17 @@ export class Simctl {
    * The process id of a running app. A simulator's apps are this Mac's processes, and the Mac's list is a fraction of
    * launchctl's in the simulator, which spawns into it: 90 against 340 ms at load 22. That list tells an app installed
    * on this simulator by its folder in the simulator's own; a system app runs from the runtime's, as it does on every
-   * simulator of that runtime, so it is asked of the simulator.
+   * simulator of that runtime, so it is told by its parent, the simulator's launchd_sim: launchctl's list took 0.5 to
+   * 1.2 s of each launch of one at load 30. Without that parent in the list it is asked of the simulator.
    */
   async pid(udid: string, bundle: string): Promise<number> {
     assertBundle(bundle);
     const app = bundle === HOME_SCREEN ? undefined : await this.appContainer(udid, bundle);
-    if (app?.includes(`/Devices/${udid}/`)) {
-      const pid = pidOfApp(await this.processes(), app);
+    const own = app?.includes(`/Devices/${udid}/`)
+      ? await this.processes()
+      : app && ofSimulator(await this.processes(true), udid);
+    if (app && own !== undefined) {
+      const pid = pidOfApp(own, app);
       if (!pid) throw notRunning(bundle);
       return pid;
     }
@@ -203,9 +226,10 @@ export class Simctl {
     return runsBy(this.pid(udid, bundle));
   }
 
-  /** This Mac's processes, each with its state and its whole command line. */
-  async processes(): Promise<string> {
-    const { stdout } = await run('/bin/ps', ['-axww', '-o', 'pid=,stat=,command='], {
+  /** This Mac's processes, each with its state and its whole command line; `parents`: its parent's pid after its own. */
+  async processes(parents = false): Promise<string> {
+    const columns = parents ? 'pid=,ppid=,stat=,command=' : 'pid=,stat=,command=';
+    const { stdout } = await run('/bin/ps', ['-axww', '-o', columns], {
       maxBuffer: 64 * 1024 * 1024,
     });
     return stdout;
