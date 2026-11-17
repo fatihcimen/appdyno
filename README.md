@@ -55,7 +55,7 @@ Each step answers with what the device showed. When a tap takes the app down, th
 APP_NOT_RUNNING: tapped @7rwa "Place order"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Shop-….ips)
 its last log lines:
 2026-11-13 15:04:41.624 Df Shop[46315:14884fe] (libswiftCore.dylib) Swift/ContiguousArrayBuffer.swift:695: Fatal error: Index out of range
-  launch_app starts it again; why it died is above, with its last log lines, and crashes has the whole report
+  launch_app starts it again; why it died is above, with its last log lines, and read_logs with source crashes has the whole report
 ```
 
 `read_logs` with `source: crashes` then names the function, `discount(forQuantity:)`, and the same checkout saved as a flow fails in CI until the bug is fixed.

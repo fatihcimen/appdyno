@@ -2,7 +2,7 @@ import type { FlowStep } from './format.js';
 import { mockRule } from './mock.js';
 import { FlowError, quote, show, tokens } from './tokens.js';
 
-/** As the `visual` tool takes a name: no folder in it, so a picture stays in the folder it is kept in. */
+/** As `check_screen` `visual` takes a name: no folder in it, so a picture stays in the folder it is kept in. */
 const PICTURE_NAME = /^[\w.-]{1,100}$/;
 const NUMBER = String.raw`(\d+(?:\.\d+)?)`;
 // a mask may start off the screen's edge
@@ -22,7 +22,7 @@ export function dropOf(value: string, line = 0): { x: number; y: number } | { se
   return { selector: wordsOf(value, line, wrong) };
 }
 
-/** What a `visual` step leaves out of its comparison, as the `visual` tool takes it. */
+/** What a `visual` step leaves out of its comparison, as `check_screen` `visual` takes it. */
 export type Mask = {
   x?: number;
   y?: number;

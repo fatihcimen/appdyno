@@ -138,7 +138,7 @@ export class EmulatorMirror implements Mirror {
     const source = await this.phone.sourceWith(opts, { maxSize: Math.floor(Math.max(w, h) / 2) });
     return {
       ...source,
-      note: `the guest encodes this picture, which lags by seconds (${why}): boot the emulator with the simulator tool for one with no lag`,
+      note: `the guest encodes this picture, which lags by seconds (${why}): boot the emulator with appdyno for one with no lag`,
     };
   }
 

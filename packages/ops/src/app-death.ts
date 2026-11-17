@@ -113,7 +113,7 @@ export const diedHint = (d: Died, lines = false) =>
         'launch_app starts it again, and read_logs with source crashes says why it died once the system has written its report, which can take a minute'
       : d.unkept
         ? 'launch_app starts it again, and read_logs says why it died'
-        : `launch_app starts it again; why it died is above${lines ? ', with its last log lines' : ''}, and crashes has the whole report`;
+        : `launch_app starts it again; why it died is above${lines ? ', with its last log lines' : ''}, and read_logs with source crashes has the whole report`;
 
 /** An answer's line of the app's end. */
 export const diedLine = ({ reason, file }: Died) =>

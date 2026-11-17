@@ -272,8 +272,8 @@ function notesOf(
     scrolled.push(`and so under ${outermost.length - MAX_SCROLLED} more containers that scroll`);
   const over =
     focus.over === 1
-      ? 'a window over the activity, as a dialog or a menu, is not in these views: screen reads it'
-      : `${focus.over} windows over the activity, as a dialog or a menu, are not in these views: screen reads them`;
+      ? 'a window over the activity, as a dialog or a menu, is not in these views: the elements on the screen have it'
+      : `${focus.over} windows over the activity, as a dialog or a menu, are not in these views: the elements on the screen have them`;
   return [
     ...(shrunk.length > 0 ? [unnamed] : []),
     ...scrolled,
@@ -319,7 +319,7 @@ export async function androidViews(sh: (command: string, timeoutMs: number) => P
       throw new DeviceError(
         'NOT_FOUND',
         'no activity has the focus to read its views',
-        'the screen may be dark or locked, or an app starting: screen wakes it and reads what is there',
+        'the screen may be dark or locked, or an app starting: a read of the elements on the screen wakes it and reads what is there',
       );
     const tree = viewsOf(dump, focus);
     if (tree && namedByShrinker(tree)) {

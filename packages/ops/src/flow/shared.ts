@@ -76,7 +76,7 @@ export const addSteps = (r: Recording, step: FlowStep | FlowStep[] | undefined) 
   const app = (st: FlowStep | undefined) => st?.args.app ?? r.state.app;
   for (const st of steps) {
     const last = r.state.steps.at(-1);
-    // a stop of an app just stopped changes nothing, as a launch that starts it writes one after terminate_app's
+    // a stop of an app just stopped changes nothing, as a launch that starts it writes one after manage_app stop's
     if (st.action === 'stop' && last?.action === 'stop' && app(last) === app(st)) continue;
     r.add(st);
   }

@@ -396,7 +396,7 @@ export class AndroidApps implements AppManager {
       throw new DeviceError(
         'APP_NOT_RUNNING',
         `${app} did not start: the start brought ${front} to the front, whose window was left in the app's task when the app ended`,
-        'screen reads that window: once it is answered or closed, the app starts',
+        'a read of the elements on the screen has that window: once it is answered or closed, the app starts',
       );
   }
 }

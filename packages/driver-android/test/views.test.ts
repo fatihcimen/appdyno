@@ -140,7 +140,7 @@ describe('the read of the native views', () => {
   it("starts from the activity's window, and says what windows over it are not here", () => {
     const t = tree('dialog-36');
     expect(t.notes).toEqual([
-      'a window over the activity, as a dialog or a menu, is not in these views: screen reads it',
+      'a window over the activity, as a dialog or a menu, is not in these views: the elements on the screen have it',
     ]);
     expect(byId(t, 'open_dialog')?.rect).toEqual({ x: 32, y: 96, width: 1016, height: 126 });
     const moved = recorded('form-36').replace(

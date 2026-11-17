@@ -53,7 +53,7 @@ export const SPECS = {
   screenshot: { words: ['name'] },
   /** The screen against the baseline of that name, in the `baselines` folder beside the flow's file. */
   visual: { words: ['name'], number: ['tolerance'], list: ['mask'] },
-  /** A device setting, as `device_setting` takes it; `setting restore` puts back what was changed. */
+  /** A device setting, as `set_device` takes it; `setting restore` puts back what was changed. */
   setting: { words: ['name', 'value?'], text: ['app', 'title'] },
   /**
    * A rule for the app's requests, as `capture_network` `mock` takes one: `host/path` with `*`, then what it does. With no
@@ -69,7 +69,7 @@ export const SPECS = {
   },
   /** A press at the target, carried in a straight line to `to=`: a point `x,y`, or an element by selector words. */
   drag: { target: 'point-needed', text: ['to'], number: ['holdMs', 'durationMs'] },
-  /** A push to the app, as the `push` tool sends one of that type: each `data=` is a `key=value` of its data. */
+  /** A push to the app, as `send_push` sends one of that type: each `data=` is a `key=value` of its data. */
   push: {
     words: ['type'],
     text: ['app', 'title', 'body', 'image', 'payload'],

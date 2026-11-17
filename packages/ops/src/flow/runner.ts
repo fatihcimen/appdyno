@@ -330,7 +330,7 @@ export function flowRunner(
         onFailure: (f) => seenAsItFailed(ctx, s, f, was, o.evidence, answers),
         ...(o.onStep && { onStep: o.onStep }),
         checkpoint: (n, total, st) => {
-          throwIfCancelled('flow');
+          throwIfCancelled('run_flow');
           reportProgress(`step ${n} of ${total}: ${st.action}`);
         },
       });

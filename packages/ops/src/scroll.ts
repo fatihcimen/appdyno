@@ -247,7 +247,7 @@ const scrollTo = async (
       { settle: SETTLE, read: 'tree', before: screen.hash },
     );
     // a call refused meanwhile, as its app died, is over: no more strokes, and no read of it for the session
-    throwIfCancelled('scroll_to');
+    throwIfCancelled('swipe_screen');
     s.acted();
     const next = last.tree ? s.screenOf(last.tree) : await s.read();
     s.remember(next);
@@ -322,7 +322,7 @@ const scrollBy = async (
       { kind: 'gesture', pointers: [slowingPath(at(-1), at(1), STROKE_MS, STROKE_REST_MS)] },
       { settle: SETTLE, read: 'tree', before: screen.hash },
     );
-    throwIfCancelled('swipe');
+    throwIfCancelled('swipe_screen');
     s.acted();
     strokes++;
     const next = await stopped(

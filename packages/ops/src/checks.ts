@@ -13,8 +13,8 @@ import { type Check, NAME_AN_ELEMENT, showSelector } from './step-schemas.js';
 import { ToolError } from './tool.js';
 import { motionText, movedIn, watchScreen } from './watch.js';
 
-/** A wait that read nothing: screen says why the device refuses it. */
-export const UNREAD = 'screen reads it once more and says what the device answered';
+/** A wait that read nothing: read_screen says why the device refuses it. */
+export const UNREAD = 'read_screen reads it once more and says what the device answered';
 
 /** How long a check watches with no time of its own. */
 const WATCH_CHECK_MS = 2_000;

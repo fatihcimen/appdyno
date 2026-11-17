@@ -134,7 +134,7 @@ export function stepsOp(
         const was = asStepBegan(s, seen);
         [since, began] = [began, Date.now()];
         try {
-          throwIfCancelled('steps');
+          throwIfCancelled('run_steps');
           reportProgress(`step ${i + 1} of ${plan.length}: ${name}`);
           if (p.op) {
             // an image asked for at a step is that step's evidence, even of a screen that has not changed

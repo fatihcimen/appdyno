@@ -220,7 +220,7 @@ describe('launching an app', () => {
     await expect(d.launch('a.b')).rejects.toMatchObject({
       code: 'APP_NOT_RUNNING',
       message: `a.b did not start: the start brought ${prompt} to the front, whose window was left in the app's task when the app ended`,
-      hint: 'screen reads that window: once it is answered or closed, the app starts',
+      hint: 'a read of the elements on the screen has that window: once it is answered or closed, the app starts',
     });
     expect(starts(ran)[0]).toContain(" 2>&1; pidof 'a.b' >/dev/null || echo 'Process: none'");
     // an app that runs behind another's window started, and one in front already is no other app's

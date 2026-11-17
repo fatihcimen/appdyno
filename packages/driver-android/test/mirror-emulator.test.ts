@@ -319,7 +319,9 @@ describe('an emulator mirror', () => {
     const source = await mirror.open({ quality: 'auto' }, signal, () => undefined);
     expect(p.mocks.sourceWith).toHaveBeenCalledWith({ quality: 'auto' }, { maxSize: 1200 });
     expect(source).toMatchObject({ kind: 'adb', start: { maxSize: 1200 } });
-    expect((source as { note: string }).note).toMatch(/lags by seconds.*simulator tool/);
+    expect((source as { note: string }).note).toMatch(
+      /lags by seconds.*boot the emulator with appdyno/,
+    );
   });
 
   it('a port that refuses: the same, with its reason', async () => {

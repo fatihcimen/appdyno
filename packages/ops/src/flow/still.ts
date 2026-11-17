@@ -2,7 +2,7 @@ import { pause } from '@appdyno/core';
 import type { Session } from '../session.js';
 
 /**
- * How long the screen must look the same before a `screenshot` step or the `visual` tool takes it: an iOS simulator's
+ * How long the screen must look the same before a `screenshot` step or `check_screen` `visual` takes it: an iOS simulator's
  * cross-fade into dark mode was still on the first picture after the setting step, 0.6 s on.
  */
 const STILL_PICTURE_MS = 500;

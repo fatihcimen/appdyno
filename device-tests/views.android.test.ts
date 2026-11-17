@@ -78,7 +78,7 @@ describe.skipIf(!ANDROID)('the native views on Android', () => {
     ok(await call('tap_screen', { selector: { id: 'open_dialog' }, read: 'none' }));
     await vi.waitFor(async () =>
       expect(ok(await call('read_screen', { views: true })).text).toContain(
-        'a window over the activity, as a dialog or a menu, is not in these views: screen reads it',
+        'a window over the activity, as a dialog or a menu, is not in these views: the elements on the screen have it',
       ),
     );
     ok(await call('press_key', { key: 'back', read: 'none' }));

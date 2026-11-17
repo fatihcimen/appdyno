@@ -23,7 +23,10 @@ export function inspectorOps(ctx: ServerContext) {
         const s = await ctx.session();
         const inspector = s.device.inspector;
         if (!inspector)
-          throw new ToolError('only an iPhone has this: screen reads this device', 'UNSUPPORTED');
+          throw new ToolError(
+            'only an iPhone has this: read_screen reads this device',
+            'UNSUPPORTED',
+          );
         if (action === 'list') {
           const elements = await inspector.elements();
           const lines = elements.map(

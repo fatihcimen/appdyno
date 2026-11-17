@@ -83,7 +83,7 @@ export async function pushCommand(args: string[], use: Use = terminalUse()) {
     return 1;
   }
   use.say(
-    `${NAMES[service]} is set up, kept in ${file} for this user alone. push uses it, and an MCP client is told only that it is set.`,
+    `${NAMES[service]} is set up, kept in ${file} for this user alone. send_push uses it, and an MCP client is told only that it is set.`,
   );
   return 0;
 }
