@@ -8,7 +8,7 @@ appdyno'ya yardım ettiğiniz için teşekkürler. Burada herkes [Davranış Kur
 
 Bir hata için Bug report formuyla, appdyno'nun henüz yapmadığı bir şey için de Feature request formuyla bir issue açın. Bir düzeltmeden büyük her şey için önce bir issue açıp neyi değiştirmek istediğinizi söyleyin: uymayabilecek bir işe emek vermekten sizi kurtarır. Bir güvenlik sorununu [SECURITY](SECURITY.tr.md) sayfasının dediği gibi özel olarak bildirin, asla bir issue ile değil.
 
-Bir pull request tek bir değişiklik taşır. Açmadan önce `pnpm run ci` geçer ve her commit, bir kullanıcının fark edeceği bir değişiklikse `CHANGELOG.md` içindeki satırıyla birlikte, [Commit'ler](#commitler) bölümünün dediği gibi yazılır. Bir cihaza dokunuyorsa hangi cihazda çalıştırdığınızı söyleyin.
+Bir pull request tek bir değişiklik taşır. Açmadan önce `pnpm run ci` geçmeli ve her commit, bir kullanıcının fark edeceği bir değişiklikse `CHANGELOG.md` içindeki satırıyla birlikte, [Commit'ler](#commitler) bölümünün dediği gibi yazılmalı. Bir cihaza dokunuyorsa hangi cihazda çalıştırdığınızı söyleyin.
 
 Katkınız, geri kalanı gibi [MIT Lisansı](LICENSE) altındadır.
 
@@ -63,7 +63,7 @@ Android'in trace'lerini okuyan Perfetto trace processor'ı `packages/driver-andr
 
 ## Testler
 
-`pnpm test` birim testlerini, yani her paketin `test` klasöründeki dosyaları cihaz olmadan çalıştırır; `npx vitest run <file>` tek bir dosyayı çalıştırır. Bir test dosyası 800 satırın altında kalır. Testlerin paylaştığı sahteler, yani bir cihazınki, bir ajanınki, bir saatinki ve dahası, hiçbir şeyin içinde gönderilmeyen bir paket olan `packages/testing`'tedir. Bir test birini dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi; testleri birini alan bir paket `@appdyno/testing`'i kendi `package.json`'unda listeler, `packages/testing`'in kendisinin bağlı olduğu bir paket hariç, çünkü pnpm o döngüyü reddeder: onlar için onu kökteki `package.json` listeler. Her test dosyası kendine ait bir durum klasöründe çalışır; onu `packages/appdyno/test/no-real-state.setup.ts` oluşturur. Testlerinin her biri boş bir klasör isteyen bir dosya `APPDYNO_STATE_DIR`'ı kendi `beforeEach`'inde stub'lar.
+`pnpm test` birim testlerini, yani her paketin `test` klasöründeki dosyaları cihaz olmadan çalıştırır; `npx vitest run <file>` tek bir dosyayı çalıştırır. Bir test dosyası 800 satırın altında kalır. Testlerin paylaştığı sahteler, yani bir cihazınki, bir ajanınki, bir saatinki ve dahası, hiçbir yayımlanan pakete girmeyen bir paket olan `packages/testing`'tedir. Bir test birini dosyasıyla alır, `@appdyno/testing/fake-device.js` gibi; testleri birini alan bir paket `@appdyno/testing`'i kendi `package.json`'unda listeler, `packages/testing`'in kendisinin bağlı olduğu bir paket hariç, çünkü pnpm o döngüyü reddeder: onlar için onu kökteki `package.json` listeler. Her test dosyası kendine ait bir durum klasöründe çalışır; onu `packages/appdyno/test/no-real-state.setup.ts` oluşturur. Testlerinin her biri boş bir klasör isteyen bir dosya `APPDYNO_STATE_DIR`'ı kendi `beforeEach`'inde stub'lar.
 
 ### Cihaz suite'leri
 
@@ -88,7 +88,7 @@ Bir suite bir cihazı kullanmadan önce hub'ı, yani `appdyno hub`'ın ve Mac uy
 
 `node scripts/efficiency.mjs` cihaz istemez. Bu süreçteki bir istemci, test fixture'ları arasında kayıtlı ekranlarda sekiz görevi, sunucunun kendi sözlerini izleyen bir okuyucunun yapacağı gibi yapar: ekranı yönergelerin söylediği ya da bir yanıtın göstermediği yerde okur, bilinen işlemleri ancak yönergeler öyle diyorsa tek çağrıda gönderir, bir crash'in raporunu ya da logunu bir ipucu oraya yolluyorsa ister. Her görevin çağrılarını ve yanıtlarının karakter sayısını, metin ve yapılandırılmış içerik olarak, ayrıca kataloğun, yönergelerin ve birkaç tekil yanıtın boyutunu yazdırır; `--answers` her yanıtın tamamını ekler. Aynı görevler bir birim testidir, `packages/ops/test/efficiency`; her görevi çağrı sayısına bağlar, böylece bir göreve bir çağrı daha ödeten değişiklik `pnpm test`'i başarısız kılar.
 
-`pnpm build && node scripts/bench.mjs <simulator id>` beş görevi gerçek bir modelle, her birini bir kez, bir MCP istemcisinin yazdırma kipindeki komut satırı üzerinden (`claude -p`, oturum açılmış) fixture kurulu bir simulator'da yapar: bir formu doldurup göndermek, sepete üç ürün koymak, simulator'ın Ayarlar uygulamasında bir ayarı bulup değiştirmek, uygulamayı çökertip nedenini log satırıyla söylemek, bir flow kaydedip yeniden oynatmak. İstemciye yalnızca bu çalışma kopyasının sunucusu verilir; her görevin geride bıraktığı, modelin sözünden alınmaz, sonradan cihaza sorulur. Her görev için yapılıp yapılmadığını, çağrıları, modele verilen yanıtların karakter sayısını, giren ve çıkan token'ları, turları ve süreyi yazdırır. `--tasks login,crash` bazılarını çalıştırır, `--model` modeli adlandırır, `--out` satırları JSON olarak, `--keep <dir>` her çalıştırmanın flow'unu yazar. Model kullanımı harcar, görev başına en çok `--budget` dolar (verilmezse 2); bir görevin tek çalıştırması tek bir gözlemdir: bir model aynı adımları iki kez atmaz.
+`pnpm build && node scripts/bench.mjs <simulator id>` beş görevi gerçek bir modelle, her birini bir kez, bir MCP istemcisinin yazdırma kipindeki komut satırı üzerinden (`claude -p`, oturum açılmış) fixture kurulu bir simulator'da yapar: bir formu doldurup göndermek, sepete üç ürün koymak, simulator'ın Ayarlar uygulamasında bir ayarı bulup değiştirmek, uygulamayı çökertip nedenini log satırıyla söylemek, bir flow kaydedip yeniden oynatmak. İstemciye yalnızca bu çalışma kopyasının sunucusu verilir; her görevin geride bıraktığı, modelin sözünden alınmaz, sonradan cihaza sorulur. Her görev için yapılıp yapılmadığını, çağrıları, modele verilen yanıtların karakter sayısını, giren ve çıkan token'ları, turları ve süreyi yazdırır. `--tasks login,crash` bazılarını çalıştırır, `--model` modeli adlandırır, `--out` satırları JSON olarak, `--keep <dir>` her çalıştırmanın akışını yazar. Model kullanımı harcar, görev başına en çok `--budget` dolar (verilmezse 2); bir görevin tek çalıştırması tek bir gözlemdir: bir model aynı adımları iki kez atmaz.
 
 ## İç değişkenler
 
@@ -105,7 +105,7 @@ Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#su
 | `APPDYNO_FORM_ALLOW_URLS`    | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-urls` için                                                                                 |
 | `APPDYNO_FORM_ALLOW_WRITE`   | masaüstü eklentisinin manifest dosyası        | aynısı, `--allow-write` için: aralarında iki nokta olan klasörler, ev klasörü için `~`                      |
 | `APPDYNO_FORM_TOOLSETS`      | masaüstü eklentisinin manifest dosyası        | aynısı, `--toolsets` için: aralarında virgül olan araç grupları                                             |
-| `APPDYNO_PROBE_OUT`          | kare ölçerin başlatılışı, uygulama için       | uygulamadaki ölçerin karelerini yazdığı dosya                                                               |
+| `APPDYNO_PROBE_OUT`          | kare probe'unun başlatılışı, uygulama için    | uygulamadaki probe'un karelerini yazdığı dosya                                                              |
 | `APPDYNO_VIEW_SOCKET`        | görünüm probe'unun başlatılışı, uygulama için | uygulamadaki probe'un yanıt verdiği soket                                                                   |
 | `APPDYNO_RECORD_SEGMENT_S`   | `device-tests/evidence.test.ts`               | bir Android kaydının parçası, yoksa 180 sn; böylece uzun bir kaydın testi kısa sürer                        |
 
@@ -113,7 +113,7 @@ Bir kişinin ayarlayabilecekleri [CLI başvurusunda](docs/reference/cli.tr.md#su
 
 `packages/` altındaki her paket yalnızca kendi kuralının izin verdiği paketleri içe aktarabilir. Örneğin `core` `protocol`'ü içe aktarabilir, başka hiçbir şeyi değil; `driver-android` ve `driver-apple` de birbirini hiçbir zaman içe aktarmaz. Kurallar ve onları uygulayan test `packages/appdyno/test/boundaries.test.ts` içindedir. Bir paketin testleri de aynı kurala uyar; yalnızca o testin adıyla saydığı birkaçı dışında. Mimari gerektiriyorsa kuralı orada değiştirin, etrafından dolaşmayın.
 
-`packages/appdyno/test/structure.test.ts`, `packages/*/src` içindeki her dosyayı ve bizim yazdığımız her `.kt`, `.swift`, `.m` ve `.h` dosyasını 450 satıra, bir paketin `test`'indeki ya da `device-tests`'teki her test dosyasını da 800 satıra bağlı tutar; bir gerekçeyle adını verdikleri dışında. Kaynaklarda iki kez geçen 8 satırlık bir diziyi de reddeder. İki sürücünün de yaptığı şey `core`'a aittir; iOS runner'ının cihaz olmadan verdiği kararlar `ios/RunnerCore`'a, Android ajanınınkiler ise içinde framework olmayan, birim testinin ulaştığı kendine ait bir sınıfa.
+`packages/appdyno/test/structure.test.ts`, `packages/*/src` içindeki her dosyayı ve bizim yazdığımız her `.kt`, `.swift`, `.m` ve `.h` dosyasını 450 satıra, bir paketin `test`'indeki ya da `device-tests`'teki her test dosyasını da 800 satıra bağlı tutar; testin bir gerekçeyle adını verdiği dosyalar dışında. Kaynaklarda iki kez geçen 8 satırlık bir diziyi de reddeder. İki sürücünün de yaptığı şey `core`'a aittir; iOS runner'ının cihaz olmadan verdiği kararlar `ios/RunnerCore`'a, Android ajanınınkiler ise içinde framework olmayan, birim testinin ulaştığı kendine ait bir sınıfa.
 
 `packages/appdyno/test/function-size.test.ts` aynısını bir TypeScript fonksiyonu için 200 satırda yapar ve içindeki bir closure'ı da ayrıca sayar: bir dosyanın sınırı, bir sınıf kadar durum tutan tek bir closure'ı hiç görmez. Sınırı aşanların her biri, neyinin uzun olduğuyla birlikte adıyla anılır.
 
@@ -146,7 +146,7 @@ Kod typescript-eslint'in tipe dayalı kurallarını kendisi karşılar: bir kura
 
 ## Belgeler
 
-[Belgeler](docs/README.tr.md), okuru bir işin içinden geçiren rehberleri ve bir şeye bakmak için bir başvuruyu tutar. Yeni bir sayfa bunlardan birine ve dizine girer. Belgelerdeki bir sayı, kendi ölçtüğünüz bir sayıdır: hangi cihazda ve hangi yük altında ölçtüğünüzü söyleyin.
+[Belgeler](docs/README.tr.md), bir işi adım adım anlatan rehberleri ve bir şeye bakmak için bir başvuruyu tutar. Yeni bir sayfa bunlardan birine ve dizine girer. Belgelerdeki bir sayı, kendi ölçtüğünüz bir sayıdır: hangi cihazda ve hangi yük altında ölçtüğünüzü söyleyin.
 
 Her belge İngilizce ve Türkçedir, `X.md` ve `X.tr.md`, ve birindeki bir değişiklik ikisinde de yapılır: `docs.test.ts` ikisini, her biri kendi dilinde, aynı satırlara, koda, sayılara ve bağlantılara bağlı tutar. Değişiklik günlüğü yayımlanmış her bölümünde böyledir, Unreleased bölümü ise [Commit'ler](#commitler) bölümünün dediği gibi yalnızca İngilizcedir.
 
@@ -156,7 +156,7 @@ Diyagramlar `docs/images` içinde elle yazılmış SVG'lerdir, üreteç yoktur. 
 
 ## Sürümler
 
-[CI referansının](docs/reference/ci.tr.md#sürüm) anlattığı gibi bir tag yayımlar ve npm yayımlamayı workflow'dan token olmadan kabul eder. Bu, npmjs.com'da paketi elinde tutan kişinin bir kez yaptığı tek bir ayara dayanır: `appdyno` paketinin Settings sayfasında, Trusted Publisher altında GitHub Actions seçilir ve kullanıcı olarak `fatihcimen`, depo olarak `appdyno`, workflow dosyası olarak `release.yml` verilir, environment boş bırakılır. npm bunların hiçbirini kaydederken denetlemez, bu yüzden yanlış bir harf ancak bir sonraki yayımlamada görünür. Bir sürüm bu yolla çıktıktan sonra deponun `NPM_TOKEN` secret'ı silinebilir, token'ı npmjs.com'da iptal edilebilir ve paketin yayımlama erişimi iki adımlı doğrulama isteyip token'ları reddedecek şekilde ayarlanabilir.
+[CI başvurusunun](docs/reference/ci.tr.md#sürüm) anlattığı gibi bir tag yayımlar ve npm yayımlamayı workflow'dan token olmadan kabul eder. Bu, npmjs.com'da paketi elinde tutan kişinin bir kez yaptığı tek bir ayara dayanır: `appdyno` paketinin Settings sayfasında, Trusted Publisher altında GitHub Actions seçilir ve kullanıcı olarak `fatihcimen`, depo olarak `appdyno`, workflow dosyası olarak `release.yml` verilir, environment boş bırakılır. npm bunların hiçbirini kaydederken denetlemez, bu yüzden yanlış bir harf ancak bir sonraki yayımlamada görünür. Bir sürüm bu yolla çıktıktan sonra deponun `NPM_TOKEN` secret'ı silinebilir, token'ı npmjs.com'da iptal edilebilir ve paketin yayımlama erişimi iki adımlı doğrulama isteyip token'ları reddedecek şekilde ayarlanabilir.
 
 ## Site
 

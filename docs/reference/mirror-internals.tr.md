@@ -2,7 +2,7 @@
 
 [English](mirror-internals.md)
 
-[Pencere ve hub](mirror.tr.md) sayfasının dışarıda bıraktıkları: görüntünün ve girdinin nasıl ilerlediği, bir pencereyle üst süreci arasındaki iletişim protokolü ve her iddiayı tutmak için hangi cihazda, hangi yükte neyin çalıştırıldığı. Yük, Mac'in 1 dakikalık yük ortalamasıdır. Burada adı geçen telefonlar bir Samsung Galaxy A52 (SM-A525F, Android 14), bir Xiaomi (25078RA3EY, Android 16) ve bir iPhone 13 Pro Max'tir (iOS 27.2).
+[Pencere ve hub](mirror.tr.md) sayfasının dışarıda bıraktıkları: görüntünün ve girdinin nasıl ilerlediği, bir pencereyle üst süreci arasındaki iletişim protokolü ve her iddiayı desteklemek için hangi cihazda, hangi yükte neyin çalıştırıldığı. Yük, Mac'in 1 dakikalık yük ortalamasıdır. Burada adı geçen telefonlar bir Samsung Galaxy A52 (SM-A525F, Android 14), bir Xiaomi (25078RA3EY, Android 16) ve bir iPhone 13 Pro Max'tir (iOS 27.2).
 
 ## Görüntü nereden gelir
 
@@ -37,7 +37,7 @@ Bir pencerenin neyi beklediği tek bir tablodadır, `packages/core/src/mirror/ne
 ## Bir iPhone
 
 Bir telefonun servisleriyle konuşan her şey `packages/driver-apple/src/phone-stream/` içindedir ve tek bir giriş yolu vardır: o
-klasörü silin, geri kalanı derlenir ve testlerini geçer, bir iPhone runner'ını korur ve yansıtması
+klasör silinse de geri kalanı derlenir ve testlerini geçer, bir iPhone runner'ını korur ve yansıtması
 `no-phone-stream` olarak reddedilir. Başka hiçbir şeyin onun içine uzanmadığını bir test doğrular.
 
 Kendi tünelini kurar: `usbmuxd`, bu Mac'in eşleştirme kaydıyla lockdown, `CoreDeviceProxy`, ardından IPv6, TCP ve UDP, bu
@@ -75,7 +75,7 @@ Dönen bir telefon, uygulama yan yatmış halde aynı biçimde bir görüntü g�
 
 Cihaz, sistemin araç çubuğunun altında, hub'ın paletinden boyanmış bir zeminde durur. Sistemin camının kendine ait bir rengi yoktur, bu yüzden bir pencere arkasında duran kadar zengindir; renk görüntünün üstünde değil, çevresinde yaşar.
 
-Pencere çoğu zaman bir kişinin yazdığı pencerenin arkasındadır, bu yüzden söyledikleri orada da gücünü koruyacak biçimde yapılmıştır. AppKit, anahtar (key) olmayan bir pencerenin çubuğundaki sistem renklerini ve her görüntüyü soldurur: kendi başlığını 2:1'e kadar. Bu yüzden çubuktaki ad bize ait bir etikettir, renkler düz renklere çözülür ve simgeleri bize ait bir görünüm çizer. Gerçek pencerenin pikselleri koyu ve açık olarak, bir simulator'da, hub'ın her yerinde, kullanımdaymış gibi ve diğerlerinin arkasındaymış gibi çizilmiş halleriyle okundu: her iki biçimde 854 sözcük ve simgeden her sözcük 4,5:1 ya da üstünde, her simge 3:1'de; Reduce Transparency, Increase Contrast ve Differentiate Without Color açıkken de, Liquid Glass ayarının iki ucunda da öyle. Arkada tutulan bir pencere anahtar yapılamaz; bu yüzden kullanımdaki hal, pencerenin öyle çizilmiş halidir ve gerçek bir anahtar pencere okunmadı.
+Pencere çoğu zaman bir kişinin yazdığı pencerenin arkasındadır, bu yüzden söyledikleri orada da gücünü koruyacak biçimde yapılmıştır. AppKit, anahtar (key) olmayan bir pencerenin çubuğundaki sistem renklerini ve her görüntüyü soldurur: kendi başlığını 2:1'e kadar. Bu yüzden çubuktaki ad bize ait bir etikettir, renkler düz renklere çözülür ve simgeleri bize ait bir görünüm çizer. Gerçek pencerenin pikselleri koyu ve açık olarak, bir simulator'da, hub'ın her yerinde, kullanımdaymış gibi ve diğerlerinin arkasındaymış gibi çizilmiş halleriyle okundu: her iki biçimde 854 sözcük ve simgeden her sözcük 4,5:1 ya da üstünde, her simge 3:1'de; Reduce Transparency, Increase Contrast ve Differentiate Without Color açıkken de, Liquid Glass ayarının iki ucunda da öyle. Arkada tutulan bir pencere anahtar yapılamaz; bu yüzden kullanımdaki hal, pencere o halde çizdirilerek elde edildi ve gerçek bir anahtar pencere okunmadı.
 
 Sözleri, Mac'in diline göre Türkçe ya da İngilizcedir ve tek bir tablodan, `mac/Viewer/WordsTable.m` dosyasından gelir. Anahtar İngilizcedir, bu yüzden üst sürecin bir komut satırı için gönderdiğinin ikinci bir ada ihtiyacı yoktur: bir etiket pencerenin kendi sözlerini tabloda arar; tablonun içermediği, örneğin bir aracın kendi hatası, İngilizce kalır. Bir uygulamanın ya da cihazın adlandırdığı, örneğin bir öğenin etiketi, bir uygulamanın ya da cihazın adı, bir adres, bir log satırı ya da bir ajanın ona yaptığı, tabloda asla aranmaz, çünkü oradaki `Settings` ya da `Small` bir addır: geldiği gibi durur, pencerenin bir cümlesinin içinde de; cümle onun çevresinde söylenir.
 
@@ -87,7 +87,7 @@ Hareket değişen şey içindir: kenar çubuğunda gelen ya da giden bir cihaz, 
 
 ## Paneller, çalıştırıldığı haliyle
 
-**Loglar, Crash'ler, Ağ ve Erişilebilirlik.** iOS 27.2 yüklü bir iPhone 17 Pro simulator'ında ve API 34 bir emulator'da, arkada tutulan hub'dan, 4 ile 10 arası yüklerde, her görünüm ve dilde çalıştırıldı: fixture'ın logu geldi, crash'i raporları arasında durdu, yaptığı bir istek simulator'da belirteci gizlenmiş olarak, emulator'da bayt olarak durdu, erişilebilirlik ekranının sorunları da türlerine göre durdu, biri görüntüde işaretlendi.
+**Loglar, Crash'ler, Ağ ve Erişilebilirlik.** iOS 27.2 yüklü bir iPhone 17 Pro simulator'ında ve API 34 bir emulator'da, arkada tutulan hub'dan, 4 ile 10 arası yüklerde, her görünüm ve dilde çalıştırıldı: fixture'ın logu geldi, crash'i raporları arasında durdu, yaptığı bir istek simulator'da token'ı gizlenmiş olarak, emulator'da bayt olarak durdu, erişilebilirlik ekranının sorunları da türlerine göre durdu, biri görüntüde işaretlendi.
 
 **Bağlantılar.** Arkada tutulan bir pencereden, iOS 27.2'li bir iPhone 17 Pro simulator'ında ve bir API 34 emulator'ında, 7 ile 57 arası yüklerde çalıştırıldı: `appdyno-fixture://open/form` fixture'ı formunda açtı ve `javascript:alert(1)` reddedildi, hiçbir şey açılmadı. Aynısı iOS 27.2'li bir iPhone 13 Pro Max'te (fixture uygulama alanında adıyla verildi) ve USB üzerinden Android 14'lü bir Samsung Galaxy A52'de, 6 ile 11 arası yüklerde.
 
@@ -189,7 +189,7 @@ Aldıkları:
 | `answer`     | Bir panelden istenen bir bağlantının, push'un ya da yakalamanın sonucu. |
 | `apps`       | Uygulamalar panelinin listelediği.                                      |
 | `attach`     | Bu kaynağı göster.                                                      |
-| `audit`      | Denetimin gösterilen ekranda bulduğu ya da nerede olduğu.               |
+| `audit`      | Denetimin gösterilen ekranda bulduğu ya da ne durumda olduğu.           |
 | `banner`     | Bir kişiden bir şey iste ya da istemeyi bırak.                          |
 | `clients`    | Yapay Zekâ İstemcileri panelinin gösterdiği.                            |
 | `copied`     | Bu görüntüyü panoya koy.                                                |
@@ -296,7 +296,7 @@ O Samsung'da, kablosu takılıyken Wi-Fi seri numarasıyla, arkada tutulan pence
 
 O iPhone'da, kablosu takılıyken çalıştırıldı. Bir eşleştirme: telefonda bir soru belirir, bir kişi onaylar ve `appdyno pair` sonra ikisinin eşleştiğini söyler. Arkada tutulan pencere suite'iyle, harfleri hâlâ kablodan giderken Wi-Fi ile 16/16: bir fiske, bir dokunuş, metin, panodan bir gizli değer, karartma ve geri gelme, döndürme, ekran görüntüleri, öldürülen bir görüntüleyici. Sürücüye kablo olmadığı söylenerek, böylece görüntü, dokunuşlar ve harfler ağda tünellerden geçerek, 4 ile 7 yükte: harfler suite'i, 6/6; bir düzenin başka bir karaktere çevirdiği her karakterle, 100 ve 900 ms önce dokunulmuş güvenli bir alana bir gizli değerle, odağı olmayan bir alanla ve `xcodebuild`'in tuttuklarında hiçbir sözcük kalmadan; ve gerçek penceresi arkada tutulan pencere suite'i, 17/17. Bunların hepsinde runner'ı `xcodebuild` kablo üzerinden başlattı.
 
-Bir runner telefonunun loopback'iyle sınırlı kalır; Wi-Fi için eşleştirilmiş bir telefonda aynı token ile bir tüneli de kabul eder. Hiçbir dinleyici yalnızca bir tünelle sınırlanamazdı, bu yüzden eşleştirilmiş bir telefonda portu Wi-Fi'da da açık durur ve o yoldan gelen hiçbir şey okunmadan kapatılır. O iPhone'da denendi: telefonun Wi-Fi adresinden gelen token'ı 15 ms içinde kesildi, bir tünelden geldiğinde ise yanıtlandı. Bu Mac'te eşleştirme yokken o port Wi-Fi'da reddetti.
+Bir runner telefonunun loopback'iyle sınırlı kalır; Wi-Fi için eşleştirilmiş bir telefonda aynı token ile bir tüneli de kabul eder. Hiçbir dinleyici yalnızca bir tünelle sınırlanamazdı, bu yüzden eşleştirilmiş bir telefonda portu Wi-Fi'da da açık durur ve o yoldan gelen bağlantı hiçbir şey okunmadan kapatılır. O iPhone'da denendi: telefonun Wi-Fi adresinden gelen token'ı 15 ms içinde kesildi, bir tünelden geldiğinde ise yanıtlandı. Bu Mac'te eşleştirme yokken o port Wi-Fi'da reddetti.
 
 Runner bulunamazken (bu durumu hemen başarısız olan bir `xcodebuild` taklit etti), her biri bir çalıştırma: düz bir alana dokunduktan sonra yazılan, tuşu olmayan metin panodan gitti, pencere bunu ve harflerin artık tuş konumuyla gittiğini söyledi ve telefonun yapıştırma sorusunu bekledi; güvenli bir alana dokunduktan sonra yazıldığında gitmedi ve pencere hiçbir alanın onu almadığını söyledi. İkisinden sonra telefonun kendi görüntüsü her alanı boş gösterdi.
 

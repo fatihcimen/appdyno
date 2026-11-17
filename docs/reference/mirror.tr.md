@@ -6,7 +6,7 @@
 da aynı cihazı yönetebilir. Pencere küçük bir Objective-C programıdır ve simulator yardımcıları gibi ilk kullanımda `clang` ile
 derlenir: Command Line Tools yeterlidir. Kontrol düzlemi Node'dur: yayınları başlatır ve durdurur,
 girdiyi taşır, neyin yanlış olduğunu söyler ve yeniden bağlanır. Bize ait bir sunucu, daemon ya da dinleyici yoktur.
-Bir pencerenin içte nasıl çalıştığı ve her iddiayı tutmak için neyin çalıştırıldığı [Pencere nasıl çalışır](mirror-internals.tr.md) sayfasındadır.
+Bir pencerenin içte nasıl çalıştığı ve her iddiayı desteklemek için neyin çalıştırıldığı [Pencere nasıl çalışır](mirror-internals.tr.md) sayfasındadır.
 
 ```sh
 appdyno mirror                     # bu cihazın penceresini açar ve çalışmayı sürdürür
@@ -104,7 +104,7 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 #### Uygulamalar
 
-- Uygulamaları listeler, açar, kapatır ve kaldırır; birini ancak onunla birlikte neyin gittiğini söyleyen bir sayfadan sonra kaldırır.
+- Uygulamaları listeler, açar, kapatır ve kaldırır; birini ancak onunla birlikte neyin gideceğini söyleyen bir onay penceresinden sonra kaldırır.
 - iOS'ta liste sistemin uygulamalarını da içerir, çünkü yeni bir simulator'da başkası yoktur; Android'de yalnızca kurulmuş olanları.
 
 #### Etkinlik
@@ -114,7 +114,7 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 #### Loglar ve Crash'ler
 
-- **Loglar**, öndeki uygulamanın logunu geldikçe gösterir: `read_logs` aracının okuduğu satırları aynı gizlemeyle; bir satırdaki belirteç, parola ya da anahtar gizlenir.
+- **Loglar**, öndeki uygulamanın logunu geldikçe gösterir: `read_logs` aracının okuduğu satırları aynı gizlemeyle; bir satırdaki token, parola ya da anahtar gizlenir.
 - Öndeki uygulamayı Performans gibi izler, her 5 s'de bir sorar ve başka bir uygulama için baştan başlar. Kişinin kendi uygulaması olmayan ya da sunucunun uygulama listesinde bulunmayan bir uygulama adıyla söylenir ve hiçbir şey okunmaz.
 - Ayrıntılı'dan Hatalar'a bir düzeyi, bir araması, durduğu yerden okumayı sürdüren Duraklat ve Sürdür'ü, bir seçimin dokunduğu satırların tamamını alan Kopyala'sı ve görünümü boşaltıp cihazın logunu asla silmeyen Temizle'si vardır.
 - Yanındaki **Crash'ler**, uygulamanın son 5 raporunu `read_logs` aracının `source: crashes` ile verdiği gibi listeler; her biri ilk satırlarına ve raporun tamamının bu Mac'teki yoluna açılır.
@@ -123,10 +123,10 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 #### Ağ
 
 - Uygulamanın isteklerini `capture_network` aracının verdiği gibi, o aracın cihaz için tuttuğu yakalamadan gösterir: bir ajanın başlattığı yakalama burada, burada başlatılan da ajana görünür ve ikisi de aynı biçimde gizlenir. Her isteğin yöntemi, adresi, durumu, süresi ve boyutu vardır; seçilen istek tam olarak görünür.
-- Yalnızca bu cihazın sahip olduğu yolları sunar: simulator'da uygulamayı yeniden başlatan, bu yüzden bir kayıt ya da ölçüm sürerken reddedilen sonda; Android'de baytlar ve build'in kaydettiği yerlerde Android 14'ten itibaren paketler; ikisi de adres olmadan sayar.
+- Yalnızca bu cihazın sahip olduğu yolları sunar: simulator'da uygulamayı yeniden başlatan, bu yüzden bir kayıt ya da ölçüm sürerken reddedilen probe; Android'de baytlar ve build'in kaydettiği yerlerde Android 14'ten itibaren paketler; ikisi de adres olmadan sayar.
 - Proxy yalnızca cihaz zaten birinden geçiyorsa sunulur ve listesi, bu araç proxy'nin kendi dışa aktarımını okuyabiliyorsa okunur. Hiçbir pencere, hiçbir cihazda proxy ayarlamaz.
 - Hiçbir yolun istekleri listelemediği yerde, bir iPhone'da ya da proxy'si olmayan bir Android'de, panel kişinin neye ihtiyacı olduğunu söyler.
-- Sondanın listesi panel görünürken 3 s'de bir, diğerleri Yeniden Oku ile okunur. Burada başlatılan bir yakalama pencere kapanınca durur. Sonda varken panel, eşleştiği istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallarını ve hız sınırını da tutar; bunlar bir ajanın ayarladıklarıyla aynıdır. **İsteklerde Bul** (⌘F) paneli filtresinde açar.
+- Probe'un listesi panel görünürken 3 s'de bir, diğerleri Yeniden Oku ile okunur. Burada başlatılan bir yakalama pencere kapanınca durur. Sonda varken panel, eşleştiği istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallarını ve hız sınırını da tutar; bunlar bir ajanın ayarladıklarıyla aynıdır. **İsteklerde Bul** (⌘F) paneli filtresinde açar.
 
 #### Erişilebilirlik
 
@@ -166,12 +166,12 @@ Denetçi (⌥⌘I) sistemin kendi denetçisidir, 320 nokta genişliğinde ve ken
 
 Bir cihaz her saniye kendi ölçümlerinin okuduğunu, `perf_*`'ın kullandığı aynı okuyucularla verir; belleğini ise her beş saniyede bir, çünkü en ağırı odur. Bir okuma yalnızca bakar: bir kişinin kapattığı ekran kapalı kalır. Veremediği şey nedeniyle birlikte bir tiredir, asla 0 değil. Bir cihazın kare saymadığı yerde kare hızı pencerenin kendisinin gösterdiğidir ve durgun bir ekran Durgun der. Bir kare hızının doğru bir değeri yoktur, çünkü bir ekran ne çizmesi gerekiyorsa onu çizer: yalnızca karelerinin ne kadarının geç geldiğine göre değerlendirilir; geç karelerin sayılmadığı yerde karar olmadan durur.
 
-| cihaz              | kare hızı  | takılma, donma               | CPU, bellek, ağ |
-| ------------------ | ---------- | ---------------------------- | --------------- |
-| simulator          | pencerenin | yalnızca kare ölçeri altında | okunur          |
-| Android emulator'ı | cihazın    | okunur                       | okunur          |
-| Android telefon    | cihazın    | okunur                       | okunur          |
-| iPhone             | ekranın    | hayır                        | CPU ve bellek   |
+| cihaz              | kare hızı  | takılma, donma                | CPU, bellek, ağ |
+| ------------------ | ---------- | ----------------------------- | --------------- |
+| simulator          | pencerenin | yalnızca kare probe'u altında | okunur          |
+| Android emulator'ı | cihazın    | okunur                        | okunur          |
+| Android telefon    | cihazın    | okunur                        | okunur          |
+| iPhone             | ekranın    | hayır                         | CPU ve bellek   |
 
 Bir iPhone'un kare hızı ekranınınkidir; tek başına bir yansıtma onu 20 civarında tutar ve bu, sayının yanında yazar. Runner'ı yalnızca kendisine verilen uygulama hakkında bilgi verebilir, bu yüzden bir pencere bunu bir kişinin uygulamalarının her biri için sorar ve onları izlemek için her beş saniyede bir yeniden sorar: aynı uygulama önde kaldıkça tek çağrı.
 
@@ -232,7 +232,7 @@ Geçerli adım kısa bir cümle ve bir diyagramdır ve telefonun durumu değişt
 |         | Geliştirici seçenekleri, USB hata ayıklama                   | adb telefondan haberdar olur. Bir Mac'ten bakınca bu ikisi tek bir durumdur, bu yüzden bir kişi aralarında İleri ile geçer                    |
 |         | USB hata ayıklamaya izin verin                               | adb'nin durumu `unauthorized`'dan `device`'a geçer                                                                                            |
 | Xiaomi  | USB hata ayıklama (Güvenlik ayarları), USB üzerinden yükleme | `persist.security.adbinput` ve `adbinstall` `1` olarak okunur. İkisi de telefonu bekletmez: öyle okunmadıkları yerde bir kişi İleri ile geçer |
-| iPhone  | Xcode'u edinin, Güven, Geliştirici Modu                      | `devicectl`'ın eşleştirme ve Geliştirici Modu durumu                                                                                          |
+| iPhone  | Xcode'u edinin, Güvenin, Geliştirici Modu                    | `devicectl`'ın eşleştirme ve Geliştirici Modu durumu                                                                                          |
 
 Derleme numarasının yeri Samsung, Xiaomi ve Pixel için adıyla söylenir; başka bir üreticinin telefonunda nerede olabileceği söylenir. Geliştirici Modu, öncesinde telefonun yeniden başlayacağını söyler. Bir kilit ya da karanlık bir ekran yalnızca telefon okunabildiğinde söylenir. Bu Mac'e izin vermemiş bir telefonda hiçbir şey okunamaz, bu yüzden o adım telefonu uyandırmayı söyler. Bir runner'ın neye ihtiyacı olduğu, yanında Çalıştırıcıyı Derle ile, `doctor`'dan gelir.
 

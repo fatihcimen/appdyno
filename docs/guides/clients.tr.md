@@ -2,7 +2,7 @@
 
 [English](clients.md)
 
-appdyno, Mac'inizde, kullandığı telefonun ya da simulator'ın yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır, örneğin Claude Code ya da Cursor; appdyno'ya MCP, yani Model Context Protocol ile ulaşır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
+appdyno, Mac'inizde, kullandığı telefonun ya da simulator'ın yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır, örneğin Claude Code ya da Cursor; appdyno'ya MCP, yani Model Context Protocol ile ulaşır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. Telefon ayarları stok Android ve iOS'taki adlarıyla anılır; bir üretici ya da bir sürüm onlara başka adlar verebilir.
 
 İstemcilerin çoğu appdyno'yu Mac'inizde kendisi başlatır ve appdyno kurulduktan sonra bunun için ağ gerekmez. Tek istisna: Mac uygulaması olmadan, ilk Android trace'i kendi trace processor'ını bir kez indirir. Tarayıcıda çalışan bir istemci ise Mac'inizde hiçbir şey başlatamaz. Zor olan durum budur.
 
@@ -129,13 +129,13 @@ Hub'ın kenar çubuğundaki **Yapay Zekâ İstemcileri**, buradaki her istemciyi
 
 **Ekle** ve **Kaldır**, `appdyno install` kodunu kullanır. Önce satırların tam hali görünür, ikinci tıklamaya kadar hiçbir şey yazılmaz. Yalnızca o girdi değişir, dosyanın yanında yedek kalır. **Geri Al** yalnızca o girdiyi, seçenekleriyle birlikte eski haline döndürür; yedeği geri yüklemez, çünkü istemci o arada dosyasını yazmış olabilir.
 
-**Test Et**, istemcinin girdisinin çalıştırdığını çalıştırır, araç listesini ister, ne bulduğunu ve sırada ne yapılacağını söyler. Araç çağırmaz, bu yüzden cihaza dokunmaz ve istemciyi Bağlı durumuna da geçirmez. Dock'tan açılan istemci, Dock'un verdiği kısa `PATH` ile denenir.
+**Test Et**, istemcinin girdisinin çalıştırdığını araç listesini isteyene kadar çalıştırır, ne bulduğunu ve sırada ne yapılacağını söyler. Araç çağırmaz, bu yüzden cihaza dokunmaz ve istemciyi Bağlı durumuna da geçirmez. Dock'tan açılan istemci, Dock'un verdiği kısa `PATH` ile denenir.
 
 Bunu nasıl bilir: sunucu her istemci için verdiği adı ve sürümü, stdio mu HTTP mi kullandığını ve son çağrısının zamanını `~/Library/Caches/appdyno/clients` altında tutar; gönderdiği hiçbir şeyi tutmaz. Listede olmayan bir istemci de çağırdığında kendi satırını alır. Adlar, çağrı yapılabilen yerlerde istemcinin kendi çağrısından okundu: bkz. [Neyle denendi](#neyle-denendi). Bir istemciyi kaldırmak çağrılarını da unutturur.
 
 İstemcinin verdiği ad, bir cihazı yönetirken durum kapsülünde de görünür.
 
-Kenar çubuğundaki **Yardım** ya da command-?, en son önde olan cihaz ve uygulamayla doldurulmuş, hedefe göre istemler sunar; her biri cihaza ne yaptığını söyler.
+Kenar çubuğundaki **Yardım** ya da command-?, en son önünüzde açık olan cihaz ve uygulamayla doldurulmuş, hedefe göre istemler sunar; her biri cihaza ne yaptığını söyler.
 
 ### Claude Code
 
@@ -143,7 +143,7 @@ Kenar çubuğundaki **Yardım** ya da command-?, en son önde olan cihaz ve uygu
 2. Kontrol: `claude mcp list` çıktısında `appdyno: ... ✔ Connected` görünmeli. Oturum içinde `/mcp` yazın.
 3. Deneyin: "cihazları listele" deyin.
 
-`--scope user` sunucuyu bütün projelerde kullanılır yapar. Bu seçenek olmadan sunucu yalnızca bulunduğunuz klasöre eklenir.
+`--scope user` sunucuyu bütün projelerde kullanılabilir kılar. Bu seçenek olmadan sunucu yalnızca bulunduğunuz klasöre eklenir.
 
 Bir araç için 1.3.0'dan önceki bir adla kaydedilmiş bir izin, örneğin `mcp__appdyno__screen`, artık hiçbir araçla eşleşmez: bunun yerine bütün sunucuya izin verin, `permissions.allow` içinde `mcp__appdyno` olarak.
 
@@ -164,12 +164,12 @@ Masaüstü uygulamasındaki sohbet içindir. Claude Code'un listesini okumaz, Cl
 2. Uygulamadan tamamen çıkın (Cmd-Q) ve yeniden açın. Pencereyi kapatmak yetmez.
 3. Kontrol: sohbet kutusunun altındaki +, sonra Connectors. appdyno araçlarıyla birlikte listelenir.
 
-"spawn npx ENOENT" hatası alıyorsanız ya da sunucu bağlanmıyorsa ilk bakılacak yer burasıdır: bkz. [Uygulama npx'i veya adb'yi bulamıyor](#uygulama-npxi-veya-adbyi-bulamıyor). Burada bir çağrının süresi 3-4 dakika kadardır, bu yüzden iOS'ta ilk kullanımdan önce `appdyno ios build` çalıştırın.
+"spawn npx ENOENT" hatası alıyorsanız ya da sunucu bağlanmıyorsa ilk bakılacak yer burasıdır: bkz. [Uygulama npx'i veya adb'yi bulamıyor](#uygulama-npxi-veya-adbyi-bulamıyor). Üretici burada bir çağrıya 3-4 dakika kadar süre tanır, bu yüzden iOS'ta ilk kullanımdan önce `appdyno ios build` çalıştırın.
 
 Ya da tek bir dosyadan, bir masaüstü eklentisinden kurun. Her sürümde `appdyno-<version>.mcpb` bulunur; sunucuyu, ajanlarını ve bir simgeyi içerir, bu yüzden uygulama ile appdyno arasında `npx` yoktur.
 
 1. Dosyayı [son sürümden](https://github.com/fatihcimen/appdyno/releases/latest) indirip uygulamayla açın; uygulama bir kurulum penceresi gösterir.
-2. Formu doldurun ya da boş bırakın. 5 alanı vardır: sürebileceği cihazlar, dokunabileceği uygulamalar, açabileceği bağlantılar, yazabileceği klasörler ve listelediği araç grupları. Bunlar [Sunucu seçenekleri](../reference/cli.tr.md#sunucu-seçenekleri) bölümündeki `--allow-devices`, `--allow-apps`, `--allow-urls`, `--allow-write` ve `--toolsets` seçenekleridir; boş bir alan, o seçeneği hiç vermemekle aynıdır.
+2. Formu doldurun ya da boş bırakın. 5 alanı vardır: kullanabileceği cihazlar, dokunabileceği uygulamalar, açabileceği bağlantılar, yazabileceği klasörler ve listelediği araç grupları. Bunlar [Sunucu seçenekleri](../reference/cli.tr.md#sunucu-seçenekleri) bölümündeki `--allow-devices`, `--allow-apps`, `--allow-urls`, `--allow-write` ve `--toolsets` seçenekleridir; boş bir alan, o seçeneği hiç vermemekle aynıdır.
 3. Yukarıdaki gibi kontrol edin: appdyno araçlarıyla birlikte listelenir.
 
 Dosya imzalı değildir. npm paketi gibi Node 22 ya da üstünü ister. Dosyayı ya da yukarıdaki girdiyi kullanın, ikisini birden değil, çünkü her biri kendi sunucusunu başlatır.
@@ -194,7 +194,7 @@ Codex komut satırı, editör eklentisi ve ChatGPT masaüstü uygulaması tek do
 
 2. Kontrol: `codex mcp list` çıktısında `enabled` görünür. Oturumda ya da uygulamanın yazma kutusunda `/mcp` yazarak nelerin bağlı olduğunu görün.
 
-Bu iki süre önemlidir. Varsayılanları 10 ve 60 saniyedir, oysa ilk çalıştırma ya da ilk derleme dakikalar sürer: istemci her seferinde vazgeçip baştan başlar. `appdyno install` bu değerleri yazar, sizin elle verdiklerinize dokunmaz.
+Bu iki süre önemlidir. Varsayılanları 10 ve 60 saniyedir, oysa ilk çalıştırma ya da ilk runner derlemesi dakikalar sürer: istemci her seferinde vazgeçip baştan başlar. `appdyno install` bu değerleri yazar, sizin elle verdiklerinize dokunmaz.
 
 ### Cursor
 
@@ -309,7 +309,7 @@ Token iki yolla gönderilebilir, istemci hangisini kullanabiliyorsa onu kullanı
 - başlık olarak: `http://127.0.0.1:8765/mcp` adresine `Authorization: Bearer <token>`
 - adresin içinde: `http://127.0.0.1:8765/mcp/<token>`, başlık için alanı olmayan istemciler için
 
-Token'ın adreste durması daha zayıftır: tünelin kayıtlarına ve istemcinin kayıtlı ayarlarına geçer. ChatGPT ve Claude hesaplarının çoğu başka yol bırakmıyor.
+Token'ın adreste durması daha zayıftır: tünelin loglarına ve istemcinin kayıtlı ayarlarına geçer. ChatGPT ve Claude hesaplarının çoğu başka yol bırakmıyor.
 
 Tünelden önce bir kontrol:
 
@@ -356,11 +356,11 @@ Masaüstü uygulamasında bunların hiçbiri yoktur: appdyno'yu Mac'inizde çal�
 3. Çalışır halde bırakın. [ChatGPT Plugins](https://chatgpt.com/plugins) sayfasında: + düğmesi, Add custom MCP server, bir ad, Connection: Tunnel, tüneliniz, Authentication: No authentication. Uyarıyı kabul edin, sonra Create as a plugin.
 4. Eklentiyi kurun. Yeni bir konuşmada `@` yazın, appdyno'yu seçin ve cihazları listelemesini isteyin.
 
-Her isteğin **120 saniyesi vardır, ne kadar ilerleme bildirirse bildirsin**, boyut sınırı da 10 MiB'dir. Uzun ölçümler ve ilk derleme buna sığmaz: önce `appdyno ios build` çalıştırın.
+Her isteğin **120 saniyesi vardır, ne kadar ilerleme bildirirse bildirsin**, boyut sınırı da 10 MiB'dir. Uzun ölçümler ve ilk runner derlemesi buna sığmaz: önce `appdyno ios build` çalıştırın.
 
 **Kendi tünelinizle.** [HTTP sunucusunu](#http-sunucusu) ve bir tüneli başlatın, sonra özel sunucuyu Server URL olarak `https://<your tunnel>/mcp/<token>` ve No authentication ile ekleyin. Bu adrese sahip olan herkes içeridedir, onu parola gibi saklayın.
 
-ChatGPT her yazma işleminde varsayılan olarak onay ister. Bir telefonun araçları için bunu değiştirmek sizin kararınızdır. Bir kullanıcı bildirimine göre bir aracın görselini boş gösteriyor: `take_screenshot` boş dönerse `read_screen` kullanın.
+ChatGPT her yazma işleminde varsayılan olarak onay ister. Bir telefonun araçları için bunu değiştirmek sizin kararınızdır. Bir kullanıcı bildirimine göre ChatGPT bir aracın görselini boş gösteriyor: `take_screenshot` boş dönerse `read_screen` kullanın.
 
 ### Tarayıcıda Claude
 
@@ -382,7 +382,7 @@ Bir araç çağrısının yaklaşık 240 saniyesi, bir yanıtın yaklaşık 150.
 
 Android cihazlarla konuşan `adb` aracı gerekir.
 
-1. Kurun. Ya [Android Studio](https://developer.android.com/studio), appdyno'nun baktığı yere kurar, ya da Google'ın platform-tools paketini `appdyno tools install adb --accept-license` ile kurun; bu seçenek Google'ın koşullarını kabul ettiğinizi söyler.
+1. Kurun. İki yol var: adb'yi appdyno'nun baktığı yere koyan [Android Studio](https://developer.android.com/studio) ya da `appdyno tools install adb --accept-license` ile Google'ın platform-tools paketi; bu seçenek Google'ın koşullarını kabul ettiğinizi söyler.
 2. Telefonda geliştirici seçeneklerini açın: Ayarlar, Telefon hakkında, **Derleme numarası**na (bazı telefonlarda Yapım numarası) yedi kez dokunun. Xiaomi'de bu **OS sürümü**dür.
 3. Ayarlar, Geliştirici seçenekleri altında **USB hata ayıklama**yı açın. Xiaomi'de **USB ile yükle** ve **USB hata ayıklama (Güvenlik ayarları)** da açılmalı.
 4. Kabloyu takın. Telefonun kilidini açın, sorduğu soruya **İzin ver** deyin.
@@ -421,14 +421,14 @@ appdyno ios build
 
 appdyno telefona küçük bir test uygulaması, yani runner yükler. iOS onu ancak Apple'dan gelen iki şeyle çalıştırır:
 
-- **kimlik**: geliştirme sertifikanız ve giriş anahtarlığındaki özel anahtarı
+- **kimlik**: geliştirme sertifikanız ve giriş anahtar zincirindeki özel anahtarı
 - **provisioning profile**: kimliği, bu telefonu ve uygulama kimliğini adıyla yazan bir dosya
 
 Bunlar kuruluysa appdyno kendisi bulur. Hesabınızda hiçbir şey oluşturmaz; tek istisna, aşağıdaki ikinci yolda bunu sizin istemenizdir.
 
 ### Ücretli Apple Developer hesabıyla, wildcard profil
 
-Kendiliğinden bulunan yol budur ve başka bir şey gerektirmez.
+appdyno'nun kendiliğinden bulduğu yol budur ve başka bir şey gerektirmez.
 
 1. Xcode, Settings, Accounts, ekibiniz, Manage Certificates, +, **Apple Development**.
 2. [developer.apple.com](https://developer.apple.com/account/resources/devices/list) adresinde Devices altına telefonun kimliğini ekleyin.
@@ -490,7 +490,7 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 
 | gördüğünüz                                                | anlamı ve yapılacak                                                                                                                      |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| istemci araç göstermiyor, hata da vermiyor                | yeniden başlatın, çoğu listeyi bir kez okur. Sonra kayıtlarına bakın ve `appdyno doctor` çalıştırın                                      |
+| istemci araç göstermiyor, hata da vermiyor                | yeniden başlatın, çoğu listeyi bir kez okur. Sonra loguna bakın ve `appdyno doctor` çalıştırın                                           |
 | `no connected device this server may drive`               | `appdyno devices` hiçbir cihaz listelemiyor ya da `--allow-devices` onu dışarıda bırakıyor                                               |
 | `more than one device this server may drive`              | istemcinize hangi cihazı kullanacağını söyleyin ya da girdiye `--device` ekleyin                                                         |
 | `is held by pid ...`                                      | o cihazı başka bir program kullanıyor. Durdurun ya da `--share` kullanın                                                                 |
@@ -501,7 +501,7 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 | ChatGPT'de çağrı 120 saniyede kesiliyor                   | Secure MCP Tunnel'ın sınırı, artırılamaz: daha kısa bir işlem seçin ya da masaüstü uygulamasını kullanın                                 |
 | Claude'da çağrı 4 dakika civarında kesiliyor              | barındırılan sürümün sınırı. Daha kısa bir işlem seçin ya da Claude Code kullanın                                                        |
 | HTTP sunucusunda `401`                                    | token yok ya da yanlış. Token gönderemeyen istemcide token adreste olmalı                                                                |
-| `403 requests from ... are not accepted`                  | bir web sayfası ya da bu sunucuya ait olmayan `Origin` başlığı gönderen bir istemci. Değeri sunucunun kaydında yazar                     |
+| `403 requests from ... are not accepted`                  | bir web sayfası ya da bu sunucuya ait olmayan `Origin` başlığı gönderen bir istemci. Değeri sunucunun logunda yazar                      |
 | `409 this server serves one client at a time`             | iletide adı geçen başka bir istemci tutuyor. Son çağrısından 10 dakika bekleyin ya da sunucuyu yeniden başlatın                          |
 | `address already in use`                                  | port dolu: başka bir port seçin                                                                                                          |
 | bağlayıcı eklenmiyor ya da araç görmüyor                  | `curl -i -X POST https://<your tunnel>/mcp` 401 vermeli. Başka bir yanıt, tünelin sunucuya ulaşmadığını gösterir                         |
@@ -509,13 +509,13 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 
 ## Neyle denendi
 
-macOS'ta, geçici bir ev klasörüyle, paketinden derlenip kurulan sürümle, bütün cihazlar `--allow-devices` ile dışarıda bırakılarak, 2026-11-04'te:
+macOS'ta, geçici bir ev klasörüyle, derlenip tarball'ından kurulan paketle, bütün cihazlar `--allow-devices` ile dışarıda bırakılarak, 2026-11-04'te:
 
 | denenen                                      | sonuç                                                     |
 | -------------------------------------------- | --------------------------------------------------------- |
 | listedeki her istemci için `appdyno install` | her dosya yazıldı; ikinci kez: hepsi "already right"      |
 | Claude Code 2.1.318, stdio ve HTTP           | bağlandı; yanlış token ve ikinci istemci reddedildi       |
-| Gemini CLI 0.66.0, opencode 1.19.5           | kendi `mcp list` komutlarıyla bağlandı                    |
+| Gemini CLI 0.66.0, opencode 1.19.5           | bağlandı, kendi `mcp list` çıktılarına göre               |
 | Codex CLI 0.166.0, Cline CLI 3.0.74          | dosyasını okuyup appdyno'yu listeledi; bağlantı kurulmadı |
 | MCP Inspector komut satırı, token adreste    | araçları listeledi, birini çağırdı                        |
 
@@ -523,4 +523,4 @@ Yapay Zekâ İstemcileri'nin bir istemcinin çağırdığını bilmesini sağlay
 
 Claude Code 2.1.319 bir aracın yapılandırılmış yanıtını görselleriyle birlikte bütünüyle, bir reddi de kodu ve ipucuyla gösterir. Bu, 2026-11-08 ve 2026-11-09'da arayüzsüz akışından (`claude -p`), iOS 27.2'li bir iPhone 17 Pro simulator'ında ve bir API 34 emulator'ında okundu.
 
-Hesap, lisans ya da pencere gerektirdiği için denenmeyenler: ChatGPT uygulaması ve web sürümü, Claude Desktop ve web'deki Claude, Secure MCP Tunnel, herkese açık herhangi bir tünel, Codex'ten bağlantı, Cursor, VS Code, Devin Desktop, Antigravity ve Zed. Buradaki adımlar kendi belgelerinden alındı. `scripts/check-mcpb.mjs` masaüstü eklentisini açar ve sunucusunu manifest dosyasının dediği gibi stdio üzerinden, form boşken ve doluyken çalıştırır; dosyayı uygulamada açmak, formu ve uygulamadan ilk çağrı denenmedi. Ücretsiz Apple kimliğiyle imzalama da denenmedi.
+Hesap, lisans ya da pencere gerektirdiği için denenmeyenler: ChatGPT uygulaması ve web sürümü, Claude Desktop ve web'deki Claude, Secure MCP Tunnel, herkese açık herhangi bir tünel, Codex, Cursor, VS Code, Devin Desktop, Antigravity ve Zed'den bağlantı. Buradaki adımlar kendi belgelerinden alındı. `scripts/check-mcpb.mjs` masaüstü eklentisini açar ve sunucusunu manifest dosyasının dediği gibi stdio üzerinden, form boşken ve doluyken çalıştırır; dosyayı uygulamada açmak, formu ve uygulamadan ilk çağrı denenmedi. Ücretsiz Apple kimliğiyle imzalama da denenmedi.

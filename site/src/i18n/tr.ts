@@ -23,7 +23,7 @@ export const tr: Words = {
     copy: 'Kopyala',
     copied: 'Kopyalandı',
     clients: 'Her MCP istemcisiyle çalışır.',
-    shot: 'Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub’ındaki bir iPhone simulator’ında Shop örneğinin ödemesinden geçiyor; sepete üç paket kahve çekirdeği koyup Place order’a geliyor, bu uygulamayı düşürüyor ve yanıt öldüğünü son log satırıyla söylüyor: Fatal error: Index out of range',
+    shot: 'Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub’ındaki bir iPhone simulator’ında Shop örneğinin ödemesinden geçiyor; sepete üç paket kahve çekirdeği koyup Place order’a geliyor, bu da uygulamayı çökertiyor ve yanıt öldüğünü son log satırıyla söylüyor: Fatal error: Index out of range',
   },
   mascot: {
     picture: 'Lacivert gövdeli, camgöbeği karınlı, macenta kanatlı küçük bir ejderha',
@@ -32,7 +32,7 @@ export const tr: Words = {
     wake: 'Ejderhayı uyandır',
   },
   console: {
-    title: 'Sorun. Kullanışını izleyin.',
+    title: 'Sorun. Nasıl kullandığını izleyin.',
     sub: 'Bir iş seçin. Ajan aynı çağrıları sizin simulator’ınızda, emulator’ınızda ya da telefonunuzda yapar.',
     jobs: 'Denenecek işler',
     phone: 'Bir iPhone simulator’ında örnek bir kahve dükkânı uygulaması',
@@ -77,7 +77,7 @@ export const tr: Words = {
       chip: 'Cold launch’ı ölç',
       ask: 'cold launch ne kadar sürüyor?',
       launch: 'cold launch, 5 çalıştırma: p50',
-      scroll: '59 FPS p50, 300 frame’de 2 yavaş frame · memory 182 MB, artış yok',
+      scroll: '59 FPS p50, 300 karede 2 yavaş kare · bellek 182 MB, artış yok',
     },
     views: {
       chip: 'Bu ekranı ne çiziyor?',
@@ -87,12 +87,12 @@ export const tr: Words = {
     flow: {
       chip: 'Test olarak yeniden çalıştır',
       ask: 'ödemeyi flow olarak kaydet ve yeniden çalıştır',
-      saved: '4 step flows/checkout.flow olarak kaydedildi',
-      replayed: '4 step, model yok · yine Siparişi ver’de başarısız',
+      saved: '4 adım flows/checkout.flow olarak kaydedildi',
+      replayed: '4 adım, model yok · yine Siparişi ver’de başarısız',
     },
   },
   cases: {
-    title: 'Üç hata: bildirimden regression test’e',
+    title: 'Üç hata: hata raporundan regression test’e',
     problem: 'Sorun',
     evidence: 'Kanıt',
     test: 'Regression test',
@@ -100,9 +100,9 @@ export const tr: Words = {
     items: [
       {
         name: 'Yavaşlayan bir liste',
-        problem: 'Ürün listesi kayarken frame’ler düşüyor.',
+        problem: 'Ürün listesi kayarken kareler düşüyor.',
         evidence: '<code>measure_performance scroll</code>: düzeltmeden önce 41 FPS, sonra 59.',
-        test: '<code>compare_performance</code> gate’i olan bir flow.',
+        test: '<code>compare_performance</code> kapısı olan bir flow.',
       },
       {
         name: 'Ödemede bir crash',
@@ -127,8 +127,8 @@ export const tr: Words = {
         text: '<code>appdyno hub</code> her birini canlı gösterir; fare ve klavyeyle kullanılır.',
       },
       {
-        name: 'Performans, olduğu anda',
-        text: 'Frame, CPU ve memory canlı okunur.',
+        name: 'Anlık performans',
+        text: 'Kareler, CPU ve bellek canlı okunur.',
       },
       {
         name: 'Yapay zekâ istemcileriniz',
@@ -138,7 +138,7 @@ export const tr: Words = {
     download: 'Mac uygulamasını indirin',
     after:
       'Apple silicon, macOS 13.5 ya da üstü: sürümdeki .dmg dosyası. Uygulama, siz onaylayınca kendini günceller.',
-    shot: 'Karanlık görünümüyle hub: bir yapay zekâ istemcisi kaydırırken Ayarlar’da canlı bir iPhone simulator’ı; Performans paneli görüntüyü 89 FPS olarak, CPU’yu ve memory’yi okuyor',
+    shot: 'Karanlık görünümüyle hub: bir yapay zekâ istemcisi kaydırırken Ayarlar’da canlı bir iPhone simulator’ı; Performans paneli görüntüyü 89 FPS olarak, CPU’yu ve belleği okuyor',
   },
   source: {
     title: 'Açık kaynak',

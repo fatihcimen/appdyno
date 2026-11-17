@@ -41,7 +41,7 @@ appdyno perf survey --app A [--device S]               # o cihazdaki her ölçü
 appdyno perf dashboard [--app A] [--out dir] [--open]  # yalnızca sayfa, saklananlardan
 ```
 
-Bir uygulamanın bütün cihazlarınızdaki performansı tek sayfada: neyin ilgi beklediği, Google Play'in yavaş ya da donmuş oturum sayacağı şey (burada tek bir oturum, kullanıcılar arasında bir oran değil), cihaza göre her ölçüm (en yeni değeri; bir tahminse ya da gürültü altında alındıysa işaretli, ya da o cihazın onu neden okuyamadığı) ve her birinin baseline bandı ve bütçesiyle eğilimi.
+Bir uygulamanın bütün cihazlarınızdaki performansı tek sayfada: neyin dikkat gerektirdiği, Google Play'in yavaş ya da donmuş oturum sayacağı şey (burada tek bir oturum, kullanıcılar arasında bir oran değil), cihaza göre her ölçüm (en yeni değeri; bir tahminse ya da gürültü altında alındıysa işaretli, ya da o cihazın onu neden okuyamadığı) ve her birinin baseline bandı ve bütçesiyle eğilimi.
 
 Bir emulator'ın ya da simulator'ın sayılarının bu Mac'e göre olduğunu ve gerçek kare hızlarının, donmuş karelerin, takılmaların ve enerjinin bir telefon gerektirdiğini söyler. Bir sayı bir cihazda başka bir şey anlatıyorsa neyi anlattığını söyler: bir simulator'ın kareleri ana thread'in temposudur, enerjisi de bu Mac'inkidir. Bir uygulama için hiçbir telefon ölçülmemişse bunun komutunu verir.
 
@@ -55,7 +55,7 @@ Okunacak başka şeyler, her biri [performans başvurusunda](../reference/perf.t
 - `measure_performance snapshot` `also: anonMemory`, belleğini Google Play'in değerlendirdiği haliyle verir: süreç durumuna göre anon RSS ve swap, bir de bitmap'ler.
 - `measure_performance snapshot` `also: startInfo`, Android 15'ten itibaren uygulamanın en son neden başladığını söyler.
 - `measure_performance frames`, yavaş karelerin ve donmaların neden yavaş olduğunu söyler.
-- `compare_performance` `action: functions`, iki profil arasında hangi fonksiyonların kaydığını söyler.
+- `compare_performance` `action: functions`, iki profil arasında hangi fonksiyonların değiştiğini söyler.
 
 ## Ağ
 
@@ -72,7 +72,7 @@ Proxy sizin çalıştırdığınız bir proxy'dir. `read` onun gördüklerini li
 `har`, yani HAR olarak dışa aktarılmış oturumuyla. Bir liste, `start`'tan bu yana herhangi bir istemciden proxy'den geçeni tutar. Hiçbir
 sertifika asla kurulmaz: HTTPS'i bir proxy üzerinden görmek için onun sertifikasını kendiniz kurun. Bir iPhone'da yalnızca `har` ile `read` vardır: proxy'si Wi-Fi ayarlarındadır.
 
-Sonda listelemekten fazlasını yapar. Bütün isteklerinin bir `read` çağrısı katlanmış gelir: önce başarısız olanlar, her ana makine bir kez, birkaç kez istenen bir yol tek satırda, görseller sayılmış olarak; `contains`, `method` ya da `status` her isteğe kendi satırını verir, `after` bir kimlikten sonra yeni olanı, `id` ise oturumun ölçtükleriyle birlikte tek bir isteğin tamamını. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur. `save` yakalamayı, bir yanıt gibi temizlenmiş olarak HAR 1.2 biçiminde yazar. `mock`, aldığı istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallar koyar; `throttle` ise uygulamanın isteklerini yavaşlatır; ikisi de yakalamayla birlikte biter. `check`, bir flow'un `request` adımı gibi, uyan bir isteği bekler. Sonda içindeyken uygulamanın bir sunucunun sertifikasına ilişkin kendi denetimi (pinning) sorulmaz, bu yüzden uygulamanın reddedeceği bir sunucu geçirilir.
+Probe listelemekten fazlasını yapar. Bütün isteklerinin bir `read` çağrısı katlanmış gelir: önce başarısız olanlar, her ana makine bir kez, birkaç kez istenen bir yol tek satırda, görseller sayılmış olarak; `contains`, `method` ya da `status` her isteğe kendi satırını verir, `after` bir kimlikten sonra yeni olanı, `id` ise oturumun ölçtükleriyle birlikte tek bir isteğin tamamını. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur. `save` yakalamayı, bir yanıt gibi temizlenmiş olarak HAR 1.2 biçiminde yazar. `mock`, eşleştikleri istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallar koyar; `throttle` ise uygulamanın isteklerini yavaşlatır; ikisi de yakalamayla birlikte biter. `check`, bir flow'un `request` adımı gibi, uyan bir isteği bekler. Probe içindeyken uygulamanın bir sunucunun sertifikasına ilişkin kendi denetimi (pinning) sorulmaz, bu yüzden uygulamanın reddedeceği bir sunucu geçirilir.
 
 ## Web görünümleri
 
@@ -87,7 +87,7 @@ seçiciyle ekler; sayfayı en çok 3 s bekler ve okumadan bıraktığında bunu 
 ## Flutter
 
 Bir Flutter uygulamasının semantiği erişilebilirlik ağacındadır, bu yüzden `read_screen`, seçiciler ve dokunuşlar onda çalışır. Dart VM
-servisinin daha zengin ağacı henüz yapılmadı: bu araç yalnızca test ettiğini gönderir ve onu test edecek bir Flutter test uygulaması yok.
+servisinin daha zengin ağacı henüz yapılmadı: bu araç yalnızca test ettiği özellikleri sunar ve onu test edecek bir Flutter test uygulaması yok.
 `inspect_app`'in bir web görünümü için yaptığı gibi olurdu: bir debug build'in logunda `Observatory` ya da `Dart VM service` satırını bulmak, portunu
 yönlendirmek ve WebSocket'i üzerinden `ext.flutter.inspector.getRootWidgetSummaryTree` çağırmak.
 

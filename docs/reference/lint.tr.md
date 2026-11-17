@@ -21,9 +21,9 @@ lint'in nasıl çalıştığını ve bir kuralın bir satır için ne zaman kapa
   hiçbir zaman onu gizleyen bir generic ile değil. Bir `catch` callback'i `(e: unknown)` alır ve onu
   `e instanceof Error ? e.message : String(e)` ile okur.
 - Bir callback'in ayarladığı ve derleyicinin başladığı değer sandığı bir bayrak `let done = false as boolean` olur;
-  typescript-eslint bunun için bunu önerir, yanında nedenini söyleyen bir söz bulunur.
-- `||` string'ler ve boolean'lar için kalır, orada `''` ve `false` istendiği gibi geçip gider; bir sayı ya da bir nesne `??` alır,
-  `0`'ın da geçip gitmesi gerekmedikçe; o zaman satır bunu söyler.
+  typescript-eslint de bunu önerir; yanına nedenini anlatan bir yorum yazılır.
+- `||` string'ler ve boolean'lar için kalır, orada `''` ve `false` istendiği gibi varsayılana düşer; bir sayı ya da bir nesne `??` alır,
+  `0`'ın da varsayılana düşmesi gerekmedikçe; o zaman satır bunu söyler.
 - Bağlanmadan dolaştırılan şey (`stop`, bir sahtenin üyeleri) bir ok fonksiyonudur ya da bağlanmıştır. Bir mock, bir testte olduğu
   mock olarak okunur, hiçbir zaman portunun tipinden değil.
 - Bir şablon string'ler ve sayılar tutar: bir undefined, olamayacağı yerde daraltmayla gider; `String(x)` ise metnin

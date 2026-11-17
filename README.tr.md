@@ -21,9 +21,9 @@
 
 </div>
 
-![Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub'ındaki bir iPhone simulator'ında alışveriş örneğinin ödemesinden geçiyor; sepete üç paket kahve çekirdeği koyup Place order'a geliyor, bu uygulamayı düşürüyor ve yanıt öldüğünü son log satırıyla söylüyor: Fatal error: Index out of range](docs/images/checkout.webp)
+![Gerçek bir çalıştırma: bir terminaldeki MCP araç çağrıları, appdyno hub'ındaki bir iPhone simulator'ında alışveriş örneğinin ödemesinden geçiyor; sepete üç paket kahve çekirdeği koyup Place order'a geliyor, bu da uygulamayı çökertiyor ve yanıt öldüğünü son log satırıyla söylüyor: Fatal error: Index out of range](docs/images/checkout.webp)
 
-<p align="center"><sub>Kurgu değil, gerçek bir çalıştırma: çağrıları bir MCP istemcisi yapıyor, süreler gerçek. Hub ise telefonu gösteriyor ve okuyor. Kayıt İngilizce arayüzle alındı; uygulama Türkçe de çalışır.</sub></p>
+<p align="center"><sub>Kurgu değil, gerçek bir çalıştırma: çağrıları terminalde bir MCP istemcisi gerçek süreleriyle yapıyor, hub ise telefonu gösteriyor ve okuyor.</sub></p>
 
 Ajan ekranı öğeler halinde okur; dokunur, yazar, kaydırır. Push bildirimi gönderir, deep link açar, uygulamanın nasıl açıldığını, nasıl kaydığını ve ne kadar bellek tuttuğunu ölçer. Her işlem, ekran durulduktan sonraki haliyle yanıt verir: ajan yaptığı işin sonucunu aynı çağrıda görür. Siz de aynı cihazı canlı bir pencerede izleyip elle kullanabilirsiniz. Hepsi Mac'inizde çalışır; bulut yok, telemetri yok.
 
@@ -49,7 +49,7 @@ npx -y appdyno install     # appdyno'yu bu Mac'teki MCP istemcilerine ekler, han
 
 > Uygulamamı aç, ödeme adımlarından geç ve neyin bozulduğunu söyle.
 
-Her adım, cihazın gösterdiğiyle yanıt verir. Bir dokunuş uygulamayı çökertirse aynı yanıt bunu crash'le ve uygulamanın son log satırlarıyla birlikte söyler. Bu deponun [alışveriş örneğinden](docs/examples/shop/README.tr.md), bir iPhone simulator'ında alınmış gerçek bir yanıt; bir üründen üç tane siparişi düşürüyor:
+Her adım, cihazın gösterdiğiyle yanıt verir. Bir dokunuş uygulamayı çökertirse aynı yanıt bunu crash'le ve uygulamanın son log satırlarıyla birlikte söyler. Bu deponun [alışveriş örneğinden](docs/examples/shop/README.tr.md), bir iPhone simulator'ında alınmış gerçek bir yanıt; bir üründen üç tane alınınca sipariş verirken uygulama çöküyor:
 
 ```text
 APP_NOT_RUNNING: tapped @7rwa "Place order"; the app died: EXC_BREAKPOINT SIGTRAP Trace/BPT trap: 5 (~/Library/Logs/DiagnosticReports/Shop-….ips)
@@ -73,17 +73,17 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 
 ## Bir ajan neler yapabilir
 
-| bir ajan neler yapabilir                                                                                                                                                                                                                                         | araçları                                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Görmek ve dokunmak.** Ekranı öğeler halinde okur, bir öğeyi metniyle, id'siyle ya da ref'iyle bulur: dokunur, yazar, kaydırır, öğeyi bulana kadar kaydırır, uzun basar, sürükler, pinch yapar, tuşa basar. Tek çağrıda 30 adıma kadar.                         | `read_screen` `tap_screen` `type_text` `swipe_screen` `press_key` `run_steps` `check_element` |
-| **Yerel görünümler.** Görünüm ağacını onu çizen çatının altında verir: SwiftUI, UIKit, Compose, Flutter, React Native ya da bir web görünümü; bir simulator'da ve Android'de.                                                                                    | `read_screen` `views`                                                                         |
-| **Push bildirimleri.** Cihazın kabul ettiği her türde push gönderir; bir başlık ve metinden ya da platformun kendi JSON'undan.                                                                                                                                   | `send_push`                                                                                   |
-| **Bağlantılar.** Deep link, universal link ya da App Link açar. Kurulu bir uygulamanın açtığı bağlantıları listeler.                                                                                                                                             | `open_link`                                                                                   |
-| **Cihaz koşulları.** Karanlık mod, yazı boyutu, dil, yavaş ağ, uçak modu ve biyometri; her biri oturum bitince eski haline döner. Konum ve ekranın yönü de. Bir bellek uyarısı, bir sallama, kitaplığa fotoğraflar ve sistemin yaptığı gibi arka planda bir son. | `set_device` `transfer_files` `manage_app`                                                    |
-| **Ölçüm.** Açılış süresi, kareler, bellek, CPU, ağ verisi ve enerji; platformun kendi araçlarından okunur, ham çıktısıyla saklanır. Performans kapısı, uygulamayı yavaşlatan bir değişikliği başarısız kılar.                                                    | `measure_performance` `compare_performance`                                                   |
-| **Kanıt.** Video, her adımın raporu, loglar, crash kayıtları, ağ trafiği, erişilebilirlik denetimi ve görsel karşılaştırma.                                                                                                                                      | `record_session` `read_logs` `capture_network` `check_screen`                                 |
-| **Flow'lar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                                              | `run_flow`                                                                                    |
-| **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                                          | `show_mirror` `ask_person`                                                                    |
+| bir ajan neler yapabilir                                                                                                                                                                                                                                                        | araçları                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Görmek ve dokunmak.** Ekranı öğeler halinde okur, bir öğeyi metniyle, id'siyle ya da ref'iyle bulur: dokunur, yazar, kaydırır, öğeyi bulana kadar kaydırır, uzun basar, sürükler, pinch yapar, tuşa basar. Tek çağrıda 30 adıma kadar.                                        | `read_screen` `tap_screen` `type_text` `swipe_screen` `press_key` `run_steps` `check_element` |
+| **Yerel görünümler.** Ekranı çizen çatının görünüm ağacını verir: SwiftUI, UIKit, Compose, Flutter, React Native ya da bir web görünümü; simulator'da ve Android'de.                                                                                                            | `read_screen` `views`                                                                         |
+| **Push bildirimleri.** Cihazın kabul ettiği her türde push gönderir; bir başlık ve metinden ya da platformun kendi JSON'undan.                                                                                                                                                  | `send_push`                                                                                   |
+| **Bağlantılar.** Deep link, universal link ya da App Link açar. Kurulu bir uygulamanın açtığı bağlantıları listeler.                                                                                                                                                            | `open_link`                                                                                   |
+| **Cihaz koşulları.** Karanlık mod, yazı boyutu, dil, yavaş ağ, uçak modu ve biyometri; her biri oturum bitince eski haline döner. Konum ve ekranın yönü de. Bir bellek uyarısı, bir sallama, kitaplığa fotoğraflar ve uygulamayı sistemin yaptığı gibi arka planda sonlandırma. | `set_device` `transfer_files` `manage_app`                                                    |
+| **Ölçüm.** Açılış süresi, kareler, bellek, CPU, ağ verisi ve enerji; platformun kendi araçlarından okunur, ham çıktısıyla saklanır. Performans kapısı, uygulamayı yavaşlatan bir değişikliği başarısız kılar.                                                                   | `measure_performance` `compare_performance`                                                   |
+| **Kanıt.** Video, her adımın raporu, loglar, crash kayıtları, ağ trafiği, erişilebilirlik denetimi ve görsel karşılaştırma.                                                                                                                                                     | `record_session` `read_logs` `capture_network` `check_screen`                                 |
+| **Flow'lar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                                                             | `run_flow`                                                                                    |
+| **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                                                         | `show_mirror` `ask_person`                                                                    |
 
 28 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında; [1.3.0'dan önceki adlar](docs/reference/tools.tr.md#130dan-önceki-adlar) da orada. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
 
@@ -100,7 +100,7 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 - **APNs kurulduğunda**, yani bir kişi `appdyno push setup apns` ile kurduğunda, simulator APNs'in sandbox'ı üzerinden rich, background, Live Activity, VoIP ve widget push'larını da alır; kabloyla bağlı gerçek bir iPhone da bunları ve alert'i alır. Kurallar sıkıdır: varsayılan olarak sandbox; token yalnızca uygulamanın kendi logundan ya da bir kişinin pencerenin Bildirim panelinde yazdığından; en çok 4 KB (VoIP için 5); dakikada 10 push; hiçbir yanıtta ya da logda anahtar ya da token yok.
 - **FCM kurulduğunda**, `appdyno push setup fcm` ile, Android cihaz alert, rich, background ve Live Activity push'larını FCM üzerinden alır; kurallar aynı türdendir.
 
-APNs kurulana kadar gerçek bir iPhone push almaz, yanıt da bunu söyler. FCM'in kendi mesajı API 34 bir emulator'da, veri push'ları da bir Samsung telefonda denendi. Apple'a ve Google'a giden istekler kaydedilmiş isteklerle, Apple'a gönderim de yerel bir test sunucusuyla sınanır: denemelerde henüz Apple'ın ya da Google'ın kendi sunucularından geçen bir push gönderilmedi.
+APNs kurulana kadar gerçek bir iPhone push almaz, yanıt da bunu söyler. FCM'in kendi mesajı API 34 bir emulator'da, veri push'ları ayrıca bir Samsung telefonda da denendi. Apple'a ve Google'a giden istekler kaydedilmiş isteklerle, Apple'a gönderim de yerel bir test sunucusuyla sınanır: denemelerde henüz Apple'ın ya da Google'ın kendi sunucularından geçen bir push gönderilmedi.
 
 `open_link` bir deep link, universal link ya da App Link açar ve vardığı ekranla yanıt verir. Bir uygulamanın kimliği verilirse o uygulamanın açtığı bağlantıları listeler: simulator'da URL şemalarını ve imzasında adı geçen alan adlarını, Android'de her filtreyi `scheme://host/path` biçiminde ve her App Link alan adını Android'in doğrulama durumuyla.
 
@@ -160,11 +160,11 @@ Her biri bir Mac ve kullanılacak bir cihaz ister: [4. adım](#4-cihazı-hazırl
 
 ### 1. Gerekenler
 
-| ne için                          | gereken                                                                                                                                           |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| appdyno                          | bir Mac ve Node 22 ya da üstü. Mac uygulaması kendi Node'unu taşır; npm'den kurulunca merkezin penceresi Xcode'u ya da Command Line Tools'u ister |
-| iOS simulator'ı ya da iPhone     | Xcode ve iOS 17 ya da üstü                                                                                                                        |
-| Android emulator'ı ya da telefon | Android Studio'dan ya da Google'ın platform-tools paketinden gelen `adb` ve Android 8.0 (API 26) ya da üstü                                       |
+| ne için                          | gereken                                                                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| appdyno                          | bir Mac ve Node 22 ya da üstü. Mac uygulaması kendi Node'unu taşır; npm'den kurulunca hub'ın penceresi Xcode'u ya da Command Line Tools'u ister |
+| iOS simulator'ı ya da iPhone     | Xcode ve iOS 17 ya da üstü                                                                                                                      |
+| Android emulator'ı ya da telefon | Android Studio'dan ya da Google'ın platform-tools paketinden gelen `adb` ve Android 8.0 (API 26) ya da üstü                                     |
 
 ### 2. appdyno'yu edinin
 
@@ -199,7 +199,7 @@ Claude Desktop, appdyno'yu terminal olmadan tek bir dosyadan kurar: `appdyno-<ve
 
 - **iOS simulator'ı**: başka bir şey gerekmez. Xcode'un Simulator uygulamasından açın ya da ajanınızdan açmasını isteyin. appdyno'nun yardımcısını gerektiren ilk işlem, sürümün derlediği yardımcıyı (1 MB'tan küçük) sürümün GitHub'daki sayfasından indirir ve yalnızca sha256'sı paketin taşıdığıyla aynıysa kullanır; kullanamazsa bir tane derler, bu birkaç dakika sürer. `--no-fetch` ya da `APPDYNO_NO_FETCH=1` indirmeyi kapatır. `appdyno ios build` bunu simulator ve iPhone için önceden yapar; iPhone'un yardımcısı her zaman derlenir. Eski sürümlerin build'lerini de siler; çalışan bir sürecin hâlâ kullandığı build'e dokunmaz.
 - **Android emulator'ı**: Android Studio'nun Device Manager'ında bir sanal cihaz oluşturup başlatın.
-- **Android telefon**: geliştirici seçeneklerini açın (Ayarlar, Telefon hakkında, Derleme numarasına yedi kez dokunun), ardından orada USB hata ayıklamayı açın. Kabloyu takın ve telefonun sorusuna İzin ver deyin. Wi-Fi için bir kez eşleştirin: Kablosuz hata ayıklama altında eşleme koduyla eşleştirmeyi seçin ve telefonun gösterdiğiyle `appdyno pair <address> <code>` çalıştırın.
+- **Android telefon**: geliştirici seçeneklerini açın (Ayarlar, Telefon hakkında, Derleme numarasına yedi kez dokunun), ardından orada USB hata ayıklamayı açın. Kabloyu takın ve telefonun sorusuna İzin ver deyin. Wi-Fi için Kablosuz hata ayıklama altında, eşleme koduyla cihaz eşleştirmeyi seçerek bir kez eşleştirin: `appdyno pair <address> <code>`.
 - **iPhone**: kabloyu takın ve Güven deyin, Geliştirici Modu'nu açın, bir geliştirme imzası ve ona ait bir profil verin: [iPhone veya simulator](docs/guides/clients.tr.md#iphone-veya-simulator) adım adım anlatır. Wi-Fi için kabloluyken bir kez eşleştirin: `appdyno pair --device <udid>`.
 
 ### 5. Kontrol edin
@@ -218,7 +218,7 @@ appdyno perf survey --app com.example.app   # bu cihazdaki her ölçüm, ardınd
 
 Wikipedia'nın kendi deposundan derlenmiş debug build'i, hub'da bir Android emulator'ında: bir MCP istemcisi Istanbul'u arar, makaleyi açar, iki satıra bölünen bir bağlantıya dokunur, o makaleyi okur ve ölçer. Her çağrı gerçektir ve yanında aldığı süre yazar:
 
-![Gerçek bir çalıştırma: bir MCP istemcisi, appdyno hub'ında bir Android emulator'ında Wikipedia'nın debug build'ini sürüyor; Istanbul'u arıyor, makaleyi açıyor, Hagia Sophia bağlantısına dokunup makalesini okuyor, Performance paneli de kareleri, CPU'yu ve belleği okuyor](docs/images/wikipedia.webp)
+![Gerçek bir çalıştırma: bir MCP istemcisi, appdyno hub'ında bir Android emulator'ında Wikipedia'nın debug build'ini kullanıyor; Istanbul'u arıyor, makaleyi açıyor, Hagia Sophia bağlantısına dokunup makalesini okuyor, Performance paneli de kareleri, CPU'yu ve belleği okuyor](docs/images/wikipedia.webp)
 
 Makale ve resmi Wikipedia'nındır, kendi lisanslarıyla.
 
@@ -234,9 +234,9 @@ Beş açık kaynak uygulamanın yedi build'i, her biri deposunun derlediği gibi
 | NetNewsWire        | Swift, UIKit                                         | 2.492 ms    | 57 MB  | %2,1 takılan, p95 16,7 ms         |
 | Wonderous, iOS     | Flutter                                              | 3.519 ms    | 298 MB | %2,1 takılan, p95 16,7 ms         |
 
-Cold launch, bir ısınmanın ardından 5 açılışın medyanıdır: Android'de sistemin bildirdiği ilk kareye kadar geçen süre, simulator'da kare probunun gördüğü ilk kareye kadar geçen süre. Bellek, kaydırmadan sonra Android'in PSS'i ve iOS'un fiziksel ayak izidir. Kaydırma, 5 kaydırmalık 3 turun medyanıdır; Android'deki Wonderous kendine ait bir yüzeye, sistemin saydığı karelerin dışında çizer, bu yüzden onun yerine o yüzeyin kareleri okunur. Bir simulator'ın ve bir emulator'ın sayıları bu Mac'indir ve bir debug build, bir release build'den yavaştır: bir çalıştırmayı bir sonrakiyle karşılaştırırlar, bir telefonun ne kadar hızlı olduğunu söylemezler.
+Cold launch, bir ısınmanın ardından 5 açılışın medyanıdır: Android'de sistemin bildirdiği ilk kareye kadar geçen süre, simulator'da kare probunun gördüğü ilk kareye kadar geçen süre. Bellek, kaydırmadan sonra Android'in PSS'i ve iOS'un fiziksel ayak izidir. Kaydırma, 5 kaydırmalık 3 turun medyanıdır; Android'deki Wonderous kendine ait bir yüzeye, sistemin saydığı karelerin dışında çizer, bu yüzden onun yerine o yüzeyin kareleri okunur. Bir simulator'ın ve bir emulator'ın sayıları bu Mac'indir ve bir debug build, bir release build'den yavaştır: bir çalıştırmayı bir sonrakiyle karşılaştırmaya yarar, bir telefonun ne kadar hızlı olduğunu söylemez.
 
-Onları denemek appdyno'da neyin düzeltilmesi gerektiğini gösterdi. LeakCanary'li bir debug build gibi iki başlatıcı etkinliği olan bir uygulama sistemin seçicisini başlatıyor ve 0 ms'lik bir cold launch ölçüyordu; iki satıra bölünen bir bağlantıya dokunuş da satırların arasına iniyordu. Her düzeltme [değişiklik kaydında](CHANGELOG.tr.md).
+Onları denemek appdyno'da neyin düzeltilmesi gerektiğini gösterdi. LeakCanary'li bir debug build gibi iki launcher activity'si olan bir uygulama sistemin seçicisini başlatıyor ve 0 ms'lik bir cold launch ölçüyordu; iki satıra bölünen bir bağlantıya dokunuş da satırların arasına iniyordu. Her düzeltme [değişiklik günlüğünde](CHANGELOG.tr.md).
 
 ## Hız
 

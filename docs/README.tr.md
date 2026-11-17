@@ -12,7 +12,7 @@ appdyno'da yeni misiniz? Sırasıyla üç sayfa:
 2. [Araçlar, bir bakışta](reference/tools.tr.md#bir-bakışta): tek ekranda 28 araç ve her birinin ayrıntılarının yeri.
 3. [Flow'lar](guides/flows.tr.md): bir ajanın yaptığını kaydedin, modelsiz yeniden oynatın ve CI'da çalıştırın.
 
-Bunlardan sonra: bir rehber sizi bir işin içinden geçirir, başvuru bir şeye bakmak içindir, bir örnek de olduğu gibi çalışır.
+Bunlardan sonra: bir rehber bir işi adım adım anlatır, başvuru bir şeye bakmak içindir, bir örnek de olduğu gibi çalışır.
 
 ## Rehberler
 

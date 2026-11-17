@@ -125,20 +125,20 @@ Karar veremeyen bir kapı geçirmemelidir. Bu yüzden `few-samples`, `noisy` ve 
 
 Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece ölü bir sahibin talebi talep sayılmaz ve bir crash'ten sonra temizlenecek bir şey kalmaz. Her birim testi çalıştırması kendi klasörünü alır ve sizin gerçek durumunuza ulaşamaz.
 
-**Bir oturumun değiştirdiği, bir öldürmeden sonra bile geri gider.** Her koşul değişmeden önce eski değeri ve sahibiyle yazılır ve oturumun sonu onu geri koyar. Bir cihazda başlayan oturum, artık ölmüş bir sahibin orada bıraktığını geri koyar. İstemcisinin bitirdiği bir sunucu, bıraktığını sunucunun grubu dışında kendine ait bir süreç olan `appdyno mcp --put-back-after <pid>`'e (appdyno'nun kendi süreçleri arasındaki bir seçenek; elle yazılmaz) devreder; o sunucunun gitmesini bekler ve sonra böyle bir oturum başlatır: bir istemci sunucusunu, bitmesini istedikten yarım saniye sonra, bir cihazın geri gidebileceğinden önce öldürebilir.
+**Bir oturumun değiştirdikleri, süreç öldürülse bile geri alınır.** Her koşul değişmeden önce eski değeri ve sahibiyle yazılır ve oturumun sonu onu geri koyar. Bir cihazda başlayan oturum, artık ölmüş bir sahibin orada bıraktığını geri koyar. İstemcisinin bitirdiği bir sunucu, bıraktığını sunucunun grubu dışında kendine ait bir süreç olan `appdyno mcp --put-back-after <pid>`'e (appdyno'nun kendi süreçleri arasındaki bir seçenek; elle yazılmaz) devreder; o sunucunun gitmesini bekler ve sonra böyle bir oturum başlatır: bir istemci sunucusunu, bitmesini istedikten yarım saniye sonra, yani cihaz eski hâline dönemeden önce öldürebilir.
 
 ## Testlerin tuttukları
 
 Önemli kurallar birer testtir, böylece sessizce eskiyemezler.
 
-| test                                          | tuttuğu                                                                                      |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `packages/appdyno/test/boundaries.test.ts`    | Paket haritası: her paketin neyi içe aktarabileceği.                                         |
-| `packages/appdyno/test/structure.test.ts`     | Bir kaynak dosyaya 450, bir test dosyasına 800 satır, iki kez geçen 8 satırlık bir dizi yok. |
-| `packages/appdyno/test/function-size.test.ts` | Bir fonksiyona 200 satır.                                                                    |
-| `packages/mcp/test/catalog.test.ts`           | Kataloğun boyutu ve belgelerin her aracı listelemesi.                                        |
-| `packages/protocol/test/native.test.ts`       | Kotlin, Swift ve TypeScript taraflarının protokolde anlaşması.                               |
-| `packages/appdyno/test/docs.test.ts`          | Belgelerdeki her bağlantının bir yere varması ve bu diyagramların kodla uyuşması.            |
+| test                                          | tuttuğu                                                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `packages/appdyno/test/boundaries.test.ts`    | Paket haritası: her paketin neyi içe aktarabileceği.                                                         |
+| `packages/appdyno/test/structure.test.ts`     | Kaynak dosya başına en çok 450, test dosyası başına en çok 800 satır; iki kez geçen 8 satırlık bir dizi yok. |
+| `packages/appdyno/test/function-size.test.ts` | Fonksiyon başına en çok 200 satır.                                                                           |
+| `packages/mcp/test/catalog.test.ts`           | Kataloğun boyutu ve belgelerin her aracı listelemesi.                                                        |
+| `packages/protocol/test/native.test.ts`       | Kotlin, Swift ve TypeScript taraflarının protokolde anlaşması.                                               |
+| `packages/appdyno/test/docs.test.ts`          | Belgelerdeki her bağlantının bir yere varması ve bu diyagramların kodla uyuşması.                            |
 
 Cihaz suite'leri `device-tests` içindedir. Adını verdiğiniz bir cihaz isterler ve CI, kendi oluşturduğu bir simulator'daki simulator smoke dışında hiçbirini çalıştırmaz: bkz. [CI sayfası](reference/ci.tr.md).
 
