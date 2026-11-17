@@ -2,7 +2,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, ToolError } from '../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
-import { callerOf, linkedClient } from '@appdyno/testing/calls.js';
+import { callerOf, checkedOps, linkedClient, opCaller } from '@appdyno/testing/calls.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
 const contextOf = (device: FakeDevice) =>
@@ -191,6 +191,33 @@ describe('what did not happen is no success', () => {
       expect(namesOf(device)).not.toContain('act');
     }),
   );
+});
+
+describe('a refused action keeps its hint in the words a client reads', () => {
+  const said = `UNSUPPORTED: not on this phone (no touch was sent)\nhint: appdyno mirror presses it`;
+
+  it.each([
+    ['press_key', { key: 'siri' }],
+    ['press_key', { key: 'volume_up' }],
+    ['tap_screen', { x: 10, y: 10 }],
+    ['swipe_screen', { direction: 'up' }],
+    ['type_text', { text: 'a', x: 10, y: 10 }],
+  ])("%s %j: the device suites' caller and an MCP client read the same", async (op, args) => {
+    const device = new FakeDevice();
+    device.act = () =>
+      Promise.reject(
+        new DeviceError('UNSUPPORTED', 'not on this phone', 'appdyno mirror presses it'),
+      );
+    const ctx = contextOf(device);
+    expect(await opCaller(checkedOps(ctx))(op as 'press_key', args)).toMatchObject({
+      error: true,
+      text: said,
+      data: { code: 'UNSUPPORTED' },
+    });
+    const client = await linkedClient(ctx);
+    const r = await client.callTool({ name: op, arguments: args });
+    expect(r.content).toEqual([{ type: 'text', text: said }]);
+  });
 });
 
 describe('a failed action says whether its touch went out', () => {

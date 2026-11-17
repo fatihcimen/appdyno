@@ -14,9 +14,11 @@ import { latestRuns, runKeys } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
   opsFor,
+  refusalText,
   strictOutput,
   ServerContext,
   textOf,
+  ToolError,
   type Op,
   type OpFields,
   type OpName,
@@ -56,6 +58,42 @@ export const callerOf = (
 };
 
 type OpResult = Awaited<ReturnType<Op['handler']>>;
+
+/** What a client sees: the op's data, or with `error` its refusal's code. */
+export type Answer<D = unknown> = { error: boolean; text: string; data: D & { code?: string } };
+
+export type Call = <N extends OpName>(
+  name: N,
+  args?: Record<string, unknown>,
+) => Promise<Answer<OpFields<N>>>;
+
+/**
+ * Calls an operation as a client sees it: through its input schema, a refusal as an answer, in the words an MCP client
+ * reads, its code first and its hint last.
+ */
+export const opCaller =
+  (ops: Record<string, Op>): Call =>
+  async <N extends OpName>(
+    name: N,
+    args: Record<string, unknown> = {},
+  ): Promise<Answer<OpFields<N>>> => {
+    const op = must(ops[name], `the op ${name}`);
+    try {
+      const r = await op.handler(op.input.parse(args));
+      return {
+        error: false,
+        text: textOf(r.blocks),
+        data: r.data as OpFields<N> & { code?: string },
+      };
+    } catch (e) {
+      if (!(e instanceof ToolError)) throw e;
+      return {
+        error: true,
+        text: refusalText(e),
+        data: { code: e.code } as OpFields<N> & { code?: string },
+      };
+    }
+  };
 
 /** One tool on a phone that answers `measures`: its answer, and what was kept of it, none if nothing was. */
 export async function keptBy(

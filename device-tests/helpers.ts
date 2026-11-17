@@ -2,53 +2,13 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assert } from 'vitest';
 import { iphoneProvider, Devicectl } from './workspace.js';
 import type { DeviceProvider } from '@appdyno/core';
-import {
-  DEFAULT_POLICY,
-  ServerContext,
-  ToolError,
-  type Op,
-  type OpFields,
-  type OpName,
-} from '@appdyno/ops';
-import { checkedOps } from '@appdyno/testing/calls.js';
+import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { checkedOps, opCaller } from '@appdyno/testing/calls.js';
 import type { Client } from '@modelcontextprotocol/client';
 
-/** What a client sees: the op's data, or with `error` its refusal's code. */
-export type Answer<D = unknown> = { error: boolean; text: string; data: D & { code?: string } };
-
-export type Call = <N extends OpName>(
-  name: N,
-  args?: Record<string, unknown>,
-) => Promise<Answer<OpFields<N>>>;
-
-/** Calls an operation as a client sees it: through its input schema, a refusal as an answer. */
-export const opCaller =
-  (ops: Record<string, Op>): Call =>
-  async <N extends OpName>(
-    name: N,
-    args: Record<string, unknown> = {},
-  ): Promise<Answer<OpFields<N>>> => {
-    const op = ops[name];
-    assert(op, name);
-    try {
-      const r = await op.handler(op.input.parse(args));
-      return {
-        error: false,
-        text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-        data: r.data as OpFields<N> & { code?: string },
-      };
-    } catch (e) {
-      if (!(e instanceof ToolError)) throw e;
-      return {
-        error: true,
-        text: e.message,
-        data: { code: e.code } as OpFields<N> & { code?: string },
-      };
-    }
-  };
+export { opCaller, type Answer, type Call } from '@appdyno/testing/calls.js';
 
 /** A person named the device to the suite: what it loses there is the fixture's, asked of nobody. Its files go to temporary folders. */
 export const SUITE_POLICY = {

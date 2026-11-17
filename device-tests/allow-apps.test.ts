@@ -114,7 +114,9 @@ function suite(
     expect((await call('press_key', { key: 'home' })).error).toBe(false);
     await shows(call, home);
     const text = refused(await call('tap_screen', { x: 100, y: 400 }), 'POLICY_DENIED');
-    expect(text).toMatch(/^a touch lands in [\w.]+, not an allowed app \(dev\.appdyno\.fixture\)/);
+    expect(text).toMatch(
+      /^POLICY_DENIED: a touch lands in [\w.]+, not an allowed app \(dev\.appdyno\.fixture\)/,
+    );
     expect((await call('launch_app', { app: APP })).error).toBe(false);
   });
 
@@ -167,7 +169,7 @@ describe.skipIf(!ANDROID)('--allow-apps on an Android emulator', () => {
       await call('open_link', { url: 'https://example.org/', read: 'none' }),
       'POLICY_DENIED',
     );
-    expect(text).toMatch(/^the link opens in [\w.]+, not an allowed app/);
+    expect(text).toMatch(/^POLICY_DENIED: the link opens in [\w.]+, not an allowed app/);
     expect((await call('open_link', { url: `${LINK}/form`, read: 'none' })).error).toBe(false);
     ctx.close();
   });
