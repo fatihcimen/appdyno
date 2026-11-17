@@ -27,7 +27,7 @@ You need a Mac with Apple silicon and macOS 13.5 or newer. You do not need Node 
 
 1. Download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases) and open it.
 2. Drag Appdyno to Applications.
-3. Open Appdyno. The hub opens, and an icon stays in the menu bar with your devices. The Dock shows Appdyno only while a window is open.
+3. Open Appdyno. The hub opens, and an icon stays in the menu bar with your devices. The Dock shows Appdyno only while a window is open. The first time, a welcome window shows the three first steps, each a button that does it: connect your AI client, start a simulator, connect a phone. Help → Welcome opens it again.
 4. In the menu bar, choose Add to MCP Clients. Restart your client, and ask it to list the devices.
 
 **The first open.** A release is signed with a Developer ID and notarized by Apple, so a double click opens it. macOS asks once whether to open an app from the internet: click Open.

@@ -56,6 +56,7 @@ void MVCheckLinks(void);
 void MVCheckPush(void);
 void MVCheckDevice(void);
 void MVCheckPanes(void);
+void MVCheckWelcome(void);
 void MVCheckHevc444(NSString *_Nullable fixtures);
 /// What a window says to its parent goes to `tap` in place of stdout, until nil; a check's line goes out still.
 void MVTapEmits(void (^_Nullable tap)(NSDictionary *message));

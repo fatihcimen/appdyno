@@ -1,4 +1,5 @@
 import {
+  nativeFile,
   viewerBinary,
   ViewerProcess,
   type ViewerLink,
@@ -82,6 +83,9 @@ async function windowMaker(o: HubRun) {
       ...(o.focus ? ['--focus'] : []),
       ...(o.behind ? ['--behind'] : []),
       ...(o.appearance ? ['--appearance', o.appearance] : []),
+      // the dragon of the first launch's welcome, which the viewer's sources carry
+      '--welcome',
+      nativeFile('viewer', 'welcome.mov'),
     ]);
 }
 

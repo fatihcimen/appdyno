@@ -152,6 +152,7 @@ NSMenu *MVHubMenu(void) {
   menuOf(bar, @"Window", windowMenu());
   NSMenu *help = [[NSMenu alloc] initWithTitle:@"Help"];
   [help addItemWithTitle:MVWord(@"appdyno Help") action:NSSelectorFromString(@"openHelp:") keyEquivalent:@"?"];
+  [help addItemWithTitle:MVWord(@"Welcome") action:NSSelectorFromString(@"openWelcome:") keyEquivalent:@""];
   menuOf(bar, @"Help", help);
   NSApp.helpMenu = help;
   return bar;

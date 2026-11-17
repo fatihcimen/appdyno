@@ -1,16 +1,26 @@
 # The dragon's pictures outside the site, drawn from the site's own model, site/public/models/dyno.glb, by Blender:
 #   blender -b --factory-startup --python scripts/render-dragon.py -- still <mac/App/dragon.png>
-# `still` is the dragon of the disk image's window.
+#   blender -b --factory-startup --python scripts/render-dragon.py -- welcome <welcome-prores.mov>
+#   avconvert -p PresetHEVCHighestQualityWithAlpha -s welcome-prores.mov -o mac/Viewer/welcome.mov
+# `still` is the dragon of the disk image's window. `welcome` is the first launch's moment: it flies in, lands and
+# breathes fire, on no ground, for mac/Viewer/Welcome.m to lay over its own, from frames it leaves beside the movie. It
+# prints where the fire leaves the mouth, in the stage's points, which Welcome.m holds as kMouth.
 import math
 import os
 import sys
 
 import bpy
-from mathutils import Vector
+from bpy_extras.object_utils import world_to_camera_view
+from mathutils import Quaternion, Vector
 
 MODEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "public", "models", "dyno.glb")
-# the clips run at the model's own rate
-CLIP_FPS = 24
+# the clips run at the model's own rate; the movie at the screen's
+CLIP_FPS, FPS = 24, 30
+# Welcome.m's stage, in points, and where the dragon's feet come to rest on it
+STAGE = (560, 240)
+REST = (150, 214)
+# its height on the stage, in points, as the model is one unit tall
+TALL = 150
 # a camera a little above it and turned to its face, as the site's poster shows it
 AZIMUTH, ELEVATION = 35, 12
 
@@ -38,7 +48,8 @@ def channels(name):
         yield bone, curve.data_path.rsplit(".", 1)[1], curve.array_index, curve
 
 
-CURVES = {name: list(channels(name)) for name in ("look",)}
+CURVES = {name: list(channels(name)) for name in ("idle", "look", "fly", "land", "puff")}
+LENGTH = {name: bpy.data.actions[name].frame_range[1] / CLIP_FPS for name in CURVES}
 
 
 def sample(name, seconds):
@@ -47,6 +58,22 @@ def sample(name, seconds):
     for bone, prop, index, curve in CURVES[name]:
         rest = {"location": [0, 0, 0], "rotation_quaternion": [1, 0, 0, 0], "scale": [1, 1, 1]}
         pose.setdefault(bone, rest)[prop][index] = curve.evaluate(seconds * CLIP_FPS)
+    return pose
+
+
+def blend(a, b, share):
+    """Two poses, a share of the way from the first to the second, as the site's mixer fades one clip into the next."""
+    pose = {}
+    for bone in set(a) | set(b):
+        rest = {"location": [0, 0, 0], "rotation_quaternion": [1, 0, 0, 0], "scale": [1, 1, 1]}
+        p, q = a.get(bone, rest), b.get(bone, rest)
+        pose[bone] = {
+            "location": [x + (y - x) * share for x, y in zip(p["location"], q["location"])],
+            "rotation_quaternion": list(
+                Quaternion(p["rotation_quaternion"]).slerp(Quaternion(q["rotation_quaternion"]), share)
+            ),
+            "scale": [x + (y - x) * share for x, y in zip(p["scale"], q["scale"])],
+        }
     return pose
 
 
@@ -128,5 +155,81 @@ def still():
     bpy.ops.render.render(write_still=True)
 
 
+def welcome():
+    """3.6 s: it flies in from the left, lands, breathes fire to its right, and stands."""
+    unit = 1 / TALL
+    eye, back = camera(STAGE[0] * unit)
+    right = eye.rotation_euler.to_matrix() @ Vector((1, 0, 0))
+    up = eye.rotation_euler.to_matrix() @ Vector((0, 1, 0))
+    # the hips over the origin, as the site's rig stands it
+    put(sample("idle", 0))
+    hip = rig.matrix_world @ rig.pose.bones["Hip"].head
+    feet = Vector((hip.x, hip.y, 0))
+    centre = feet + right * (STAGE[0] / 2 - REST[0]) * unit - up * (STAGE[1] / 2 - REST[1]) * unit
+    eye.location = centre + back * 10
+    home = rig.location.copy()
+
+    def on_stage(x, y):
+        return home + right * (x - REST[0]) * unit - up * (y - REST[1]) * unit
+
+    def flight(t):
+        """Along a curve from off the stage, high on the left, to just over where it lands."""
+        s = 1 - (1 - min(t / 1.1, 1)) ** 3
+        a, c, b = (-110, 30), (60, -20), (REST[0], REST[1] - 20)
+        x = (1 - s) ** 2 * a[0] + 2 * (1 - s) * s * c[0] + s * s * b[0]
+        y = (1 - s) ** 2 * a[1] + 2 * (1 - s) * s * c[1] + s * s * b[1]
+        if t > 1.05:
+            y += 20 * min((t - 1.05) / 0.35, 1)
+        return x, y
+
+    def fade(t, at, length=0.15):
+        return min(max((t - at) / length, 0), 1)
+
+    def pose_at(t):
+        fly = sample("fly", t % LENGTH["fly"])
+        land = sample("land", min(max(t - 1.0, 0), LENGTH["land"]))
+        puff = sample("puff", min(max(t - 1.45, 0), LENGTH["puff"]))
+        idle = sample("idle", max(t - 3.0, 0))
+        return blend(blend(blend(fly, land, fade(t, 1.0)), puff, fade(t, 1.45)), idle, fade(t, 3.0, 0.2))
+
+    scene.render.engine = "BLENDER_EEVEE"
+    scene.render.resolution_x, scene.render.resolution_y = STAGE[0] * 2, STAGE[1] * 2
+    scene.render.fps = FPS
+    frames = round(3.6 * FPS)
+    folder = out + ".frames"
+    os.makedirs(folder, exist_ok=True)
+    fire = []
+    for frame in range(frames):
+        t = frame / FPS
+        rig.location = on_stage(*flight(t))
+        put(pose_at(t))
+        # while the puff's fire burns, by the clip's own times
+        if 1.45 + 0.6 <= t <= 1.45 + 0.933:
+            at = world_to_camera_view(scene, eye, rig.matrix_world @ rig.pose.bones["FireSocket"].head)
+            fire.append((at.x * STAGE[0], (1 - at.y) * STAGE[1]))
+        scene.render.image_settings.file_format = "PNG"
+        scene.render.image_settings.color_mode = "RGBA"
+        scene.render.filepath = os.path.join(folder, f"{frame:04d}.png")
+        bpy.ops.render.render(write_still=True)
+    print("MOUTH %.0f %.0f" % tuple(sum(f[i] for f in fire) / len(fire) for i in range(2)))
+    # the frames, one movie with their alpha, from Blender's own sequencer
+    edit = scene.sequence_editor_create()
+    strips = edit.strips if hasattr(edit, "strips") else edit.sequences
+    strip = strips.new_image("frames", os.path.join(folder, "0000.png"), 1, 1)
+    for frame in range(1, frames):
+        strip.elements.append(f"{frame:04d}.png")
+    scene.frame_start, scene.frame_end = 1, frames
+    settings = scene.render.image_settings
+    settings.media_type = "VIDEO"
+    settings.file_format = "FFMPEG"
+    scene.render.ffmpeg.format = "QUICKTIME"
+    scene.render.ffmpeg.codec = "PRORES"
+    scene.render.ffmpeg.ffmpeg_prores_profile = "4444"
+    settings.color_mode = "RGBA"
+    scene.render.use_sequencer = True
+    scene.render.filepath = out
+    bpy.ops.render.render(animation=True)
+
+
 light()
-{"still": still}[mode]()
+{"still": still, "welcome": welcome}[mode]()

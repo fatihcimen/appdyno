@@ -62,6 +62,18 @@ void MVSlideIn(NSView *view, double from);
 - (void)pokeBoard;
 @end
 
+/// The first launch's welcome: the dragon's moment, and the three things to do first.
+@interface MVHub (Welcome)
+/// Once for this Mac's user, the first time a hub opens where a person sees it.
+- (void)welcomeOnce;
+/// Help → Welcome, whenever it is asked for.
+- (void)openWelcome:(nullable id)sender;
+/// What the welcome's button asked for: a place's title, or `device` for one to start.
+- (void)welcomeChose:(NSString *)step;
+/// While it stands, for a test.
+@property(nonatomic, readonly, nullable) NSWindow *welcomeWindow;
+@end
+
 /// Opens a page or a file outside this window, as a person's click asks; a window kept behind only notes it.
 void MVOpenOutside(NSString *where);
 NSString *_Nullable MVLastOpened(void);

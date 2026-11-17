@@ -91,6 +91,15 @@ const MVWordRow MVWordTableHelp[] = {
     {"The device reads %@, not %@", "Cihaz %1$@ okuyor, %2$@ değil"},
     {"A call from %@ is coming in", "%@ numarasından arama geliyor"},
     {"The call from %@ ended", "%@ numarasından gelen arama bitti"},
+    // the first launch's welcome, which Help opens again
+    {"Welcome", "Hoş geldiniz"},
+    {"Three things to do first", "Önce yapılacak üç şey"},
+    {"Connect your AI client", "Yapay zekâ istemcinizi bağlayın"},
+    {"So it can see and drive your devices.", "Cihazlarınızı görebilsin ve yönetebilsin."},
+    {"Start a simulator", "Bir simülatör başlatın"},
+    {"Or an Android emulator: it shows here, live.", "Ya da bir Android emülatörü: burada canlı görünür."},
+    {"Connect a phone", "Bir telefon bağlayın"},
+    {"An iPhone or Android phone, by cable or Wi-Fi.", "Kabloyla ya da Wi-Fi ile bir iPhone veya Android telefon."},
 };
 
 const size_t MVWordCountHelp = sizeof MVWordTableHelp / sizeof MVWordTableHelp[0];

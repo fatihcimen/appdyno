@@ -27,7 +27,7 @@ Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node ya da te
 
 1. `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip açın.
 2. Appdyno'yu Applications klasörüne sürükleyin.
-3. Appdyno'yu açın. Hub açılır, menü çubuğunda cihazlarınızla birlikte bir simge kalır. Dock'ta Appdyno yalnızca bir pencere açıkken görünür.
+3. Appdyno'yu açın. Hub açılır, menü çubuğunda cihazlarınızla birlikte bir simge kalır. Dock'ta Appdyno yalnızca bir pencere açıkken görünür. İlk açılışta bir karşılama penceresi ilk üç adımı gösterir, her biri onu yapan bir düğmeyle: yapay zekâ istemcinizi bağlayın, bir simulator başlatın, bir telefon bağlayın. Yardım → Hoş geldiniz onu yeniden açar.
 4. Menü çubuğunda Add to MCP Clients'ı seçin. İstemcinizi yeniden başlatın ve ondan cihazları listelemesini isteyin.
 
 **İlk açılış.** Bir sürüm Developer ID ile imzalıdır ve Apple'ın noter onayından geçmiştir, bu yüzden çift tıklamayla açılır. macOS internetten gelen bir uygulamayı açmak isteyip istemediğinizi bir kez sorar: Open'a tıklayın.
