@@ -4,6 +4,22 @@
 
 ## Unreleased
 
+## 1.3.1
+
+appdyno 1.3.1 closes several ways a run could read PASS for what it did not check, puts back a simulator's turn, and adds a guide for the move from 1.2.
+
+### Fixed
+
+- **Network strict passed on a capture nobody read.** An action under `capture_network` strict passed when the capture could not be read, as its read error was taken for a list with no request. It now fails, `network strict: the capture could not be read: …`, and with strict off the answer says the capture could not be read. A run whose `request` steps cannot read the capture as it begins is refused, where they would take a request from before the run for one of its own, and a simulator's capture whose folder is gone is refused where its log read as empty.
+- **A setting not put back left the run PASS.** What `appdyno test` could not put back after a file was only logged. It now fails the run as a cleanup failure: `CLEANUP FAILED` in the log and in `verdict.txt`, a JUnit case of its own named `<file> (cleanup)`, `cleanup` in `run.json` and on the page, and exit 1, while the file's own outcome stays what its steps came to. That file is not retried, and the files after it on that device do not run: each is `not_run`, with `why`. `run_flow run` refuses with `CHECK_FAILED`, and `replay` answers `passed: false` with `cleanup`, where the mock rules their steps added cannot be taken out, and the library's `close`, silent before, answers `{ cleanup }` with what it could not put back and writes it to stderr, still resolving.
+- **Checks that passed on what they could not read.** A flow's `alert` step passed on any `NOT_FOUND`: a button that is not on the alert, or a screen that could not be read, now fail it, and only no alert open passes. `check_element` `absent`, and a wait for an element to go, passed on a screen whose words come from its picture where that picture could not be read: they now fail and say so. An Android `check_screen` `accessibility` skipped contrast with no word where its screenshot could not be decoded: it is now refused, unless contrast is not among the types asked. An action whose look for its app's end could not read what it needed, as whether the app still runs, says so in a line, `not checked for a crash: …`, where it said nothing.
+- **A simulator's turn is put back.** `set_device` `restore`, a session's end and a test file put a simulator's turn back as they put Android's rotation lock back: the runner reads the turn before one is made. On an iPhone 17 simulator, iOS 26.5, 9 checks of 9 held.
+
+### Changed
+
+- [Upgrading from 1.2 to 1.3](docs/guides/upgrade-1.3.md): the old tool names and the new, saved permissions in a client and how to allow the server whole, the commands, `run_steps` keyed by `tool`, the library, and what stays the same. The README, the docs index and 1.3.0's Breaking section lead to it, and the table of old names moved there from Tools.
+- `answer_alert`, `open_link`, `run_flow` and `compare_performance` say what each does, when to use it over its neighbour, its key parameters, what it changes and what it returns. `read_screen`, `take_screenshot`, `check_element`, `check_screen`, `run_steps` and `run_flow` each name in one line the neighbour to use instead. The catalog a client reads is 26,838 characters, from 26,851.
+
 ## 1.3.0
 
 appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tools are now 28, named verb_noun, and the old names are gone: a call by one is refused, with the new name in its hint. On an iOS simulator it inspects, mocks and throttles an app's requests. Foldables fold on both platforms, a tool writes and builds only where a person allowed, and each release is held to a run on a simulator in CI. It is a breaking release: the table of old and new names is under Breaking.

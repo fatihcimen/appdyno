@@ -4,6 +4,22 @@
 
 ## Yayımlanmamış
 
+## 1.3.1
+
+appdyno 1.3.1, bir çalıştırmanın denetlemediği bir şey için PASS okuyabildiği yollardan birkaçını kapatır, bir simulator'ın dönüşünü geri koyar ve 1.2'den geçiş için bir kılavuz ekler.
+
+### Düzeltilenler
+
+- **Network strict, kimsenin okumadığı bir capture'da geçiyordu.** `capture_network` strict altındaki bir eylem, capture okunamadığında geçiyordu, çünkü okuma hatası hiç isteği olmayan bir liste sayılıyordu. Artık `network strict: the capture could not be read: …` ile başarısız olur; strict kapalıyken de yanıt capture'ın okunamadığını söyler. `request` adımları başlarken capture'ı okuyamayan bir çalıştırma reddedilir, çünkü bu adımlar çalıştırmadan önceki bir isteği kendi isteği sayardı; klasörü gitmiş bir simulator capture'ı da, logunun boş okunduğu yerde reddedilir.
+- **Geri konmayan bir ayar çalıştırmayı PASS bırakıyordu.** `appdyno test`'in bir dosyadan sonra geri koyamadığı şey yalnızca loga yazılıyordu. Artık çalıştırmayı bir cleanup hatası olarak başarısız kılar: logda ve `verdict.txt` içinde `CLEANUP FAILED`, `<file> (cleanup)` adlı ayrı bir JUnit durumu, `run.json` içinde ve sayfada `cleanup` ve 1 ile çıkış; dosyanın kendi sonucu ise adımlarının vardığı gibi kalır. O dosya yeniden denenmez ve o cihazda ondan sonraki dosyalar çalışmaz: her biri `why` ile `not_run` olur. Adımlarının eklediği mock kuralları çıkarılamadığında `run_flow run` `CHECK_FAILED` ile reddeder, `replay` de `cleanup` ile `passed: false` yanıtını verir; kütüphanenin önceden sessiz kalan `close` çağrısı da geri koyamadığını `{ cleanup }` ile yanıtlar ve stderr'e yazar, yine de reddetmez.
+- **Okuyamadıkları şeyde geçen denetimler.** Bir flow'un `alert` adımı her `NOT_FOUND`'da geçiyordu: uyarıda olmayan bir düğme ya da okunamayan bir ekran artık onu başarısız kılar ve yalnızca açık bir uyarının olmaması geçer. `check_element` `absent` ve bir öğenin gitmesini bekleme, sözcükleri resminden okunan bir ekranda o resim okunamadığında geçiyordu: artık başarısız olur ve bunu söyler. Bir Android `check_screen` `accessibility` denetimi, ekran görüntüsü çözülemediğinde kontrastı tek söz etmeden atlıyordu: artık, istenen türler arasında kontrast yoksa dışında, reddedilir. Uygulamasının ölümüne bakışı, uygulamanın hâlâ çalışıp çalışmadığı gibi gereken bir şeyi okuyamayan bir eylem, hiçbir şey söylemediği yerde bunu bir satırda söyler: `not checked for a crash: …`.
+- **Bir simulator'ın dönüşü geri konur.** `set_device` `restore`, bir oturumun sonu ve bir test dosyası, bir simulator'ın dönüşünü Android'in döndürme kilidini geri koydukları gibi geri koyar: runner bir dönüş yapılmadan önce dönüşü okur. iOS 26.5'li bir iPhone 17 simulator'ında 9 denetimin 9'u tuttu.
+
+### Değişenler
+
+- [1.2'den 1.3'e geçiş](docs/guides/upgrade-1.3.tr.md): eski ve yeni araç adları, bir istemcide kaydedilmiş izinler ve sunucuya bütün olarak nasıl izin verileceği, komutlar, `tool` ile verilen `run_steps` adımları, kütüphane ve aynı kalanlar. README, belgelerin dizini ve 1.3.0'ın uyumluluğu bozan değişiklikler bölümü ona götürür; eski adların tablosu da Araçlar'dan oraya taşındı.
+- `answer_alert`, `open_link`, `run_flow` ve `compare_performance`, her birinin ne yaptığını, komşusu yerine ne zaman kullanılacağını, ana parametrelerini, neyi değiştirdiğini ve ne döndürdüğünü söyler. `read_screen`, `take_screenshot`, `check_element`, `check_screen`, `run_steps` ve `run_flow` her biri, yerine kullanılacak komşuyu tek satırda adlandırır. Bir istemcinin okuduğu katalog 26.851 karakterden 26.838 karaktere iner.
+
 ## 1.3.0
 
 appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fazlasını yapar. 48 araç artık 28'dir, hepsi fiil_ad biçiminde adlandırılmıştır ve eski adlar kaldırılmıştır: eski bir adla yapılan çağrı, ipucunda yeni ad söylenerek reddedilir. Bir iOS simulator'ında uygulamanın isteklerini inceler, mock'lar ve yavaşlatır. Katlanabilir cihazlar iki platformda da katlanır, bir araç yalnızca bir kişinin izin verdiği yere yazar ve yalnızca orada derler, her sürüm de CI'da bir simulator üzerindeki çalıştırmaya bağlıdır. Uyumluluğu bozan bir sürümdür: eski ve yeni adların tablosu "Uyumluluğu bozan değişiklikler" başlığının altındadır.
