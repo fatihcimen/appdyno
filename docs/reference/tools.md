@@ -317,7 +317,7 @@ With `file` it saves the picture at full size, or as wide as `width` asks, and s
 
 ### Steps in one call
 
-`run_steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It stops at the first failure, says which step and why, and shows the screen: what differs from the screen shown last with `read` `diff`, else all of it, with `read` `none` too. A step that is no tool refuses the whole call before anything is done, and says so.
+`run_steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It stops at the first failure, says which step and why, and shows the screen as the call's `read` asks: what differs from the screen shown last, all of it, or, with `none`, nothing past the failing step's own line. A step that is no tool refuses the whole call before anything is done, and says so.
 
 `check_element` with `timeoutMs` and selectors wait on the device, so the tree crosses the wire only when the screen changed.
 

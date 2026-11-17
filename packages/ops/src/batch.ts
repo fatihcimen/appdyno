@@ -230,6 +230,7 @@ export function stepsOp(
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
           const screen = await s.read().catch(() => undefined);
+          const shown = read === 'none' ? undefined : screen;
           const own = e instanceof AppDied;
           const appDied = own
             ? undefined
@@ -241,11 +242,11 @@ export function stepsOp(
                 ? `${i + 1}. ${e.message}\nthe app died in step ${i + 1}, ${name}: the rest were not run`
                 : `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
               ...(appDied ? [`${diedLine(appDied)}, by step ${i + 1}`] : []),
-              // as the call asked to read: what differs from the screen shown last, or all of it
-              ...(screen ? [left(s, screen, read === 'diff' ? 'diff' : 'full')] : []),
+              // as the call asked to read: what differs from the screen shown last, all of it, or none of it
+              ...(shown ? [left(s, shown, read === 'diff' ? 'diff' : 'full')] : []),
             ].join('\n'),
             own || appDied ? 'APP_NOT_RUNNING' : e.code,
-            appDied ? diedHint(appDied) : screen ? hintWithScreen(e.hint) : e.hint,
+            appDied ? diedHint(appDied) : shown ? hintWithScreen(e.hint) : e.hint,
             e.dispatched,
           );
         }

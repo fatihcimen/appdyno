@@ -317,7 +317,7 @@ Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyle
 
 ### Tek çağrıda adımlar
 
-`run_steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir. İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı gösterir: `read` `diff` ise son gösterilen ekrandan farkını, değilse tamamını, `read` `none` olsa da. Araç olmayan bir adım, hiçbir şey yapılmadan bütün çağrıyı reddettirir ve yanıt bunu söyler.
+`run_steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir. İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı çağrının `read`'inin istediği gibi gösterir: son gösterilen ekrandan farkını, tamamını ya da `none` ile başarısız adımın kendi satırından başka hiçbir şeyi. Araç olmayan bir adım, hiçbir şey yapılmadan bütün çağrıyı reddettirir ve yanıt bunu söyler.
 
 `timeoutMs` ile `check_element` ve seçiciler cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir.
 
