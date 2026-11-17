@@ -9,7 +9,7 @@ import { REVISIONS } from '@appdyno/testing/calls.js';
 import { toolCaller } from './helpers.js';
 
 /**
- * The built MCP server over stdio, as a client starts it, asks the person before `app clear`: a client that shows the
+ * The built MCP server over stdio, as a client starts it, asks the person before `manage_app clear`: a client that shows the
  * question and says yes, one that says no, and one that cannot ask, on the simulator APPDYNO_IOS_UDID names with the
  * fixture installed. A file the fixture keeps says whether its data went.
  */
@@ -67,7 +67,7 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
     expect(r.error).toBe(true);
     expect(r.text).toMatch(
       new RegExp(
-        `^PERMISSION_REQUIRED: app clear on .*${SIMULATOR}.* was not allowed: its question got no yes, and nothing was done\\nhint: a client may answer no by itself, with no person shown the question; a person allows it ahead in this server's own command line: --allow-data-loss virtual`,
+        `^PERMISSION_REQUIRED: manage_app clear on .*${SIMULATOR}.* was not allowed: its question got no yes, and nothing was done\\nhint: a client may answer no by itself, with no person shown the question; a person allows it ahead in this server's own command line: --allow-data-loss virtual`,
       ),
     );
     expect(asked).toEqual([
@@ -84,7 +84,7 @@ describe.skipIf(!SIMULATOR).each(REVISIONS)('what loses data, over stdio, on %s'
     const r = await (await connect())('manage_app', { action: 'clear', app: APP });
     expect(r.error).toBe(true);
     expect(r.text).toMatch(
-      /^PERMISSION_REQUIRED: app clear asks the person first, and this client cannot ask: nothing was done\nhint: a person allows it ahead in this server's own command line: --allow-data-loss virtual/,
+      /^PERMISSION_REQUIRED: manage_app clear asks the person first, and this client cannot ask: nothing was done\nhint: a person allows it ahead in this server's own command line: --allow-data-loss virtual/,
     );
     expect(existsSync(kept())).toBe(true);
   }, 120_000);
