@@ -12,7 +12,7 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '@appdyno/testing/calls.js';
 import { opCaller, SIM_FIXTURE, type Call } from './helpers.js';
@@ -158,6 +158,11 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       b.close();
     };
   }, 240_000);
+
+  // a capture a failed case left running refuses the start of every case after it
+  afterEach(async ({ task }) => {
+    if (task.result?.state === 'fail') await call('capture_network', { action: 'stop' });
+  });
 
   /** Whether the trusted address answers from this Mac: the simulator has the Mac's network. */
   const trusted = () =>

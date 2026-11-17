@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { assert, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, assert, beforeAll, describe, expect, it } from 'vitest';
 import type { OpFields, OpName } from '@appdyno/ops';
 import { Devicectl, IosSimulatorDevice } from './workspace.js';
 
@@ -93,6 +93,11 @@ for (const { platform, serial, form } of targets)
     };
     const refOf = (text: string, label: string) =>
       new RegExp(`(@[a-z0-9-]+) (?:\\w+ )?"${label}"`).exec(text)?.[1];
+
+    // a recording a failed case left running refuses the record and the replay of every case after it
+    afterEach(async ({ task }) => {
+      if (task.result?.state === 'fail') await raw('run_flow', { action: 'stop' });
+    });
 
     beforeAll(async () => {
       if (platform === 'iphone') await new Devicectl(serial).install(iphoneFixture);
