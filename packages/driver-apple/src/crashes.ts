@@ -256,6 +256,12 @@ export async function crashExits(
   };
 }
 
+/** The files under `dir`, at any depth. */
+const filesUnder = (dir: string) =>
+  (readdirSync(dir, { recursive: true }) as string[])
+    .map((n) => join(dir, n))
+    .filter((p) => statSync(p, { throwIfNoEntry: false })?.isFile());
+
 /** Whether a copied report is the app's; another's is deleted. Another app's process may have its name: every Flutter app's is `Runner`. */
 async function keptIfOwn(file: string, app: string) {
   if (ofApp(parseIps(await readFile(file, 'utf8').catch(() => ''))?.bundle, app)) return true;
@@ -270,8 +276,7 @@ async function keptIfOwn(file: string, app: string) {
 async function sweptOnce(dir: string, app: string) {
   const swept = join(dir, '.swept');
   if (existsSync(swept)) return;
-  for (const n of readdirSync(dir, { recursive: true }) as string[])
-    if (n.endsWith('.ips')) await keptIfOwn(join(dir, n), app);
+  for (const file of filesUnder(dir)) if (file.endsWith('.ips')) await keptIfOwn(file, app);
   await writeFile(swept, '', { mode: 0o600 });
 }
 
@@ -287,7 +292,7 @@ export async function phoneCrashes(ctl: Devicectl, q: CrashesQuery): Promise<Cra
   await sweptOnce(dir, q.app);
   // a report waits apart until it is known to be the app's: what a process killed there left goes
   for (const n of readdirSync(dir))
-    if (n.startsWith('.part-')) await rm(join(dir, n), { force: true });
+    if (n.startsWith('.part-')) await rm(join(dir, n), { recursive: true, force: true });
   const part = join(dir, `.part-${String(process.pid)}`);
   // the app's process, as its bundle's folder is named (`Shop.app`), as on a simulator
   const url = (await ctl.app(q.app))?.url;
@@ -302,6 +307,8 @@ export async function phoneCrashes(ctl: Devicectl, q: CrashesQuery): Promise<Cra
         const local = join(dir, f.relativePath);
         // shortcut: another app's report of the same process name is copied at each read, to be deleted again; keep a list of them if that is ever slow
         if (existsSync(local)) continue;
+        await rm(part, { recursive: true, force: true });
+        await mkdir(part, { mode: 0o700 });
         await ctl.json([
           'device',
           'copy',
@@ -310,14 +317,16 @@ export async function phoneCrashes(ctl: Devicectl, q: CrashesQuery): Promise<Cra
           '--source',
           f.relativePath,
           '--destination',
-          part,
+          join(part, basename(f.relativePath)),
         ]);
-        if (!(await keptIfOwn(part, q.app))) continue;
+        // devicectl writes the file at the path it is given, or in a folder of that name: whichever, it is the one file
+        const got = filesUnder(part)[0];
+        if (!got || !(await keptIfOwn(got, q.app))) continue;
         await mkdir(dirname(local), { recursive: true, mode: 0o700 });
-        await rename(part, local);
+        await rename(got, local);
       }
     } finally {
-      await rm(part, { force: true });
+      await rm(part, { recursive: true, force: true });
     }
   }
   const answer = {

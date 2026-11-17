@@ -251,8 +251,11 @@ describe("an iPhone's crash reports", () => {
   };
   let crashDir: string;
   const files = (dir: string) => (readdirSync(dir, { recursive: true }) as string[]).sort();
-  /** `cut`: a report whose copy is written, then fails, as a read cut short. */
-  const phone = (cut?: string) => {
+  /**
+   * `cut`: a report whose copy is written, then fails, as a read cut short. `inFolder`: devicectl makes a folder of the
+   * destination and writes the report in it, as its help leaves open.
+   */
+  const phone = (cut?: string, inFolder = false) => {
     const pulled: string[] = [];
     const ctl = {
       udid: PHONE,
@@ -270,7 +273,12 @@ describe("an iPhone's crash reports", () => {
         }
         const of = (flag: string) => must(args[args.indexOf(flag) + 1], flag);
         pulled.push(of('--source'));
-        writeFileSync(of('--destination'), ips(must(ON_PHONE[of('--source')], 'a report'), ''));
+        let to = of('--destination');
+        if (inFolder) {
+          mkdirSync(to);
+          to = join(to, of('--source').split('/').pop() ?? '');
+        }
+        writeFileSync(to, ips(must(ON_PHONE[of('--source')], 'a report'), ''));
         return of('--source') === cut ? Promise.reject(new Error('cut')) : Promise.resolve({});
       },
     } as unknown as Devicectl;
@@ -286,8 +294,11 @@ describe("an iPhone's crash reports", () => {
     vi.unstubAllEnvs();
   });
 
-  it("copies only the app's own, and writes no other process's", async () => {
-    const { ctl, pulled } = phone();
+  it.each([
+    ['at the path it is given', false],
+    ['in a folder of that name', true],
+  ])("copies only the app's own, and writes no other process's, a copy %s", async (_, inFolder) => {
+    const { ctl, pulled } = phone(undefined, inFolder);
     const a = await phoneCrashes(ctl, { app: 'dev.app', limit: 5 });
     expect(pulled.sort()).toEqual([
       'Fixture-2026-11-17-100000.ips',
