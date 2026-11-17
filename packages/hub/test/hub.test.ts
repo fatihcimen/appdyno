@@ -8,6 +8,7 @@ import type {
   Startable,
   ViewerLink,
   ViewerMessage,
+  VirtualCatalog,
   VirtualDevices,
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,7 +34,9 @@ class Simulated implements VirtualDevices {
   boot = vi.fn((id: string) => Promise.resolve(id));
   shutdown = vi.fn(() => Promise.resolve(undefined));
   startable = () => Promise.resolve(this.all);
-  catalog = vi.fn(() => Promise.resolve({ models: [{ id: 'm', name: 'M' }], systems: [] }));
+  catalog = vi.fn((): Promise<VirtualCatalog | undefined> =>
+    Promise.resolve({ models: [{ id: 'm', name: 'M' }], systems: [] }),
+  );
   create = vi.fn((d: NewDevice) => Promise.resolve(d.name));
 }
 
@@ -237,12 +240,15 @@ describe('the hub', () => {
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
     say({ op: 'hub', action: 'new', kind: 'simulator', name: 'n', model: 'm', system: 's' });
     await vi.waitFor(() =>
-      expect(told).toContainEqual(
-        expect.objectContaining({
-          op: 'note',
-          text: 'create is off while this server has a device allow list',
-        }),
-      ),
+      expect(told).toContainEqual({
+        op: 'hub',
+        made: {
+          kind: 'simulator',
+          problem: expect.objectContaining({
+            said: 'create is off while this server has a device allow list',
+          }) as unknown,
+        },
+      }),
     );
     expect(virtual.create).not.toHaveBeenCalled();
     close();
@@ -438,34 +444,127 @@ describe('the hub', () => {
     await done;
   });
 
-  it('offers what can be made, kind by kind', async () => {
-    const { link, told, close } = window();
-    const done = runHub(context(new Simulated()), {
+  /** A hub run on `virtual`, its window, and what it says once it has listed. */
+  async function hubOn(virtual: VirtualDevices, policy = DEFAULT_POLICY) {
+    const win = window();
+    const done = runHub(context(virtual, [phone], undefined, policy), {
       focus: false,
       log: () => undefined,
-      viewer: () => link,
+      viewer: () => win.link,
     });
-    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
-    expect(told.find((m) => m.op === 'hub')?.choices).toMatchObject({
-      simulator: { models: [{ id: 'm' }] },
+    await vi.waitFor(() => expect(lastList(win.told)).toBeDefined());
+    const choices = async (kind: string) => {
+      win.say({ op: 'hub', action: 'choices', kind });
+      await vi.waitFor(() => expect(win.told.findLast((m) => m.choices)).toBeDefined());
+      return (win.told.findLast((m) => m.choices)?.choices as Record<string, unknown>)[kind];
+    };
+    return { ...win, done, choices };
+  }
+
+  it('offers what can be made as the sheet opens, asking each time, as a tool may answer now that failed before', async () => {
+    const virtual = new Simulated();
+    virtual.catalog.mockRejectedValueOnce(
+      Object.assign(new Error('No iOS runtime is installed'), {
+        hint: 'Xcode, Settings, Components: get iOS, then try again',
+      }),
+    );
+    const hub = await hubOn(virtual);
+    expect(virtual.catalog).not.toHaveBeenCalled();
+    expect(await hub.choices('simulator')).toEqual({
+      problem: {
+        said: 'No iOS runtime is installed',
+        fix: 'Xcode, Settings, Components: get iOS, then try again',
+      },
     });
-    close();
-    await done;
+    hub.told.length = 0;
+    expect(await hub.choices('simulator')).toMatchObject({ models: [{ id: 'm' }] });
+    hub.close();
+    await hub.done;
   });
 
   it('says in the sheet why it makes none under a device allow list, before Create is pressed', async () => {
-    const { link, told, close } = window();
-    const policy = { ...DEFAULT_POLICY, devices: /^B$/ };
-    const done = runHub(context(new Simulated(), [phone], undefined, policy), {
-      focus: false,
-      log: () => undefined,
-      viewer: () => link,
+    const hub = await hubOn(new Simulated(), { ...DEFAULT_POLICY, devices: /^B$/ });
+    expect(await hub.choices('simulator')).toMatchObject({
+      models: [{ id: 'm' }],
+      refused: CREATE_REFUSED,
     });
-    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
-    expect(told.find((m) => m.op === 'hub')?.choices).toMatchObject({
-      simulator: { models: [{ id: 'm' }], refused: CREATE_REFUSED },
-    });
-    close();
-    await done;
+    hub.close();
+    await hub.done;
   });
+
+  it('says what it made, lists it, and starts it; and why not, to the sheet', async () => {
+    const virtual = new Simulated();
+    virtual.create.mockRejectedValueOnce(new Error('Incompatible device'));
+    const hub = await hubOn(virtual);
+    const ask = {
+      op: 'hub',
+      action: 'new',
+      kind: 'simulator',
+      name: 'C',
+      model: 'm',
+      system: 's',
+    } as const;
+    hub.say(ask);
+    await vi.waitFor(() =>
+      expect(hub.told).toContainEqual({
+        op: 'hub',
+        made: { kind: 'simulator', problem: { said: 'Incompatible device' } },
+      }),
+    );
+    virtual.create.mockImplementationOnce((d: NewDevice) => {
+      virtual.all = [...virtual.all, { id: d.name, name: d.name, state: 'stopped' }];
+      return Promise.resolve(d.name);
+    });
+    hub.say(ask);
+    await vi.waitFor(() => expect(virtual.boot).toHaveBeenCalledWith('C'));
+    const made = hub.told.findIndex((m) => (m.made as { id?: string } | undefined)?.id === 'C');
+    expect(made).toBeGreaterThan(-1);
+    // listed before it is started, so the window can choose it
+    expect(lastList(hub.told.slice(made))?.map((d) => d.id)).toContain('C');
+    hub.close();
+    await hub.done;
+  });
+
+  it('says why a kind has nothing, and that a slow tool is still asked, keeping every other list', async () => {
+    const virtual = new Simulated();
+    let answer: (found: Startable[]) => void = () => undefined;
+    const startable = vi.spyOn(virtual, 'startable');
+    startable.mockRejectedValueOnce(
+      Object.assign(new Error("Xcode's license is not agreed to"), {
+        hint: 'run `sudo xcodebuild -license accept` in a terminal, or open Xcode once and agree',
+      }),
+    );
+    const hub = await hubOn(virtual);
+    const kinds = () => hub.told.findLast((m) => m.kinds)?.kinds;
+    expect(kinds()).toEqual([
+      {
+        kind: 'simulator',
+        problem: {
+          said: "Xcode's license is not agreed to",
+          fix: 'run `sudo xcodebuild -license accept` in a terminal, or open Xcode once and agree',
+        },
+      },
+    ]);
+    // the phone is listed all the same
+    expect(lastList(hub.told)?.map((d) => d.id)).toEqual(['R58M']);
+    startable.mockImplementationOnce(() => new Promise((done) => (answer = done)));
+    // what it said last stands meanwhile
+    await vi.waitFor(() => expect(kinds()).toMatchObject([{ kind: 'simulator', waiting: true }]), {
+      timeout: 10_000,
+    });
+    answer([]);
+    virtual.catalog.mockResolvedValueOnce(undefined);
+    await vi.waitFor(
+      () =>
+        expect(kinds()).toEqual([
+          {
+            kind: 'simulator',
+            problem: { said: 'Xcode is not installed', fix: 'install Xcode from the App Store' },
+          },
+        ]),
+      { timeout: 10_000 },
+    );
+    hub.close();
+    await hub.done;
+  }, 20_000);
 });

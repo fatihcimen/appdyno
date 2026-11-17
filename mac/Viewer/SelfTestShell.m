@@ -274,7 +274,7 @@ static void checkGoneAnotherWay(void) {
               @"showing": @"R5C"}];
   [hub show:@{@"devices": @[wifi]}];
   NSString *needs = MVWord(@"Needs You");
-  MVCheck(@"sidebar: a phone off its cable that runs by Wi-Fi is not under Needs You", ![hub.rowTitles containsObject:needs] && [hub.rowTitles containsObject:MVWord(@"Running")], [hub.rowTitles componentsJoinedByString:@"|"]);
+  MVCheck(@"sidebar: a phone off its cable that runs by Wi-Fi is not under Needs You", ![hub.rowTitles containsObject:needs] && [hub.rowTitles containsObject:MVWord(@"Phones")], [hub.rowTitles componentsJoinedByString:@"|"]);
   [hub show:@{@"devices": @[]}];
   MVCheck(@"sidebar: gone every way, it is", [hub.rowTitles containsObject:needs], [hub.rowTitles componentsJoinedByString:@"|"]);
   // and the other way: chosen by Wi-Fi, its cable back, the network row gives way to the cable's

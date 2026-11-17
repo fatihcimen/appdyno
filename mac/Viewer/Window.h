@@ -242,6 +242,8 @@ NSColor *MVMarkRed(void);
 @property(nonatomic, copy, nullable) NSString *finds;
 /// Its line beneath wraps whole, the row as tall as it needs, where one cut in the middle would leave a name unread.
 @property(nonatomic) BOOL wraps;
+/// What a button at its end says, in English: pressed, it is the list's `onButton`, and chooses nothing.
+@property(nonatomic, copy, nullable) NSString *button;
 + (instancetype)headerNamed:(NSString *)title;
 @end
 
@@ -250,6 +252,8 @@ NSColor *MVMarkRed(void);
 @property(nonatomic, copy, nullable) void (^onSelect)(MVRow *_Nullable row);
 /// A row is something to press, and none is ever selected: a second click on it means as much as the first.
 @property(nonatomic, copy, nullable) void (^onClick)(MVRow *row);
+/// A row's own button pressed, by its `key`.
+@property(nonatomic, copy, nullable) void (^onButton)(MVRow *row);
 @property(nonatomic, readonly, nullable) MVRow *selected;
 - (void)scrollToEnd;
 - (void)selectKey:(nullable NSString *)key;
@@ -373,8 +377,14 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 /// A system a new device may run, as a person reads it.
 NSString *MVSystemName(NSDictionary *row);
 
+/// The sheet that makes a simulator or an emulator: it stands at once, and asks the hub what can be made.
 @interface MVNewDevice : NSObject
-- (void)askIn:(NSWindow *)window kind:(NSString *)kind choices:(NSDictionary *)choices;
+- (void)askIn:(NSWindow *)window kind:(NSString *)kind;
+/// What the hub said can be made, by kind; or why nothing can.
+- (void)heard:(NSDictionary *)choices;
+/// Why Create failed, said in the sheet, which stays.
+- (void)failed:(nullable NSDictionary *)problem;
+- (void)done;
 - (void)create:(nullable id)sender;
 - (void)setName:(NSString *)name;
 @end

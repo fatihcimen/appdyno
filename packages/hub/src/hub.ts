@@ -6,7 +6,7 @@ import {
   type ViewerMessage,
   type ViewerSaid,
 } from '@appdyno/core';
-import { HubList } from './hub-list.js';
+import { hubChoices, HubList, NOTHING_MADE, problemOf } from './hub-list.js';
 import { HubRoom } from './hub-room.js';
 import { Parent } from './parent.js';
 import { checkCreate, FOCUS_SIGNAL, type ServerContext, ToolError } from '@appdyno/ops';
@@ -128,9 +128,29 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     close: (m) => room.close(m),
     start: async (m) => (await ownerOf(ctx, m.id)).boot(m.id),
     stop: async (m) => (await ownerOf(ctx, m.id)).shutdown(m.id),
-    new: (m) => {
-      checkCreate(ctx.policy);
-      return ctx.providers.find((p) => p.virtual?.kind === m.kind)?.virtual?.create?.(m);
+    choices: async (m) =>
+      link.send({ op: 'hub', choices: { [m.kind]: await hubChoices(ctx, m.kind) } }),
+    // the sheet stays until it hears: its own words say what failed, and one made is chosen and started
+    new: async (m) => {
+      const made = (said: Record<string, unknown>) => {
+        link.send({ op: 'hub', made: { kind: m.kind, ...said } });
+      };
+      const driver = ctx.providers.find((p) => p.virtual?.kind === m.kind)?.virtual;
+      let id: string | undefined;
+      try {
+        checkCreate(ctx.policy);
+        id = await driver?.create?.(m);
+      } catch (e) {
+        made({ problem: problemOf(e) });
+        return;
+      }
+      if (!driver || !id) {
+        made({ problem: { said: NOTHING_MADE } });
+        return;
+      }
+      made({ id });
+      await list.refresh();
+      return driver.boot(id);
     },
     clients: (m) => o.services?.act(m, (said) => link.send({ op: 'clients', ...said })),
   };

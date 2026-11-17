@@ -44,7 +44,7 @@ static const double kNoteSeconds = 12;
 }
 
 - (void)offerConnect {
-  if (_placeShown || _shown || _left) return;
+  if (_placeShown || _shown || _left || [self hasVirtual]) return;
   [self choosePlace:_connectPlace];
   _placeByItself = YES;
 }

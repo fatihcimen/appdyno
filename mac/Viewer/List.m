@@ -285,7 +285,16 @@ static NSDictionary *subLine(void) {
   [lines setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
   NSStackView *stack = [NSStackView stackViewWithViews:@[icon, lines]];
   stack.spacing = row.tile ? 10 : 8;
-  if (row.dot) {
+  NSButton *press = row.button ? MVPlaceButton(row.button, [NSString stringWithFormat:@"%@:%@", row.button, row.key ?: @""], self, @selector(rowButton:)) : nil;
+  if (press) {
+    press.translatesAutoresizingMaskIntoConstraints = NO;
+    [cell addSubview:press];
+    [NSLayoutConstraint activateConstraints:@[
+      [press.trailingAnchor constraintEqualToAnchor:cell.trailingAnchor
+                                           constant:-6],
+      [press.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
+    ]];
+  } else if (row.dot) {
     // a dot says what it says by its colour: a person who asked for more than colour gets a mark to read
     MVInk *dot = [[MVInk alloc] initWithSymbol:MVWithoutColor() ? row.dotShape ?: @"circle.fill" : @"circle.fill" color:row.dot size:MVWithoutColor() ? 12 : 8];
     dot.translatesAutoresizingMaskIntoConstraints = NO;
@@ -303,11 +312,16 @@ static NSDictionary *subLine(void) {
     [icon.widthAnchor constraintEqualToConstant:row.tile ? kTileSide : 18],
     [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor
                                         constant:row.tile ? 8 : 6],
-    [stack.trailingAnchor constraintLessThanOrEqualToAnchor:cell.trailingAnchor
+    [stack.trailingAnchor constraintLessThanOrEqualToAnchor:press ? press.leadingAnchor : cell.trailingAnchor
                                                    constant:-4],
     [stack.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
   ]];
   return cell;
+}
+
+- (void)rowButton:(NSButton *)sender {
+  for (MVRow *row in _rows)
+    if (row.button && [sender.identifier isEqual:[NSString stringWithFormat:@"%@:%@", row.button, row.key ?: @""]] && self.onButton) return self.onButton(row);
 }
 
 @end

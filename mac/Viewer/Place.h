@@ -47,8 +47,9 @@ void MVSlideIn(NSView *view, double from);
 /// AI Clients and Help, each a place of the hub.
 @interface MVHub (Places)
 - (void)addOwnPlaces;
-/// Where nothing stands, Connect a Phone does, by itself.
+/// Where this Mac has no device at all, Connect a Phone stands, by itself.
 - (void)offerConnect;
+- (void)goTo:(NSString *)title;
 /// A phone listed by now that got ready, and what to try on it.
 - (void)openWaiting;
 - (void)leaveNote;

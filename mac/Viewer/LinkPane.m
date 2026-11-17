@@ -145,7 +145,7 @@ static MVRow *linkRow(NSString *url, NSString *detail, NSString *symbol) {
   }
   // where the device cannot tell them, it says why, over where they would stand
   BOOL why = rows.count == before && _linksWhy.length;
-  _why.stringValue = why ? MVWord([[_linksWhy substringToIndex:1].uppercaseString stringByAppendingString:[_linksWhy substringFromIndex:1]]) : @"";
+  _why.stringValue = why ? MVWord(MVCapitalized(_linksWhy)) : @"";
   _why.hidden = !why;
   if (rows.count > before) [rows insertObject:[MVRow headerNamed:MVWord(@"This app's links")] atIndex:before];
   _recent.rows = rows;

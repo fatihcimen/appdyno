@@ -203,3 +203,9 @@ NSString *MVPercent(double value) {
   NSString *number = value == round(value) ? [NSString stringWithFormat:@"%.0f", value] : MVDecimal(value);
   return turkish() ? [@"%" stringByAppendingString:number] : [number stringByAppendingString:@" %"];
 }
+
+NSString *MVCapitalized(NSString *words) {
+  NSString *first = [words componentsSeparatedByString:@" "].firstObject;
+  if (!words.length || ![first isEqual:first.lowercaseString]) return words;
+  return [[words substringToIndex:1].uppercaseString stringByAppendingString:[words substringFromIndex:1]];
+}

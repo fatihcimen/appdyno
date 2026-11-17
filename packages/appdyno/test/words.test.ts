@@ -2,8 +2,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { must, NEEDS } from '@appdyno/core';
+import { NO_RUNTIME, NOT_READY } from '@appdyno/driver-apple';
 import {
   CREATE_REFUSED,
+  NO_TOOLS,
+  NOTHING_MADE,
+  SLOW,
   MEASURE_YOURS,
   PERSON_HINTS,
   PERSON_REASONS,
@@ -113,6 +117,20 @@ describe('the table of words', () => {
 
   it('has why the New sheet makes no device, in the words it says it in', () => {
     expect(known(CREATE_REFUSED)).toBe(true);
+  });
+
+  it('has why a kind of device has nothing to list or make, and what to do, in the words a sidebar and a sheet say', () => {
+    const said = [
+      ...NOT_READY.flatMap(([, problem, fix]) => [problem, fix]),
+      ...Object.values(NO_TOOLS).flatMap((p) => [p.said, p.fix ?? '']),
+      ...Object.values(NO_RUNTIME),
+      SLOW.said,
+      SLOW.fix ?? '',
+      NOTHING_MADE,
+      'the Android emulator is not installed: spawn emulator ENOENT',
+      "Android Studio's SDK Manager installs it, under SDK Tools",
+    ];
+    expect(said.filter((w) => !known(w))).toEqual([]);
   });
 
   it('has why the Device pane cannot change a condition, in the words it says it in', () => {

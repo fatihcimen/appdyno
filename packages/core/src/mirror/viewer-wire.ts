@@ -129,6 +129,7 @@ type HubAction =
   | { action: 'start' | 'stop'; id: string }
   | { action: 'pair'; serial: string; with: string }
   | { action: 'new'; kind: string; name: string; model: string; system: string }
+  | { action: 'choices'; kind: string }
   | {
       action: 'clients';
       /** What a Clients, Tools or Connect pane asks of the hub's services, with what it gives. */
@@ -278,7 +279,9 @@ export type ViewerOrder = Staged &
         look: unknown[];
         file?: string;
       }
-    | { op: 'hub'; devices: unknown[]; choices: unknown; showing?: string }
+    | { op: 'hub'; devices: unknown[]; kinds: unknown[]; showing?: string }
+    | { op: 'hub'; choices: Record<string, unknown> }
+    | { op: 'hub'; made: Record<string, unknown> }
     | {
         op: 'logs';
         reset?: boolean;

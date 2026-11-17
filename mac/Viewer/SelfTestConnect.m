@@ -290,26 +290,8 @@ static void checkNoteLeaves(MVHub *hub) {
   [hub show:@{@"devices": @[]}];
 }
 
-/// Where each field and menu of a view ends on the right, in its window.
-static void addEdges(NSView *view, NSMutableSet<NSNumber *> *edges) {
-  BOOL field = [view isKindOfClass:NSTextField.class] && ((NSTextField *)view).editable;
-  if (field || [view isKindOfClass:NSPopUpButton.class]) [edges addObject:@(round(NSMaxX([view convertRect:view.bounds toView:nil])))];
-  for (NSView *sub in view.subviews) addEdges(sub, edges);
-}
-
-static NSView *viewNamed(NSView *view, NSString *name) {
-  if ([view.identifier isEqual:name]) return view;
-  for (NSView *sub in view.subviews)
-    if (viewNamed(sub, name)) return viewNamed(sub, name);
-  return nil;
-}
-
 static void checkWays(MVHub *hub) {
-  NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17 Pro Max with a long name", @"id": @"m"}],
-                          @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]};
-  NSDictionary *choices = @{@"simulator": kinds, @"emulator": kinds};
-  [hub show:@{@"devices": @[],
-              @"choices": choices}];
+  [hub show:@{@"devices": @[]}];
   MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.2);
   look(hub, @{@"steps": @[],
@@ -328,41 +310,11 @@ static void checkWays(MVHub *hub) {
               @"ready": @NO,
               @"client": @YES,
               @"prompt": @YES});
-  NSWindow *window = hub.room.window;
+  // New Simulator and New Emulator are a click away: their sheet is checked with the hub's devices
   [hub pokeClick:@"newSimulator"];
   MVPump(0.3);
-  MVCheck(@"started: New Simulator asks what to make", window.attachedSheet != nil, nil);
-  NSMutableSet<NSNumber *> *edges = [NSMutableSet set];
-  [window.attachedSheet.contentView layoutSubtreeIfNeeded];
-  addEdges(window.attachedSheet.contentView, edges);
-  MVCheck(@"started: its name, model and system end on one edge", edges.count == 1, edges.description);
-  if (window.attachedSheet) [window endSheet:window.attachedSheet];
-  MVPump(0.3);
-  [hub pokeClick:@"newEmulator"];
-  MVPump(0.3);
-  MVCheck(@"started: and so does New Emulator", window.attachedSheet != nil, nil);
-  if (window.attachedSheet) [window endSheet:window.attachedSheet];
-  MVPump(0.3);
-  // under a device allow list Create was refused, and the reason went to a line behind the sheet
-  NSString *why = @"The hub was started with a list of allowed devices, so it makes no new one: start it without --allow-devices to make one.";
-  [hub show:@{@"devices": @[],
-              @"choices": @{@"simulator": [kinds dictionaryWithValuesForKeys:@[@"models", @"systems"]], @"emulator": @{@"models": kinds[@"models"], @"systems": kinds[@"systems"], @"refused": why}}}];
-  [hub pokeClick:@"newEmulator"];
-  MVPump(0.3);
-  NSTextField *refused = (NSTextField *)viewNamed(window.attachedSheet.contentView, @"newRefused");
-  NSButton *create = (NSButton *)MVFindControl(window.attachedSheet.contentView, @"create");
-  MVCheck(@"started: a sheet that can make none says why, whole, and cannot be sent", [refused.stringValue isEqual:MVWord(why)] && !refused.hidden && NSHeight(refused.frame) > 20 && !create.enabled, refused.stringValue);
-  if (window.attachedSheet) [window endSheet:window.attachedSheet];
-  MVPump(0.3);
-  // two runtimes of one name, as iOS 27.2 and the iOS 27.2 of one model: each a row, and the newest chosen
-  NSArray *twins = @[@{@"name": @"iOS 26.5", @"id": @"a"}, @{@"name": @"iOS 27.2", @"id": @"b"}, @{@"name": @"iOS 27.2", @"id": @"c"}];
-  [hub show:@{@"devices": @[],
-              @"choices": @{@"simulator": @{@"models": kinds[@"models"], @"systems": twins}}}];
-  [hub pokeClick:@"newSimulator"];
-  MVPump(0.3);
-  NSPopUpButton *system = (NSPopUpButton *)viewNamed(window.attachedSheet.contentView, @"system");
-  MVCheck(@"started: a system of a name another has is a row of its own, and the last is chosen", system.numberOfItems == 3 && system.indexOfSelectedItem == 2, [NSString stringWithFormat:@"%ld rows, %ld chosen", (long)system.numberOfItems, (long)system.indexOfSelectedItem]);
-  if (window.attachedSheet) [window endSheet:window.attachedSheet];
+  MVCheck(@"started: New Simulator asks what to make", hub.room.window.attachedSheet != nil, nil);
+  if (hub.room.window.attachedSheet) [hub.room.window endSheet:hub.room.window.attachedSheet];
   MVPump(0.3);
 }
 

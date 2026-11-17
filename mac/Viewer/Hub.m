@@ -13,6 +13,8 @@ static const double kSidebar = 260;
 // a window's three buttons stand above the sidebar's first line
 static const double kBelowLights = 46;
 static const double kNoteGap = 10;
+/// The kinds a person folded in the sidebar.
+static NSString *const kFoldsKept = @"foldedKinds";
 
 static NSString *stateWords(NSDictionary *device) {
   if ([device[@"mirrored"] boolValue]) return @"Window open";
@@ -85,6 +87,8 @@ static NSString *stateWords(NSDictionary *device) {
     _window.titleVisibility = NSWindowTitleHidden;
     _window.contentMinSize = NSMakeSize(kContentLeast, 520);
     _window.offscreen = how == MVShowBehind;
+    _folds = [NSMutableSet setWithArray:how == MVShowBehind ? @[] : [NSUserDefaults.standardUserDefaults stringArrayForKey:kFoldsKept] ?
+                                                                                                                                       : @[]];
     if (how != MVShowBehind) _window.frameAutosaveName = @"hub";
     NSViewController *side = [NSViewController new];
     side.view = [self sidebarView];
@@ -156,7 +160,11 @@ static NSString *stateWords(NSDictionary *device) {
   _list.onSelect = ^(MVRow *row) {
     [weak chose:row];
   };
+  _list.onButton = ^(MVRow *row) {
+    [weak rowPressed:row];
+  };
   NSMenu *rowMenu = [[NSMenu alloc] initWithTitle:@"Device"];
+  [rowMenu addItemWithTitle:MVWord(@"Start") action:@selector(startClicked:) keyEquivalent:@""].target = self;
   [rowMenu addItemWithTitle:MVWord(@"Show Beside This One") action:@selector(besideClicked:) keyEquivalent:@""].target = self;
   [rowMenu addItemWithTitle:MVWord(@"Open in New Window") action:@selector(openClicked:) keyEquivalent:@""].target = self;
   [rowMenu addItemWithTitle:MVWord(@"Shut Down") action:@selector(shutDownClicked:) keyEquivalent:@""].target = self;
@@ -214,51 +222,38 @@ static NSString *stateWords(NSDictionary *device) {
   return _room;
 }
 
-- (void)askNew:(NSButton *)sender {
-  NSMenu *menu = [[NSMenu alloc] initWithTitle:@"New"];
-  [menu addItemWithTitle:MVWord(@"New Simulator…") action:@selector(newSimulator:) keyEquivalent:@""].target = self;
-  [menu addItemWithTitle:MVWord(@"New Emulator…") action:@selector(newEmulator:) keyEquivalent:@""].target = self;
-  [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, sender.bounds.size.height + 6) inView:sender];
-}
-
-- (void)ask:(NSString *)kind {
-  NSDictionary *choices = _choices[kind];
-  if (!choices) return;
-  _asking = [MVNewDevice new];
-  [_asking askIn:_window kind:kind choices:choices];
-}
-
-- (void)newSimulator:(id)sender {
-  [self ask:@"simulator"];
-}
-
-- (void)newEmulator:(id)sender {
-  [self ask:@"emulator"];
-}
-
 - (void)controlTextDidChange:(NSNotification *)notification {
   [self listDevices];
 }
 
 - (void)show:(NSDictionary *)message {
+  if ([message[@"choices"] isKindOfClass:NSDictionary.class]) return [_asking heard:message[@"choices"]];
+  if ([message[@"made"] isKindOfClass:NSDictionary.class]) return [self heardMade:message[@"made"]];
   _devices = [message[@"devices"] isKindOfClass:NSArray.class] ? message[@"devices"] : @[];
-  if (message[@"choices"]) _choices = message[@"choices"];
+  _kinds = [message[@"kinds"] isKindOfClass:NSArray.class] ? message[@"kinds"] : nil;
+  // a device stops starting once it runs, or once its row of a shut-down one is gone: an emulator runs under another
+  NSDictionary *starting = [self deviceKeyed:_starting];
+  if (!starting || [starting[@"state"] isEqual:@"running"]) _starting = nil;
   NSDictionary *kept = nil, *first = nil;
   for (NSDictionary *device in _devices) {
-    // a window that came back after a crash goes on with what stood in it
-    if ([device[@"id"] isEqual:_shown[@"id"]] || (!_shown && [(device[@"serial"] ?: device[@"id"]) isEqual:message[@"showing"]])) kept = device;
+    // a window that came back after a crash goes on with what stood in it; an emulator that starts runs under its serial,
+    // and is the one chosen still by its AVD's name
+    BOOL started = [device[@"kind"] isEqual:@"emulator"] && [_shown[@"kind"] isEqual:@"emulator"] && [device[@"name"] isEqual:_shown[@"name"]];
+    if ([device[@"id"] isEqual:_shown[@"id"]] || started || (!_shown && [(device[@"serial"] ?: device[@"id"]) isEqual:message[@"showing"]])) kept = device;
     // a phone is a person's: it is touched only when they choose it
     if (!first && [device[@"state"] isEqual:@"running"] && ![device[@"kind"] isEqual:@"phone"]) first = device;
   }
   // a phone that left stays what is chosen: it says so where it stood, and comes back by itself
   BOOL left = !kept && [_shown[@"kind"] isEqual:@"phone"];
   // a place a person chose stays chosen while the list changes behind it; one that came by itself gives way
-  if (!left && (!_placeShown || (_placeByItself && (kept ?: first)))) [self showDevice:kept ?: first];
+  // what stood by itself gives way to the list once there is a device to choose: the window opens on the devices
+  if (!left && (!_placeShown || (_placeByItself && (kept || first || [self hasVirtual])))) [self showDevice:kept ?: first];
   _left = left ? _shown : nil;
   _connect.hasDevice = _devices.count > 0;
   [self listDevices];
   [self sayWhatMoved];
   [self openWaiting];
+  [self chooseMade];
   [self offerConnect];
 }
 
@@ -267,10 +262,9 @@ static NSString *stateWords(NSDictionary *device) {
   _placeByItself = NO;
   [self leaveNote];
   if ([row.key hasPrefix:MVPlaceKey]) return [self choosePlace:_places[[row.key substringFromIndex:MVPlaceKey.length].integerValue]];
-  if ([row.key isEqual:MVFoldKey]) {
-    _unfolded = !_unfolded;
-    return [self listDevices];
-  }
+  if ([row.key hasPrefix:MVFoldKey]) return [self fold:[row.key substringFromIndex:MVFoldKey.length]];
+  // a line that says why a kind has nothing is no device: what is chosen stays
+  if ([row.key hasPrefix:MVKindKey]) return [_list selectKey:_placeKey ?: _shown[@"id"]];
   if ([self deviceKeyed:row.key][@"need"] && [[self deviceKeyed:row.key][@"kind"] isEqual:@"phone"]) return [self choosePlace:_connectPlace];
   [self choose:row.key];
 }
@@ -295,26 +289,38 @@ static NSString *stateWords(NSDictionary *device) {
   BOOL running = [device[@"state"] isEqual:@"running"], elsewhere = [device[@"mirrored"] boolValue];
   [self tellChosen:running && !elsewhere ? device[@"serial"] ?: device[@"id"] : nil];
   _again.hidden = YES;
+  BOOL starting = device && [_starting isEqual:device[@"id"]];
   [_mark paint:device ? MVDeviceSymbol(device) : @"iphone.gen3" color:MVQuietColor()];
-  _name.stringValue = device ? MVNamedParts(device[@"name"] ?: @"")[0] : @"";
-  _about.stringValue = device ? MVWord(elsewhere ? @"In a window of its own" : stateWords(device)) : @"";
-  _start.title = MVWord(elsewhere ? @"Close That Window" : @"Start");
+  // with nothing chosen the room says what to do, and its button is the way to a phone
+  _name.stringValue = device ? MVNamedParts(device[@"name"] ?: @"")[0] : MVWord(@"Choose a Device");
+  _about.stringValue = !device ? MVWord(@"Start a simulator or an emulator in the list, or connect a phone.") : MVWord(elsewhere ? @"In a window of its own" : starting ? @"Starting…"
+                                                                                                                                                                        : stateWords(device));
+  _start.title = MVWord(!device ? @"Connect a Phone" : elsewhere ? @"Close That Window"
+                                                                 : @"Start");
   [((MVRoomView *)_room).slot sayEmpty:elsewhere ? @"Its numbers are in its own window." : @"Choose a running device to see its numbers."];
   if (device) [_bare setName:MVDeviceRow(device).title about:MVDeviceRow(device).detail];
   else [_bare setName:@"appdyno" about:nil];
-  _start.hidden = !device || (running && !elsewhere) || [device[@"kind"] isEqual:@"phone"];
+  _start.hidden = (running && !elsewhere) || starting || [device[@"kind"] isEqual:@"phone"];
 }
 
-- (void)togglePower:(id)sender {
-  if (!_shown) return;
-  if ([_shown[@"mirrored"] boolValue]) return MVEmit(@{@"op": @"hub", @"action": @"close", @"serial": _shown[@"serial"] ?: _shown[@"id"]});
-  MVEmit(@{@"op": @"hub", @"action": [_shown[@"state"] isEqual:@"running"] ? @"stop" : @"start", @"id": _shown[@"id"]});
+/// A kind's section folded or opened, as a person left it: a window kept behind for a test leaves nothing kept.
+- (void)fold:(NSString *)kind {
+  if ([_folds containsObject:kind]) [_folds removeObject:kind];
+  else [_folds addObject:kind];
+  if (!_window.offscreen) [NSUserDefaults.standardUserDefaults setObject:_folds.allObjects forKey:kFoldsKept];
+  [self listDevices];
 }
 
 /// With no device standing the bar has one control left to answer for.
 - (void)barClicked:(NSButton *)sender {
   NSSplitViewItem *item = ((MVRoomView *)_room).slot.item;
   if ([sender.identifier isEqual:@"inspector"]) (MVMoves() ? item.animator : item).collapsed = !item.collapsed;
+}
+
+- (BOOL)hasVirtual {
+  for (NSDictionary *device in _devices)
+    if (![device[@"kind"] isEqual:@"phone"]) return YES;
+  return NO;
 }
 
 - (nullable NSDictionary *)deviceKeyed:(nullable NSString *)key {
@@ -333,40 +339,6 @@ static NSString *stateWords(NSDictionary *device) {
     }
 }
 
-/// The row a person's secondary click is on, beside the device shown.
-- (void)besideClicked:(id)sender {
-  [self pairWith:[self deviceKeyed:_list.clickedKey]];
-}
-
-/// A phone is a person's to turn off.
-- (void)shutDownClicked:(id)sender {
-  NSDictionary *device = [self deviceKeyed:_list.clickedKey];
-  if (![device[@"kind"] isEqual:@"phone"] && [device[@"state"] isEqual:@"running"]) MVEmit(@{@"op": @"hub", @"action": @"stop", @"id": device[@"id"]});
-}
-
-- (void)openClicked:(id)sender {
-  [self choose:_list.clickedKey];
-  [self openWindow:sender];
-}
-
-- (void)openWindow:(id)sender {
-  if (!_shown) return;
-  MVEmit(@{@"op": @"hub", @"action": [_shown[@"mirrored"] boolValue] ? @"close" : @"open", @"id": _shown[@"id"], @"serial": _shown[@"serial"] ?: _shown[@"id"]});
-}
-
-/// What is up to stand beside the device shown.
-- (NSArray<NSDictionary *> *)others {
-  NSMutableArray *others = [NSMutableArray array];
-  for (NSDictionary *device in _devices)
-    if ([device[@"state"] isEqual:@"running"] && ![device[@"id"] isEqual:_shown[@"id"]]) [others addObject:device];
-  return others;
-}
-
-- (void)pairWith:(nullable NSDictionary *)device {
-  if (!_shown || !device) return;
-  MVEmit(@{@"op": @"hub", @"action": @"pair", @"serial": _shown[@"serial"] ?: _shown[@"id"], @"with": device[@"serial"] ?: device[@"id"]});
-}
-
 - (void)poke:(NSDictionary *)message {
   if (message[@"clickOn"]) return [self pokeClick:message[@"clickOn"]];
   if (message[@"clickRow"]) return [self pokeRow:message[@"clickRow"]];
@@ -383,7 +355,13 @@ static NSString *stateWords(NSDictionary *device) {
   if ([message[@"press"] isEqual:@"beside"]) [self pairWith:[self others].firstObject];
 }
 
+/// What failed, where the device chosen is said: one that was starting starts no more, and its Start comes back.
 - (void)sayNote:(NSString *)note {
+  if (_starting) {
+    _starting = nil;
+    [self listDevices];
+    if (_shown) [self showDevice:_shown];
+  }
   _about.stringValue = MVSentence(note);
 }
 

@@ -24,6 +24,8 @@ NSString *MVSentence(NSString *english);
 NSString *MVFormat(NSString *english, NSArray<NSString *> *values);
 /// For a test: speaks Turkish whatever the Mac's language, or goes back to it.
 void MVTestTurkish(BOOL on);
+/// Words begun as a sentence, where the first is no name that keeps its own case, as iOS does.
+NSString *MVCapitalized(NSString *words);
 /// A number with the Mac's decimal mark, and `%` on the side its language puts it.
 NSString *MVPercent(double value);
 /// The same for a number with one decimal.

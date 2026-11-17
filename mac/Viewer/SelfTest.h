@@ -48,6 +48,8 @@ void MVCheckFlow(void);
 void MVCheckShell(void);
 void MVCheckPlaces(void);
 void MVCheckConnect(void);
+/// The hub's sections of devices, their Start, and the sheet that makes one.
+void MVCheckHubDevices(void);
 void MVCheckLinks(void);
 void MVCheckPush(void);
 void MVCheckDevice(void);

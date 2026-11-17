@@ -1,4 +1,12 @@
-import type { DeviceHardware, Need, Startable, ViewerOrder } from '@appdyno/core';
+import type {
+  DeviceHardware,
+  Need,
+  Startable,
+  ViewerOrder,
+  VirtualCatalog,
+  VirtualDevices,
+} from '@appdyno/core';
+import { sleep } from '@appdyno/core';
 import type { Platform } from '@appdyno/protocol';
 import { checkCreate, liveMirrors, type ServerContext } from '@appdyno/ops';
 
@@ -21,10 +29,70 @@ export type HubDevice = {
   need?: Need;
 };
 
+/** Why a kind has nothing to list or make, in a person's words, and what to do. */
+export type Problem = { said: string; fix?: string };
+
+/** A section of the sidebar: each kind this Mac can start is one, empty or not, and says why where it has nothing. */
+export type HubKind = { kind: VirtualDevices['kind']; problem?: Problem; waiting?: boolean };
+
+/** A kind's list as last asked: a tool slow to answer leaves what it said before, and is said to be asked still. */
+type Listed = { driver: VirtualDevices; found: Startable[]; problem?: Problem; waiting?: boolean };
+
 type Hardware = (serial: string) => Promise<DeviceHardware | undefined>;
 
+/** How long a refresh waits for a kind's tool before it says it waits: simctl's first answer after a boot takes seconds. */
+const WAIT_MS = 3_000;
+/** What made the last empty list empty, asked again only after this. */
+const WHY_EMPTY_MS = 30_000;
+
+/** Where a driver's tools are missing altogether, as its catalog says by having none. */
+export const NO_TOOLS: Record<VirtualDevices['kind'], Problem> = {
+  simulator: { said: 'Xcode is not installed', fix: 'install Xcode from the App Store' },
+  emulator: {
+    said: "Android's command-line tools or a system image are missing",
+    fix: 'Android Studio, Settings, Android SDK: get the Command-line Tools and a system image',
+  },
+};
+
+/** A tool that never answered: its own words name a command and a limit, which say nothing to a person. */
+export const SLOW: Problem = {
+  said: 'The tool that lists them gave no answer in 60 s',
+  fix: 'wait, then try again; where it lasts, restart the Mac',
+};
+
+/** A refusal said to a person: what failed, and its hint as what to do. */
+export const problemOf = (e: unknown): Problem => {
+  const { message, hint, code } = e as { message?: string; hint?: string; code?: string };
+  if (code === 'TIMEOUT') return SLOW;
+  return { said: message ?? String(e), ...(hint && { fix: hint }) };
+};
+
+/** What can be made of a kind, or why nothing can. */
+export async function catalogOf(driver: VirtualDevices): Promise<VirtualCatalog | Problem> {
+  try {
+    return (await driver.catalog?.()) ?? NO_TOOLS[driver.kind];
+  } catch (e) {
+    return problemOf(e);
+  }
+}
+
 /** Every device this Mac can reach and each virtual one that could start, as a person sees them. */
-export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promise<HubDevice[]> {
+export async function hubDevices(
+  ctx: ServerContext,
+  hardware: Hardware,
+  lists: Promise<Listed[]> = Promise.all(
+    ctx.providers.flatMap(({ virtual: driver }) =>
+      driver
+        ? [
+            driver.startable().then(
+              (found) => ({ driver, found }),
+              (e: unknown) => ({ driver, found: [], problem: problemOf(e) }),
+            ),
+          ]
+        : [],
+    ),
+  ),
+): Promise<HubDevice[]> {
   // what stands in the hub's own room is the hub's
   const mirrored = new Set(
     liveMirrors()
@@ -32,21 +100,7 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
       .map((m) => m.serial),
   );
   // each list is a tool of its own, asked at once
-  const [startable, listed] = await Promise.all([
-    Promise.all(
-      ctx.providers.flatMap(({ virtual: driver }) =>
-        driver
-          ? [
-              driver
-                .startable()
-                .catch(() => [] as Startable[])
-                .then((found) => ({ driver, found })),
-            ]
-          : [],
-      ),
-    ),
-    ctx.devices(),
-  ]);
+  const [startable, listed] = await Promise.all([lists, ctx.devices()]);
   const virtual: HubDevice[] = startable.flatMap(({ driver, found }) =>
     found.map((d) => ({
       id: d.id,
@@ -98,9 +152,14 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
 export const CREATE_REFUSED =
   'The hub was started with a list of allowed devices, so it makes no new one: start it without --allow-devices to make one.';
 
-/** What each kind can be made from: asked once, as each list is a tool's slow answer. */
-async function hubChoices(ctx: ServerContext) {
-  const choices: Record<string, unknown> = {};
+/** Where a driver makes none: no window asks this of a kind the sidebar has not, but a message may. */
+export const NOTHING_MADE = 'Nothing of this kind can be made on this Mac';
+
+/** What a kind can be made from, asked as its sheet opens: a tool that failed at the hub's start may answer now. */
+export async function hubChoices(ctx: ServerContext, kind: string) {
+  const driver = ctx.providers.find((p) => p.virtual?.kind === kind)?.virtual;
+  if (!driver) return { problem: { said: NOTHING_MADE } };
+  const made = await catalogOf(driver);
   // said in the sheet before Create is pressed: the hub's `new` refuses it all the same
   const refused = (() => {
     try {
@@ -110,19 +169,20 @@ async function hubChoices(ctx: ServerContext) {
       return CREATE_REFUSED;
     }
   })();
-  for (const { virtual } of ctx.providers) {
-    const made = await virtual?.catalog?.().catch(() => undefined);
-    if (virtual && made) choices[virtual.kind] = { ...made, ...(refused && { refused }) };
-  }
-  return choices;
+  return { ...('said' in made ? { problem: made } : made), ...(refused && { refused }) };
 }
 
 /** The sidebar as a window was told it: said again only when it changed. */
 export class HubList {
   private readonly known = new Map<string, DeviceHardware | undefined>();
-  private readonly choices: Promise<Record<string, unknown>>;
   private told = '';
   private readonly names = new Map<string, string>();
+  private readonly asking = new Map<VirtualDevices, Promise<Listed>>();
+  private readonly answered = new Map<VirtualDevices, Listed>();
+  private readonly whyEmpty = new Map<
+    VirtualDevices,
+    { at: number; problem: Promise<Problem | undefined> }
+  >();
 
   constructor(
     private readonly ctx: ServerContext,
@@ -133,9 +193,7 @@ export class HubList {
       windowUp(serial: string): void;
       tell(message: ViewerOrder): void;
     },
-  ) {
-    this.choices = hubChoices(ctx);
-  }
+  ) {}
 
   private readonly hardware: Hardware = async (serial) => {
     if (!this.known.has(serial))
@@ -149,6 +207,35 @@ export class HubList {
     return this.known.get(serial);
   };
 
+  /** An empty list that is no failure may still have a reason: no runtime, or no tools, as the catalog says. */
+  private emptyBecause(driver: VirtualDevices) {
+    const last = this.whyEmpty.get(driver);
+    if (last && Date.now() - last.at < WHY_EMPTY_MS) return last.problem;
+    const problem = catalogOf(driver).then((made) => ('said' in made ? made : undefined));
+    this.whyEmpty.set(driver, { at: Date.now(), problem });
+    return problem;
+  }
+
+  /** A kind's list, or the last one and that it is asked still: a slow tool holds no other list up. */
+  private async listOf(driver: VirtualDevices): Promise<Listed> {
+    let asking = this.asking.get(driver);
+    if (!asking) {
+      asking = driver.startable().then(
+        async (found) => {
+          const problem = found.length ? undefined : await this.emptyBecause(driver);
+          return { driver, found, ...(problem && { problem }) };
+        },
+        (e: unknown) => ({ driver, found: [], problem: problemOf(e) }),
+      );
+      this.asking.set(driver, asking);
+    }
+    const done = await Promise.race([asking, sleep(WAIT_MS).then(() => undefined)]);
+    if (!done) return { ...(this.answered.get(driver) ?? { driver, found: [] }), waiting: true };
+    this.asking.delete(driver);
+    this.answered.set(driver, done);
+    return done;
+  }
+
   /** What the sidebar calls a device: an emulator by its AVD's name, which its own hardware does not know. */
   nameOf(serial: string) {
     return this.names.get(serial);
@@ -160,18 +247,21 @@ export class HubList {
   }
 
   async refresh() {
-    const devices = await hubDevices(this.ctx, this.hardware);
+    const lists = Promise.all(
+      this.ctx.providers.flatMap(({ virtual }) => (virtual ? [this.listOf(virtual)] : [])),
+    );
+    const devices = await hubDevices(this.ctx, this.hardware, lists);
+    const kinds: HubKind[] = (await lists).map(({ driver, problem, waiting }) => ({
+      kind: driver.kind,
+      ...(problem && { problem }),
+      ...(waiting && { waiting }),
+    }));
     for (const d of devices) this.names.set(d.serial ?? d.id, d.name);
     for (const d of devices) if (d.mirrored) this.hooks.windowUp(d.serial ?? d.id);
-    const text = JSON.stringify(devices);
+    const text = JSON.stringify({ devices, kinds });
     if (text === this.told) return;
     this.told = text;
     const showing = this.hooks.showing();
-    this.hooks.tell({
-      op: 'hub',
-      devices,
-      choices: await this.choices,
-      ...(showing && { showing }),
-    });
+    this.hooks.tell({ op: 'hub', devices, kinds, ...(showing && { showing }) });
   }
 }

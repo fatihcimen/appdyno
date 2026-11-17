@@ -3,7 +3,8 @@
 #import "Window.h"
 #import "Words.h"
 
-NSString *const MVFoldKey = @"fold";
+NSString *const MVFoldKey = @"fold:";
+NSString *const MVKindKey = @"kind:";
 NSString *const MVPlaceKey = @"place:";
 
 static const double kPlaceSeconds = 0.18;
@@ -81,32 +82,83 @@ static MVRow *goneRow(NSDictionary *device) {
 
 @implementation MVHub (Rows)
 
-/// Phones first, then what runs, and what is shut down folded away: a person's Mac may have a hundred of them.
+/// A kind's section past this many folds at its header, and stays as a person left it.
+static const NSUInteger kFoldPast = 8;
+
+static NSString *kindTitle(NSString *kind) {
+  return [kind isEqual:@"emulator"] ? @"Emulators" : @"Simulators";
+}
+
+/// A line of a section that is no device: why it has none, that its tool is still asked, or that there is none yet.
+static MVRow *sayRow(NSString *kind, NSString *title, NSString *detail, NSString *symbol) {
+  MVRow *row = [MVRow new];
+  row.title = title;
+  row.detail = detail;
+  row.symbol = symbol;
+  row.tint = MVQuietColor();
+  row.wraps = YES;
+  row.key = [MVKindKey stringByAppendingString:kind];
+  return row;
+}
+
+/// Each kind this Mac can start has its section, empty or not: what runs first, then what is shut down, each with Start.
+/// A list that folded what was shut down read as a Mac with no simulator.
+- (void)listKind:(NSString *)kind about:(NSDictionary *)about into:(NSMutableArray<MVRow *> *)rows words:(NSString *)words {
+  NSMutableArray<MVRow *> *running = [NSMutableArray array], *off = [NSMutableArray array];
+  for (NSDictionary *device in _devices) {
+    if (![device[@"kind"] isEqual:kind] || device[@"need"] || !matches(device, words)) continue;
+    MVRow *row = MVDeviceRow(device);
+    BOOL up = [device[@"state"] isEqual:@"running"];
+    if (!up && [_starting isEqual:device[@"id"]]) row.detail = MVWord(@"Starting…");
+    else if (!up) row.button = @"Start";
+    [up ? running : off addObject:row];
+  }
+  NSUInteger count = running.count + off.count;
+  BOOL foldable = count > kFoldPast && !words.length, folded = foldable && [_folds containsObject:kind];
+  MVRow *header = [MVRow headerNamed:foldable ? [NSString stringWithFormat:@"%@ %@ (%lu)", folded ? @"▸" : @"▾", MVWord(kindTitle(kind)), (unsigned long)count] : MVWord(kindTitle(kind))];
+  if (foldable) header.key = [MVFoldKey stringByAppendingString:kind];
+  [rows addObject:header];
+  NSDictionary *problem = [about[@"problem"] isKindOfClass:NSDictionary.class] ? about[@"problem"] : nil;
+  if (problem) [rows addObject:sayRow(kind, MVSentence(problem[@"said"] ?: @""), MVCapitalized(MVSentence(problem[@"fix"] ?: @"")), @"exclamationmark.triangle")];
+  else if (!count && [about[@"waiting"] boolValue]) [rows addObject:sayRow(kind, MVWord(@"Asking for them…"), MVWord(@"The first answer after a Mac starts can take a minute."), @"hourglass")];
+  else if (!count && !words.length) {
+    MVRow *none = sayRow(kind, MVWord([kind isEqual:@"emulator"] ? @"No emulator yet" : @"No simulator yet"), @"", [kind isEqual:@"emulator"] ? @"candybarphone" : @"iphone");
+    none.button = @"New…";
+    [rows addObject:none];
+  }
+  [rows addObjectsFromArray:running];
+  if (!folded) [rows addObjectsFromArray:off];
+}
+
+/// The kinds the hub said it has, simulators first; a list that named none has those its devices are of.
+- (NSArray<NSDictionary *> *)kindsListed {
+  NSMutableArray<NSDictionary *> *kinds = [NSMutableArray array];
+  for (NSString *kind in @[@"simulator", @"emulator"]) {
+    NSDictionary *said = nil;
+    for (NSDictionary *one in _kinds)
+      if ([one isKindOfClass:NSDictionary.class] && [one[@"kind"] isEqual:kind]) said = one;
+    if (said || [[_devices valueForKey:@"kind"] containsObject:kind]) [kinds addObject:said ?: @{@"kind": kind}];
+  }
+  return kinds;
+}
+
+/// What needs a person first, then phones, then a section for each kind of virtual device, then the places.
 - (void)listDevices {
   NSString *words = _search.stringValue;
-  NSMutableArray<MVRow *> *phones = [NSMutableArray array], *running = [NSMutableArray array], *off = [NSMutableArray array], *needs = [NSMutableArray array];
+  NSMutableArray<MVRow *> *phones = [NSMutableArray array], *needs = [NSMutableArray array];
   for (NSDictionary *device in _devices) {
     if (!matches(device, words)) continue;
-    BOOL phone = [device[@"kind"] isEqual:@"phone"], up = [device[@"state"] isEqual:@"running"];
-    [device[@"need"] ? needs : phone ? phones
-                           : up      ? running
-                                     : off addObject:MVDeviceRow(device)];
+    if (device[@"need"]) [needs addObject:MVDeviceRow(device)];
+    else if ([device[@"kind"] isEqual:@"phone"]) [phones addObject:MVDeviceRow(device)];
   }
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   BOOL gone = _left && !hereAnotherWay(_left, _devices);
   if (needs.count || gone) [rows addObject:[MVRow headerNamed:MVWord(@"Needs You")]];
   if (gone) [rows addObject:goneRow(_left)];
   [rows addObjectsFromArray:needs];
-  [running insertObjects:phones atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, phones.count)]];
-  if (running.count) [rows addObject:[MVRow headerNamed:MVWord(@"Running")]];
-  [rows addObjectsFromArray:running];
-  if (off.count) {
-    BOOL open = _unfolded || words.length;
-    MVRow *fold = [MVRow headerNamed:MVWord([NSString stringWithFormat:@"%@ Shut Down (%lu)", open ? @"▾" : @"▸", (unsigned long)off.count])];
-    fold.key = MVFoldKey;
-    [rows addObject:fold];
-    if (open) [rows addObjectsFromArray:off];
-  }
+  if (phones.count) [rows addObject:[MVRow headerNamed:MVWord(@"Phones")]];
+  [rows addObjectsFromArray:phones];
+  for (NSDictionary *kind in [self kindsListed]) [self listKind:kind[@"kind"] about:kind into:rows words:words];
   [_places enumerateObjectsUsingBlock:^(MVPlace *place, NSUInteger at, __unused BOOL *stop) {
     MVRow *row = [MVRow new];
     row.title = place.title;

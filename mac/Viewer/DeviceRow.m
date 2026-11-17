@@ -80,13 +80,6 @@ static BOOL sameChoice(NSString *choice, NSString *read, BOOL loose) {
   return [choice isEqual:head] || (choice.doubleValue > 0 && choice.doubleValue == head.doubleValue) || (loose && [head.lowercaseString hasSuffix:choice]);
 }
 
-/// A reason begun as a sentence, where its first word is no name that keeps its own case, as iOS does.
-static NSString *capitalized(NSString *words) {
-  NSString *first = [words componentsSeparatedByString:@" "].firstObject;
-  if (!words.length || ![first isEqual:first.lowercaseString]) return words;
-  return [[words substringToIndex:1].uppercaseString stringByAppendingString:[words substringFromIndex:1]];
-}
-
 /// A field on its plate, `wide` unless it takes what room is left.
 static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSView *> *views, NSMutableArray<NSControl *> *controls) {
   NSView *plate = MVFieldPlate(field, nil);
@@ -223,8 +216,8 @@ static NSTextField *plated(NSTextField *field, double wide, NSMutableArray<NSVie
   NSString *value = [_said[@"value"] isKindOfClass:NSString.class] ? _said[@"value"] : nil;
   _can = !why.length && (_kind >= MVRowLocation || value);
   // why it cannot be changed, else that the device did not take a change of it
-  _note.stringValue = why.length ? MVSentence(capitalized(why)) : _warning ?
-                                                                           : @"";
+  _note.stringValue = why.length ? MVSentence(MVCapitalized(why)) : _warning ?
+                                                                             : @"";
   _note.textColor = why.length ? MVQuietColor() : MVOrange();
   _note.hidden = !_note.stringValue.length;
   _label.textColor = _can ? MVInkColor() : MVQuietColor();
