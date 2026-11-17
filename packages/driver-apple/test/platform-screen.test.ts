@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { screenElements, windowRect, withStableRefs, type UiElement } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
-import { iosScreen } from '../src/platform-screen.js';
+import { iosScreen, keyboardCloser } from '../src/platform-screen.js';
 
 const root: UiElement = {
   type: 'Window',
@@ -218,5 +218,45 @@ describe('what covers the app', () => {
     expect(listed).toContain('Send');
     expect(listed).toContain('Done');
     expect(listed.filter((l) => /^\d$|Delete|Dictate|inputView|LayoutStar/.test(l))).toEqual([]);
+  });
+});
+
+describe('closing the keyboard', () => {
+  /** A web form's field with the keyboard up, and the bar over it (a simulator's read of one). */
+  const form = (bar: string[]): Tree => ({
+    hash: 'k',
+    truncated: false,
+    elapsedMs: 1,
+    windows: [
+      {
+        type: 1,
+        pkg: 'com.apple.mobilesafari',
+        layer: 0,
+        b: [0, 0, 402, 874],
+        active: true,
+        focused: true,
+      },
+    ],
+    nodes: [
+      { p: -1, w: 0, c: 'Application', b: [0, 0, 402, 874], f: 17 },
+      { p: 0, w: 0, c: 'TextField', d: 'Customer name:', b: [60, 70, 140, 82], f: 17 | 128 },
+      { p: 0, w: 0, c: 'Button', d: 'Done', b: [340, 20, 390, 60], f: 19 },
+      { p: 0, w: 0, c: 'Toolbar', d: 'Toolbar', b: [0, 508, 402, 556], f: 17 },
+      ...bar.map((d, i) => ({
+        p: 3,
+        w: 0,
+        c: 'Button',
+        d,
+        b: [21 + i * 160, 513, 61 + i * 160, 551] as [number, number, number, number],
+        f: 19,
+      })),
+      { p: 0, w: 0, c: 'Keyboard', b: [0, 583, 402, 816], f: 17 },
+    ],
+  });
+
+  it("touches the Done of the bar over the keyboard, which a web form's touch beside its fields does not close", () => {
+    expect(keyboardCloser(form(['Previous', 'Next', 'Done']))).toEqual({ x: 361, y: 532 });
+    // a Done far from the keyboard is the app's own, as a navigation bar's: not touched for it
+    expect(keyboardCloser(form(['Previous', 'Next']))).not.toEqual({ x: 365, y: 40 });
   });
 });

@@ -51,6 +51,29 @@ export function promptButton(t: Tree, name: string): Point | undefined {
 export const staticTexts = ({ nodes }: Tree) =>
   nodes.flatMap((n) => (n.c === 'StaticText' ? (n.d ?? n.t ?? []) : []));
 
+/** How far above the keyboard the bar a form puts over it may stand. */
+const KEYBOARD_BAR_PT = 80;
+
+/**
+ * Where a touch closes the keyboard: its own hide key where it shows one, the Done of the bar a form puts over it
+ * (Previous, Next, Done, over a web form), else a place with no control, which closes it in an app that takes that as
+ * leaving the field. A web form takes a touch beside its fields as none.
+ */
+export function keyboardCloser(t: Tree): Point {
+  const said = (n: Tree['nodes'][number]) => n.d ?? n.t ?? '';
+  const keyboard = t.nodes.find((n) => /keyboard$/i.test(n.c));
+  const key = t.nodes.find(
+    (n) =>
+      /button$/i.test(n.c) &&
+      (/^(hide keyboard|dismiss keyboard)$/i.test(said(n)) ||
+        (!!keyboard &&
+          /^done$/i.test(said(n)) &&
+          n.b[3] <= keyboard.b[1] &&
+          n.b[3] >= keyboard.b[1] - KEYBOARD_BAR_PT)),
+  );
+  return key ? { x: (key.b[0] + key.b[2]) / 2, y: (key.b[1] + key.b[3]) / 2 } : inertPoint(t);
+}
+
 /** A point above the keyboard with no control or field on it; else near the top. */
 export function inertPoint(t: Tree): Point {
   const screen = t.windows[0]?.b ?? [0, 0, 400, 800];

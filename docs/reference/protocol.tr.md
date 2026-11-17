@@ -122,7 +122,8 @@ pano ve aşağıdaki her durum için. `APPDYNO_SIM_DIRECT=off` ikisini de kapat�
 `simctl pbpaste` ile okunur, bir iPhone'unki de iki yönde de `devicectl device pasteboard` ile gider, çünkü runner panoya yalnızca öndeyken erişebilir. `simctl pbcopy`'nin hiçbir şey yazmadığı yerde (yeni bir iOS 26.5 simulator'ında Xcode 27.1) panoyu runner ayarlar ve okur. Bu bilinen bir sınırdır: yük altındaki bir Mac'te runner'ın çağrısı da takılabilir (yük 138'deyken iki kez) ve `set_device clipboard` o zaman yaklaşık 20 s içinde `UNSUPPORTED` ile ve nedenini söyleyerek reddeder, runner da yeniden başlatılır.
 
 iOS'ta klavyeyi kapatacak ya da uygulama değiştiriciyi açacak bir tuş yoktur. `dismissKeyboard`, klavye bir gizleme tuşu gösteriyorsa ona,
-yoksa kontrol olmayan bir yere dokunur; host sonra klavyenin gidip gitmediğini okur ve gitmediyse reddeder. `appSwitch` bir simulator'da
+yoksa klavyenin hemen üstündeki bir çubuğun Done'ına (Safari'nin bir web formunun üstüne koyduğu Previous, Next, Done; formun alanlarının
+yanına bir dokunuş klavyeyi açık bırakır), o da yoksa kontrol olmayan bir yere dokunur; host sonra klavyenin gidip gitmediğini okur ve gitmediyse reddeder. `appSwitch` bir simulator'da
 iki kez basılan Home'dur, bir pencerenin kontrolüyle aynı girdi; ikinci basıştan yarım saniye sonra yanıt verir,
 çünkü iOS daha erken gelen bir basışı o ikisinin parçası sayar; bir telefonda ana ekran göstergesinin yukarı doğru yavaş sürüklenmesidir. Denetim Merkezi ve Bildirim Merkezi, bir simulator'da bir pencerenin kontrollerinin yansıtmanın
 girdisiyle gönderdiği sürüklemelerdir: `act`, altlarındaki uygulamanın dokunuşu bildirmesini beklerdi, bildirmeyince onu kayıp sayıp

@@ -42,7 +42,7 @@ import { keepTreeDump } from './tree-dump.js';
 import {
   HOME_SCREEN_APP,
   SPOTLIGHT_APP,
-  inertPoint,
+  keyboardCloser,
   iosScreen,
   promptButton,
   staticTexts,
@@ -114,19 +114,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
   crashes = (q: CrashesQuery) => this.ops.crashes(q);
   appRunning = (app: string) => runsBy(this.ops.pid(app));
 
-  /**
-   * iOS has no call to close a keyboard: its own hide key where it shows one, else a touch on a place
-   * with no control, which closes it in an app that takes that as leaving the field.
-   */
+  /** iOS has no call to close a keyboard: a touch where one closes it (`keyboardCloser`). */
   dismissKeyboard = async () => {
-    const t = await this.tree();
-    const hide = t.nodes.find(
-      (n) => /button$/i.test(n.c) && /^(hide keyboard|dismiss keyboard)$/i.test(n.d ?? n.t ?? ''),
-    );
-    const point = hide
-      ? { x: (hide.b[0] + hide.b[2]) / 2, y: (hide.b[1] + hide.b[3]) / 2 }
-      : inertPoint(t);
-    await this.tap(point, { settle: false, read: 'none' });
+    await this.tap(keyboardCloser(await this.tree()), { settle: false, read: 'none' });
   };
 
   /** Before a new runner starts: the device must be up (a new runner would boot a shut-down simulator). */
