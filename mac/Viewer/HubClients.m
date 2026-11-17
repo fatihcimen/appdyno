@@ -285,6 +285,8 @@ static NSString *shownName(NSDictionary *row) {
   first.spacing = 6;
   first.alignment = NSLayoutAttributeCenterY;
   if (row[@"undo"] && [row[@"undo"] boolValue] && told[@"line"]) [first addView:[self button:@"Undo" do:@"undo" for:row[@"name"]] inGravity:NSStackViewGravityTrailing];
+  // what a test found that Update fixes, a click away: it shows the lines first, as Add does
+  if ([told[@"fix"] boolValue]) [first addView:[self button:@"Update" do:@"add" for:row[@"name"]] inGravity:NSStackViewGravityTrailing];
   [parts addObject:first];
   if ([told[@"next"] length]) [parts addObject:line(told[@"next"], MVStyleSub)];
   if ([told[@"tail"] length]) [parts addObject:MVCard(MVCodeText(told[@"tail"]), 8)];

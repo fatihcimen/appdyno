@@ -93,6 +93,10 @@ static void checkTest(MVHub *hub) {
   [hub showClients:@{@"tested": @{@"client": @"One", @"ok": @NO, @"said": @"It stopped before it answered.", @"next": @"Read what it said here, and run Doctor in Help.", @"tail": @"npm error boom"}}];
   NSString *words = wordsOf(hub);
   MVCheck(@"clients: a failed test says what it found and what to do next", [words containsString:MVWord(@"It stopped before it answered.")] && [words containsString:@"npm error boom"], words);
+  // an entry by name, which an app from the Dock cannot run: Update is on the line that says so, and shows what it writes
+  [hub showClients:@{@"tested": @{@"client": @"One", @"ok": @NO, @"said": @"Its entry runs npx by name, and an app opened from the Dock cannot find it.", @"next": @"Update writes its full path, then restart the client.", @"fix": @YES}}];
+  NSDictionary *fix = clicked(hub, @"add:One");
+  MVCheck(@"clients: a test that Update fixes offers it there, and it shows the lines first", [fix[@"do"] isEqual:@"preview"] && [fix[@"client"] isEqual:@"One"], [fix description]);
   button = MVFindControl(hub.room.window.contentView, @"test:Two");
   NSMutableArray *rows = [fixture()[@"rows"] mutableCopy];
   NSMutableDictionary *later = [rows[0] mutableCopy];

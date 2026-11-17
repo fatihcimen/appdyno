@@ -129,7 +129,7 @@ Flags go at the end of `args`. For example `"--device", "emulator-5554"`, or `"-
 
 **Add** and **Remove** go by the code of `appdyno install`. The exact lines show first, and nothing is written until the second click. Only that entry changes, and a backup stays beside the file. **Undo** takes that one entry back, flags and all, and does not restore the backup, as a client may have written its file since.
 
-**Test** runs what the client's entry runs, as far as asking for its list of tools, and says what it found and what to do next. It calls no tool, so it touches no device and does not make the client Connected. A client opened from the Dock is tried with the short `PATH` the Dock gives it.
+**Test** runs what the client's entry runs, as far as asking for its list of tools, and says what it found and what to do next. It calls no tool, so it touches no device and does not make the client Connected. A client opened from the Dock is tried with the short `PATH` the Dock gives it, and an entry that runs a command by name is said to fail there, untried, with Update beside it, which writes the command's full path and a `PATH` with Node. A client a terminal starts is tried with your terminal's `PATH`: the app asks your login shell for it once, so it finds what Homebrew, nvm, mise, Volta or Bun put there. A command it still cannot find is said by name, with where it looked.
 
 How it knows: the server keeps, for each client, the name and version it gave, whether it came over stdio or HTTP, and the time of its last call, in `~/Library/Caches/appdyno/clients`, and nothing it sent. A client that is not in this list still gets a row of its own once it has called. The names were read from each client's own call where one could be made: see [What this was tried on](#what-this-was-tried-on). Taking a client out forgets its calls.
 
@@ -470,7 +470,7 @@ Find where they are, in a terminal:
 command -v npx node adb
 ```
 
-Then give the entry the full path of `npx`, and a `PATH` that holds `node` and `adb` too. The full path alone is not enough, as `npx` itself needs to find `node`:
+Add and Update in AI Clients do this for a client opened from the Dock, from the `PATH` your terminal has. By hand, give the entry the full path of `npx`, and a `PATH` that holds `node` and `adb` too. The full path alone is not enough, as `npx` itself needs to find `node`:
 
 ```json
 {

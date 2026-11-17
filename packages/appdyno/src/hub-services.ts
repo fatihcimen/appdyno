@@ -14,6 +14,7 @@ import {
   changes,
   clientRows,
   CLIENTS,
+  DOCK_PATH,
   entryCommand,
   fileOf,
   outcomeFor,
@@ -29,8 +30,6 @@ import { HubHttp, httpToken, renewHttpToken } from './hub-http.js';
 import { HubRuns } from './hub-run.js';
 import { allowFlags } from './serve.js';
 
-/** What an app opened from the Dock has: neither Homebrew nor a Node from a version manager. */
-const DOCK_PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
 /** The end of what a server said, which is where the reason is: all of it is for the client's own log. */
 const TAIL_SHOWN = 300;
 
@@ -39,9 +38,14 @@ export const TRIED = {
   notPutBack: ['Not put back: its settings file cannot be edited.', ''],
   listed: ['It started, and lists %@ tools.', 'Restart it, then ask it to list the devices.'],
   connected: ['It started, and lists %@ tools.', ''],
-  missing: [
+  missing: ['It could not find %@.', 'It looked in %@.'],
+  noFile: [
     'It could not find %@.',
-    'An app opened from the Dock has a short PATH. Give its entry the full path of the command, and a PATH that holds node and adb, then restart it.',
+    'No file is at that path: Update writes the one this copy runs.',
+  ],
+  byName: [
+    'Its entry runs %@ by name, and an app opened from the Dock cannot find it.',
+    'Update writes its full path, then restart the client.',
   ],
   registry: [
     "npm's registry has no appdyno.",
@@ -63,17 +67,27 @@ export const TRIED = {
   ],
 } as const;
 
-type Tried = { ok: boolean; said: string; next: string; tail?: string };
+/** `fix`: Update, which writes the command whole, is what makes it work. */
+type Tried = { ok: boolean; said: string; next: string; tail?: string; fix?: boolean };
 
 /** What a try found, in a person's words. */
-function triedWords(probe: Probe, o: { command?: string; connected: boolean }): Tried {
+function triedWords(
+  probe: Probe,
+  o: { command?: string; connected: boolean; path?: string | undefined },
+): Tried {
   if (probe.ok) {
     const [said, next] = o.command ? TRIED[o.connected ? 'connected' : 'listed'] : TRIED.serves;
     return { ok: true, said: said.replace('%@', String(probe.tools)), next };
   }
   if (probe.why === 'missing') {
-    const [said, next] = TRIED.missing;
-    return { ok: false, said: said.replace('%@', o.command ?? ''), next };
+    // a command by name was looked for along the PATH, which is said; one by its path was not there
+    const [said, next] = TRIED[o.command?.includes('/') ? 'noFile' : 'missing'];
+    const looked = (o.path ?? '').split(':').filter(Boolean).join(', ');
+    return {
+      ok: false,
+      said: said.replace('%@', o.command ?? ''),
+      next: next.replace('%@', looked),
+    };
   }
   if (probe.why === 'ended' && /\b(E404|404)\b/.test(probe.tail ?? '')) {
     const [said, next] = TRIED.registry;
@@ -149,10 +163,16 @@ async function tryClient(
     ...(client.dock && { PATH: DOCK_PATH }),
     ...entry.env,
   };
+  // the Dock's PATH holds no command of a person's: said as that, with what fixes it, and not tried
+  if (client.dock && !entry.command.includes('/') && !entry.env?.PATH) {
+    const [said, next] = TRIED.byName;
+    return { ok: false, said: said.replace('%@', entry.command), next, fix: true };
+  }
   const row = clientRows(where).find((r) => r.name === name);
   return triedWords(await probeCommand({ ...entry, env, cwd: o.home }), {
     command: entry.command,
     connected: row?.state === 'connected',
+    path: env.PATH,
   });
 }
 

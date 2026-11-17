@@ -23,6 +23,7 @@ import {
   installCheck,
   listOf,
   manifestOf,
+  personPath,
   serverOf,
   takeFlag,
 } from '@appdyno/cli';
@@ -294,6 +295,8 @@ async function main(): Promise<number> {
         windows: runMirrors,
       });
     case 'hub':
+      // opened from the Dock, the app has no PATH of a person's: what its clients and tools run is found as a terminal finds it
+      if (process.env.APPDYNO_HELPERS) process.env.PATH = await personPath();
       return hubCommand(rest, {
         context: contextFrom,
         hub: (ctx, run) => runHub(ctx, { ...run, services: servicesOfHub(ctx) }),

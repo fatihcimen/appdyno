@@ -1,7 +1,8 @@
 /** The name this server goes by in a client's list. */
 export const SERVER = 'appdyno';
 
-export type Stdio = { command: string; args: string[] };
+/** `env`: what the command needs that the client does not give, as a PATH where Node is for one opened from the Dock. */
+export type Stdio = { command: string; args: string[]; env?: Record<string, string> };
 
 /** What most clients take, from the npm package. The app gives its own command. */
 export const STDIO: Stdio = { command: 'npx', args: ['-y', 'appdyno', 'mcp'] };

@@ -129,7 +129,7 @@ Hub'ın kenar çubuğundaki **Yapay Zekâ İstemcileri**, buradaki her istemciyi
 
 **Ekle** ve **Kaldır**, `appdyno install` kodunu kullanır. Önce satırların tam hali görünür, ikinci tıklamaya kadar hiçbir şey yazılmaz. Yalnızca o girdi değişir, dosyanın yanında yedek kalır. **Geri Al** yalnızca o girdiyi, seçenekleriyle birlikte eski haline döndürür; yedeği geri yüklemez, çünkü istemci o arada dosyasını yazmış olabilir.
 
-**Test Et**, istemcinin girdisinin çalıştırdığını araç listesini isteyene kadar çalıştırır, ne bulduğunu ve sırada ne yapılacağını söyler. Araç çağırmaz, bu yüzden cihaza dokunmaz ve istemciyi Bağlı durumuna da geçirmez. Dock'tan açılan istemci, Dock'un verdiği kısa `PATH` ile denenir.
+**Test Et**, istemcinin girdisinin çalıştırdığını araç listesini isteyene kadar çalıştırır, ne bulduğunu ve sırada ne yapılacağını söyler. Araç çağırmaz, bu yüzden cihaza dokunmaz ve istemciyi Bağlı durumuna da geçirmez. Dock'tan açılan istemci, Dock'un verdiği kısa `PATH` ile denenir; bir komutu adıyla çalıştıran kayıt orada denenmeden başarısız sayılır ve yanında, komutun tam yolunu ve Node'lu bir `PATH` yazan Güncelle durur. Terminalden başlayan bir istemci terminalinizin `PATH`'i ile denenir: uygulama onu bir kez giriş kabuğunuza sorar, böylece Homebrew'un, nvm'in, mise'ın, Volta'nın ya da Bun'ın koyduğunu bulur. Yine bulamadığı bir komutu adıyla ve nerelere baktığıyla söyler.
 
 Bunu nasıl bilir: sunucu her istemci için verdiği adı ve sürümü, stdio mu HTTP mi kullandığını ve son çağrısının zamanını `~/Library/Caches/appdyno/clients` altında tutar; gönderdiği hiçbir şeyi tutmaz. Listede olmayan bir istemci de çağırdığında kendi satırını alır. Adlar, çağrı yapılabilen yerlerde istemcinin kendi çağrısından okundu: bkz. [Neyle denendi](#neyle-denendi). Bir istemciyi kaldırmak çağrılarını da unutturur.
 
@@ -470,7 +470,7 @@ Terminalde nerede olduklarına bakın:
 command -v npx node adb
 ```
 
-Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` yazın. Yalnızca tam yol yetmez, çünkü `npx`'in kendisi de `node`'u bulmak zorundadır:
+Yapay Zekâ İstemcileri'ndeki Ekle ve Güncelle bunu Dock'tan açılan bir istemci için, terminalinizin `PATH`'inden yapar. Elle yapmak için girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` yazın. Yalnızca tam yol yetmez, çünkü `npx`'in kendisi de `node`'u bulmak zorundadır:
 
 ```json
 {

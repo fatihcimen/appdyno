@@ -13,6 +13,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { writeWhole } from '@appdyno/core';
 import { CLIENTS, SERVER, STDIO, type Client, type Stdio } from './clients.js';
 import { jsonEdit } from './jsonc.js';
+import { forTheDock } from './person-path.js';
 import { tomlEdit } from './toml.js';
 
 const EDIT = { json: jsonEdit(true), jsonc: jsonEdit(false), toml: tomlEdit };
@@ -95,6 +96,8 @@ function textOf(file: string) {
 }
 
 type Asked = Pick<InstallOptions, 'remove' | 'server' | 'moved'> & {
+  /** Its PATH, for a client opened from the Dock, which is given each command whole. */
+  env?: InstallOptions['env'];
   /** Puts back an entry as it was, flags and all: what an undo has, and an edit by hand may hold more than `entry` makes. */
   back?: Record<string, unknown>;
 };
@@ -137,7 +140,7 @@ export function outcomeFor(client: Client, file: string, o: Asked): Outcome {
       if (!entry) return { ...same, did: 'right' };
       return { ...same, did: 'replaced', after: writing(entry) };
     }
-    const entry = client.entry(server);
+    const entry = client.entry(client.dock ? forTheDock(server, o.env?.PATH) : server);
     if (fits(have, entry)) return { ...same, did: 'right' };
     return { ...same, did: have === undefined ? 'added' : 'replaced', after: writing(entry) };
   } catch (e) {

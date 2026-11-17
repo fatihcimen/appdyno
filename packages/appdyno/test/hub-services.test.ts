@@ -252,12 +252,29 @@ describe('Test', () => {
     expect(rows.find((r) => r.name === client.name)?.state).toBe('added');
   });
 
-  it('says what to do when the command is not there', async () => {
+  it('says what to do when the command is not there, and where a command by name was looked for', async () => {
     entryWith({ command: '/no/such/program', args: [] });
     expect(await tried(place())).toMatchObject({
       ok: false,
       said: 'It could not find /no/such/program.',
-      next: expect.stringContaining('full path') as unknown,
+      next: 'No file is at that path: Update writes the one this copy runs.',
+    });
+    // a client a terminal starts, which looks along the PATH
+    const terminal = must(
+      CLIENTS.find((c) => !c.dock && c.format === 'json'),
+      'a client of a terminal',
+    );
+    const its = join(home, must(terminal.files[0], 'its file'));
+    mkdirSync(dirname(its), { recursive: true });
+    writeFileSync(
+      its,
+      JSON.stringify({ [terminal.key]: { appdyno: { command: 'no-such-program', args: [] } } }),
+    );
+    const dirs = (process.env.PATH ?? '').split(':').filter(Boolean);
+    expect(await tried(place(), terminal.name)).toMatchObject({
+      ok: false,
+      said: 'It could not find no-such-program.',
+      next: `It looked in ${dirs.join(', ')}.`,
     });
   });
 
@@ -302,9 +319,19 @@ describe('Test', () => {
     const entry = join(home, must(dock.files[0], 'its file'));
     mkdirSync(dirname(entry), { recursive: true });
     writeFileSync(entry, JSON.stringify({ [dock.key]: { appdyno: { command: 'npx', args: [] } } }));
+    // by name it is found by no client opened from the Dock: said as that, untried, with Update to fix it
     expect(await tried(place(), dock.name)).toMatchObject({
       ok: false,
-      said: 'It could not find npx.',
+      said: 'Its entry runs npx by name, and an app opened from the Dock cannot find it.',
+      fix: true,
+    });
+    writeFileSync(
+      entry,
+      JSON.stringify({ [dock.key]: { appdyno: { command: '/no/such/npx', args: [] } } }),
+    );
+    expect(await tried(place(), dock.name)).toMatchObject({
+      ok: false,
+      said: 'It could not find /no/such/npx.',
     });
   });
 });

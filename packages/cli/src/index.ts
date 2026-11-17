@@ -11,6 +11,7 @@ export { apply, changedLines, changes, fileOf, install, outcomeFor } from './ins
 export { download } from './appcast.js';
 export { appCommand, installCheck, installedBy, manifestOf, serverOf } from './installed.js';
 export { followMove, putOnPath, takeOffPath } from './on-path.js';
+export { commandIn, DOCK_PATH, forTheDock, personPath } from './person-path.js';
 export { verifyRelease, type Run } from './release.js';
 export { update } from './update.js';
 export * from './commands.js';
