@@ -28,6 +28,12 @@ class SettingsScriptTest {
     }
 
     @Test
+    fun aTurnWhoseLockIsOnIsWrittenOnceAndNotAgainOverTheHosts() {
+        val script = SettingsScript.restoreTurn(listOf("user_rotation" to "1", "accelerometer_rotation" to "0"))
+        assertEquals("settings put system user_rotation 1; settings put system accelerometer_rotation 0", script)
+    }
+
+    @Test
     fun anythingButANumberIsLeftAlone() {
         assertEquals("true", SettingsScript.restore("global", listOf("a" to "1; reboot")))
     }

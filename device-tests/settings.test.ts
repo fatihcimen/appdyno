@@ -1,7 +1,7 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { createServer, type AddressInfo } from 'node:net';
 import { promisify } from 'node:util';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 import { Adb, androidProvider, simulatorProvider } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 import { untilWithin } from './until.js';
@@ -54,6 +54,13 @@ describe.skipIf(!EMULATOR)('conditions on an emulator', () => {
   it('writes the rotation lock a turn sets down, keeps it past its connection, and puts it back at restore and the session end', async () => {
     const lock = () =>
       ['accelerometer_rotation', 'user_rotation'].map((k) => adb('settings', 'get', 'system', k));
+    // from auto-rotate on, as a person's phone often is: a lock put back where the lock was proves nothing
+    const [found = 'null'] = lock();
+    onTestFinished(() => {
+      if (found === 'null') adb('settings', 'delete', 'system', 'accelerometer_rotation');
+      else adb('settings', 'put', 'system', 'accelerometer_rotation', found);
+    });
+    adb('settings', 'put', 'system', 'accelerometer_rotation', '1');
     const was = lock();
     await call('set_device', { name: 'orientation', value: 'landscape_left', read: 'none' });
     await call('set_device', { name: 'orientation', value: 'portrait', read: 'none' });
