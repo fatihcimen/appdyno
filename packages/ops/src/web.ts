@@ -94,7 +94,9 @@ export async function webLines(
   if (!web || !view) return undefined;
   if (Date.now() < (rests.get(s) ?? 0)) return UNREAD;
   const read = async () => {
-    const pages = await web.pages(s.appId).catch(() => [] as WebPage[]);
+    // with no app selected, the app in front holds the web view: every app's inspector was asked, and one in the
+    // background the system has frozen answers none
+    const pages = await web.pages(s.appId ?? screen.foreground).catch(() => [] as WebPage[]);
     const page = pages.find((p) => p.visible) ?? pages[0];
     return page && ((await web.evaluate(page, READ_DOM).catch(() => undefined)) as Dom | undefined);
   };

@@ -46,6 +46,20 @@ describe("a screen's web lines", () => {
     }),
   );
 
+  it("ask the app in front for its page where no app is selected, not every app's inspector", async () => {
+    const asked: unknown[] = [];
+    const s = {
+      device: {
+        web: {
+          pages: (app: unknown) => (asked.push(app), Promise.resolve([])),
+          evaluate: () => Promise.resolve(undefined),
+        },
+      },
+    } as unknown as Session;
+    await webLines(s, { ...screen, foreground: 'com.front' }, (t) => t);
+    expect(asked).toEqual(['com.front']);
+  });
+
   it('leave out what the page holds past the web view, where a touch would land on something else', async () => {
     const el = (text: string, y: number) => ({ tag: 'a', text, x: 10, y, w: 100, h: 20 });
     const dom = {
