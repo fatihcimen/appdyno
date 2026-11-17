@@ -186,6 +186,23 @@ describe('an app just opened on a simulator', () => {
     expect(callNow).not.toHaveBeenCalled();
   });
 
+  it('started afresh under a system alert is left to the runner at once, as no wait brings it in front', async () => {
+    // the home screen stays in front under an alert over the app: 3 s and a look at the runner, before
+    const front = () => Promise.resolve('com.apple.springboard');
+    const prompt = { words: ['Allow “App” to use your location?'], buttons: [] };
+    const read = vi.fn(() => Promise.resolve({ refused: 'not-foreground', prompt }));
+    const direct = { reads: true, front, read, close: vi.fn() };
+    const simctl = Object.assign(new Listed(''), { restart: vi.fn(() => Promise.resolve()) });
+    const device = new IosSimulatorDevice(UDID, simctl, direct as never);
+    const callNow = vi.fn(() => Promise.reject(new Error('the runner is starting')));
+    Object.assign(device, { callNow });
+    const began = Date.now();
+    await device.apps.launchWith('dev.app', {});
+    expect(Date.now() - began).toBeLessThan(2_000);
+    expect(read).toHaveBeenCalledWith('com.apple.springboard');
+    expect(callNow).not.toHaveBeenCalled();
+  });
+
   it('is not waited for by the runner once the home screen stays and its process is gone', async () => {
     vi.useFakeTimers();
     const runner = vi.spyOn(

@@ -99,10 +99,23 @@ export async function untilOpened(app: string, name: string, looks: LinkLooks, m
 }
 
 const HOME_FRONT_MS = 3_000;
+/** The home screen in front this long in a launch is looked at for a system alert, which a launch never brings itself. */
+const ALERT_LOOK_MS = 300;
+
+/** Whether the home screen in front holds a system alert; a look that fails says no. */
+async function alertUp(direct: DirectSim) {
+  try {
+    const r = await direct.read(HOME_SCREEN_APP);
+    return 'refused' in r && !!r.prompt;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Whether the helper sees `app` come in front within `ms`. During a launch no app is primary, for seconds on a loaded
- * Mac; the home screen stays so under a system alert over the app, which only the runner can tell apart.
+ * Mac; the home screen stays so under a system alert over the app, which only the runner can tell apart: at one, no
+ * longer wait brings the app in front.
  */
 export async function helperSeesFront(direct: DirectSim, app: string, ms: number) {
   const end = Date.now() + ms;
@@ -111,7 +124,8 @@ export async function helperSeesFront(direct: DirectSim, app: string, ms: number
     const front = await direct.front().catch(() => undefined);
     if (front === app) return true;
     homeSince = front === HOME_SCREEN_APP ? (homeSince ?? Date.now()) : undefined;
-    if (homeSince !== undefined && Date.now() - homeSince > HOME_FRONT_MS) return false;
+    const home = homeSince === undefined ? 0 : Date.now() - homeSince;
+    if (home > HOME_FRONT_MS || (home > ALERT_LOOK_MS && (await alertUp(direct)))) return false;
     await sleep(20);
   }
   return false;
