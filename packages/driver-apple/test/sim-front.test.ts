@@ -72,6 +72,9 @@ describe('a running app on a simulator', () => {
     await expect(listed.pid(UDID, 'com.apple.Maps')).rejects.toThrow(
       'com.apple.Maps is not running',
     );
+    // one the list does not show, as from a folder it names otherwise, is asked of the simulator
+    const missing = parents.split('\n').slice(0, 2).join('\n');
+    expect(await new Listed(LISTING, '', missing).pid(UDID, 'com.apple.Preferences')).toBe(7712);
   });
 
   it('includes the home screen, which is a service with a label of its own', async () => {

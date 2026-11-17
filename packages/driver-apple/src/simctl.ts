@@ -192,7 +192,7 @@ export class Simctl {
    * launchctl's in the simulator, which spawns into it: 90 against 340 ms at load 22. That list tells an app installed
    * on this simulator by its folder in the simulator's own; a system app runs from the runtime's, as it does on every
    * simulator of that runtime, so it is told by its parent, the simulator's launchd_sim: launchctl's list took 0.5 to
-   * 1.2 s of each launch of one at load 30. Without that parent in the list it is asked of the simulator.
+   * 1.2 s of each launch of one at load 30. One not found so is asked of the simulator.
    */
   async pid(udid: string, bundle: string): Promise<number> {
     assertBundle(bundle);
@@ -200,11 +200,10 @@ export class Simctl {
     const own = app?.includes(`/Devices/${udid}/`)
       ? await this.processes()
       : app && ofSimulator(await this.processes(true), udid);
-    if (app && own !== undefined) {
-      const pid = pidOfApp(own, app);
-      if (!pid) throw notRunning(bundle);
-      return pid;
-    }
+    const seen = app && own !== undefined ? pidOfApp(own, app) : undefined;
+    if (seen) return seen;
+    // a system app missing there may run from a folder the list names otherwise: launchctl says whether it runs
+    if (app?.includes(`/Devices/${udid}/`)) throw notRunning(bundle);
     const out = await this.exec(['spawn', udid, 'launchctl', 'list']);
     // the home screen is a system service: it has a label of its own, with capitals its bundle id has not
     const listed = (l: string) =>
