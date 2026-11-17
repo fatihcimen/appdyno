@@ -412,8 +412,12 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
 
   it('opens a deep link into the app', async () => {
     await d.openUrl('appdyno-fixture://open/late', APP);
-    await new Promise((r) => setTimeout(r, 1_000));
-    expect(labels(await d.read(APP))).toContain('Clear');
+    // the link is handed over at once and the app pushes its screen when it gets to it: a hosted runner can take
+    // longer than a second, so the screen is waited for, not slept for
+    await vi.waitFor(async () => expect(labels(await d.read(APP))).toContain('Clear'), {
+      timeout: 10_000,
+      interval: 500,
+    });
   });
 
   // a code entry that takes keys without being a text field: no element reports the focus (XCUI's own
