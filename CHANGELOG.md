@@ -152,6 +152,9 @@ appdyno 1.3.0 renames its tools and does more with an app's network. The 48 tool
 
 ### Fixed
 
+- iOS: on a simulator, text typed by ref goes into the field it names when the keyboard moves the form. On a simulator on its side the keyboard lifted the form and brought the password field to where "Your name" had been read, and the text went into the password field with an answer that it had been typed. The field touched is now followed by what it is, at its place while it stands there and else by its focus, and read back so.
+- `inspect_app` `web_click` waits up to 1.5 s for its selector, as a tap by selector waits for its element: on iOS 27.2 a web view's page is listed while it is still about:blank, and a click right after the link that showed it found nothing.
+- Mac app: New Simulator offers every runtime of this Mac, two of one name too (iOS 27.2 and the iOS 27.2 of a single model). The menu kept one item of a name, so nothing was chosen and Create did nothing.
 - `measure_performance` `launch` with `mode: hot` or `warm` starts the app again only once the system has stopped it: on an emulator still pausing the app it answered `UNKNOWN` and measured nothing.
 - On Android, a turn of the screen that appdyno puts back, by `set_device` `restore`, at a flow's end or as its agent lets go, leaves auto-rotate as it was found, also on a phone that writes a rotation lock of its own after a turn (a Xiaomi REDMI 15C with HyperOS 3).
 - Android: an app brought to the front is answered once its window has grown to its place. A read waits while a window is drawn smaller than its size, sticks out of the display, or slides with nodes that have no place, so a tap by ref right after lands where it should.

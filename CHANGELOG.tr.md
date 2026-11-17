@@ -152,6 +152,9 @@ appdyno 1.3.0 araçlarına yeni adlar verir ve bir uygulamanın ağıyla daha fa
 
 ### Düzeltilenler
 
+- iOS: bir simulator'da ref ile yazılan metin, klavye formu kaydırdığında da adlandırdığı alana gider. Yan çevrilmiş bir simulator'da klavye formu yukarı kaldırıyor ve "Your name"in okunduğu yere parola alanını getiriyordu; metin, yazıldığı söylenerek parola alanına gidiyordu. Dokunulan alan artık ne olduğuyla izlenir: orada durdukça yerinde, yoksa odağıyla; ve öyle geri okunur.
+- `inspect_app` `web_click`, seçiciyle yapılan bir tap'in öğesini beklediği gibi seçicisini 1,5 sn'ye kadar bekler: iOS 27.2'de bir web view'in sayfası daha about:blank iken listelenir ve onu gösteren link'ten hemen sonraki bir tıklama hiçbir şey bulamıyordu.
+- Mac uygulaması: New Simulator, bu Mac'in her runtime'ını sunar; aynı adı taşıyan ikisini de (iOS 27.2 ve tek bir modelin iOS 27.2'si). Menü bir addan tek öğe tutuyordu; hiçbir şey seçilmiyor ve Create hiçbir şey yapmıyordu.
 - `measure_performance` `launch`, `mode: hot` ya da `warm` ile, uygulamayı ancak sistem onu durdurduktan sonra yeniden başlatır: uygulamayı hâlâ duraklatmakta olan bir emulator'da `UNKNOWN` yanıtı verip hiçbir şey ölçmüyordu.
 - Android'de appdyno'nun geri koyduğu bir ekran dönüşü (`set_device` `restore` ile, bir flow'un sonunda ya da agent'ı bırakırken) otomatik döndürmeyi bulduğu gibi bırakır; bir dönüşten sonra kendi döndürme kilidini yazan bir telefonda da (HyperOS 3'lü bir Xiaomi REDMI 15C).
 - Android: öne getirilen bir uygulama, penceresi yerine kadar büyüdükten sonra yanıtlanır. Bir pencere boyundan küçük çizilirken, ekranın dışına taşarken ya da yeri olmayan node'larla kayarken bir okuma bekler; böylece hemen ardından ref ile yapılan bir tap doğru yere varır.
