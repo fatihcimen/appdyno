@@ -221,7 +221,9 @@ export class TcpConnection {
       this.end('the phone closed the connection');
       return;
     }
-    if (data.length || flags & FIN) this.segment(ACK, this.seq, Buffer.alloc(0), false);
+    // a bare segment from before what was taken is the phone's keepalive, which resets the connection unanswered
+    const probe = !data.length && before(seq, this.rcv);
+    if (data.length || flags & FIN || probe) this.segment(ACK, this.seq, Buffer.alloc(0), false);
     this.flush();
   }
 

@@ -176,6 +176,15 @@ describe('TCP in this process', () => {
     expect(why).toEqual(['the phone closed the connection']);
   });
 
+  it("answers the phone's keepalive on a quiet connection, and not its plain acknowledgements", async () => {
+    const { stack, segment, port, ours, theirs, tcp } = await connected();
+    // the phone's probe: no data, one before what it has sent; unanswered, it resets the connection
+    stack.feed(segment(port, 1234, { seq: theirs - 1, ack: ours, flags: ACK }));
+    expect(tcp()).toEqual([expect.objectContaining({ flags: ACK, ack: theirs, seq: ours })]);
+    stack.feed(segment(port, 1234, { seq: theirs, ack: ours, flags: ACK }));
+    expect(tcp()).toHaveLength(1);
+  });
+
   it('says goodbye when it closes, and writes no more', async () => {
     const { c, tcp, sent } = await connected();
     c.close();
