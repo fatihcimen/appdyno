@@ -591,7 +591,9 @@ On Android it reads the app's process and the last one that died, by the pid exi
 
 Every simulator's reports are in one folder, so a simulator's are only those that name it, by the app's path or by the coalition its process ran in, which a system app's has too; the note says how many were left out and why. An iOS report is dated by the time it gives itself, as macOS moves an old report's file time on at each new crash once it keeps 25 of the app's, and an uncaught exception's is given by where it was thrown, not by the abort that ended the app. Secrets are redacted.
 
-On Android it also counts every exit the system keeps, by its reason in full, because an app that left by itself or was killed did not crash: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
+An iPhone's crash folder holds every process's reports, each named after its process, so only the app's are copied to this Mac: by the name of its bundle's folder, `Shop.app` for `Shop-…`. One of another app's process with that name, as every Flutter app's is `Runner`, is deleted as soon as it is read. An extension's reports are named after its own process, which the phone does not say, so they are not given on an iPhone. An app the phone does not have gets none, and the note says why. The first read after an update deletes what an earlier version copied of other processes.
+
+On Android only the app's dropbox entries are kept, in its crash file and in a `measure_performance` `exits` reading, though the dropbox lists every app's. It also counts every exit the system keeps, by its reason in full, because an app that left by itself or was killed did not crash: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
 
 ### Symbols for a release build
 

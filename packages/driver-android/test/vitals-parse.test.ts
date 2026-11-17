@@ -64,8 +64,14 @@ describe("what Play's definitions are read from", () => {
 
   it('counts no other app’s, and stands where the dropbox cannot be read', async () => {
     const other = filed(TOUCH).replace('Process: dev.appdyno.fixture', 'Process: com.other');
-    const { value } = await exits(device(other) as never, 'dev.appdyno.fixture');
+    const { value, raw } = await exits(
+      device(`${other}${filed('Broadcast of Intent')}`) as never,
+      'dev.appdyno.fixture',
+    );
     expect(value.held).toMatchObject({ anrs: 2, userAnrs: 1 });
+    // what is kept with the measurement is the app's alone
+    expect(raw).not.toContain('com.other');
+    expect(raw).toContain('Subject: Broadcast of Intent');
     const failing = {
       shell: (cmd: string) => {
         if (cmd.includes('dropbox')) return Promise.reject(new Error('no dropbox'));

@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   callSignal,
   stateDir,
@@ -86,6 +87,10 @@ export function parseIps(text: string): Ips | undefined {
   }
 }
 
+/** The app's own, or one of its extensions (a widget, a share sheet), named under its id. */
+const ofApp = (bundle: string | undefined, app: string) =>
+  bundle === app || !!bundle?.startsWith(`${app}.`);
+
 /** The reports of `q.app` in `dir`, newest first; `only` keeps a simulator's own (others run from their own folder). */
 export async function reportsIn(
   dir: string,
@@ -111,9 +116,9 @@ export async function reportsIn(
   const out: { time: number; report: CrashReport }[] = [];
   for (const f of files) {
     const r = parseIps(await readFile(f.file, 'utf8').catch(() => ''));
-    // the app's own extensions (a widget, a share sheet) are named under its id, and crash in its name
+    // the app's own extensions crash in its name
     const bundle = r?.bundle;
-    if (!r || !bundle || (bundle !== q.app && (q.own || !bundle.startsWith(`${q.app}.`)))) continue;
+    if (!r || !bundle || !ofApp(bundle, q.app) || (q.own && bundle !== q.app)) continue;
     // by the crash's own time: macOS at its limit moves an old report's file time on at each new crash
     if (q.since && r.time < q.since) continue;
     if (only && !only(r)) continue;
@@ -194,14 +199,19 @@ type PhoneFile = {
 /** What an app's end leaves on a phone: a crash (309, once 109), a resource limit (385). */
 const END_TYPES = new Set(['109', '309', '385']);
 
-/** Of the phone's crash folder, what can say how an app ended, newest first. */
-export function endReports(files: PhoneFile[], q: CrashesQuery): PhoneFile[] {
+/**
+ * Of the phone's crash folder, what can say how the app's process `name` ended, newest first. A phone names a report
+ * after its process: `Shop-2026-11-17-101500.ips`, and `Shop.cpu_resource-….ips` for a resource limit.
+ */
+export function endReports(files: PhoneFile[], q: CrashesQuery, name: string): PhoneFile[] {
   const at = (f: PhoneFile) => Date.parse(f.metadata?.lastModDate ?? '') || 0;
   return files
     .filter((f) => {
       const type = f.metadata?.extendedAttributes?.bug_type;
+      const file = basename(f.relativePath);
       return (
-        f.relativePath.endsWith('.ips') &&
+        (file.startsWith(`${name}-`) || file.startsWith(`${name}.`)) &&
+        file.endsWith('.ips') &&
         (!type || END_TYPES.has(type)) &&
         (!q.since || at(f) >= q.since)
       );
@@ -210,11 +220,6 @@ export function endReports(files: PhoneFile[], q: CrashesQuery): PhoneFile[] {
     .slice(0, MAX_OPENED);
 }
 
-/**
- * Copies the phone's reports here (a folder per phone), then reads them as a simulator's. One by one, from a
- * list: `devicectl device copy from` of the folder stops at the first file it cannot take, and iOS leaves such
- * files there (`19:24.spindump.txt`).
- */
 /** A folder may hold more than a reading opens. */
 const EXIT_REPORTS = 100;
 
@@ -251,28 +256,76 @@ export async function crashExits(
   };
 }
 
+/** Whether a copied report is the app's; another's is deleted. Another app's process may have its name: every Flutter app's is `Runner`. */
+async function keptIfOwn(file: string, app: string) {
+  if (ofApp(parseIps(await readFile(file, 'utf8').catch(() => ''))?.bundle, app)) return true;
+  await rm(file, { force: true });
+  return false;
+}
+
+/**
+ * A version before 1.3.0 copied every process's reports here: before the first read since, what is not the app's goes,
+ * once. Which other apps were asked about then was not kept, and what the phone still holds of one is copied again.
+ */
+async function sweptOnce(dir: string, app: string) {
+  const swept = join(dir, '.swept');
+  if (existsSync(swept)) return;
+  for (const n of readdirSync(dir, { recursive: true }) as string[])
+    if (n.endsWith('.ips')) await keptIfOwn(join(dir, n), app);
+  await writeFile(swept, '', { mode: 0o600 });
+}
+
+/**
+ * Copies the app's reports from the phone here (a folder per phone), then reads them as a simulator's. Only those named
+ * after its process, as the phone's folder holds every process's: an extension's are named after its own, which the
+ * phone does not say, so they are not copied. One by one, from a list: `devicectl device copy from` of the folder stops
+ * at the first file it cannot take, and iOS leaves such files there (`19:24.spindump.txt`).
+ */
 export async function phoneCrashes(ctl: Devicectl, q: CrashesQuery): Promise<CrashesAnswer> {
   const dir = join(stateDir(), 'crashes', ctl.udid);
   await mkdir(dir, { recursive: true, mode: 0o700 });
-  const on = ['--device', ctl.udid, '--domain-type', 'systemCrashLogs'];
-  const listed = await ctl.json(['device', 'info', 'files', ...on]);
-  const files = (listed.result as { files?: PhoneFile[] } | undefined)?.files ?? [];
-  for (const f of endReports(files, q)) {
-    callSignal()?.throwIfAborted();
-    const local = join(dir, f.relativePath);
-    if (existsSync(local)) continue;
-    await mkdir(dirname(local), { recursive: true, mode: 0o700 });
-    await ctl.json([
-      'device',
-      'copy',
-      'from',
-      ...on,
-      '--source',
-      f.relativePath,
-      '--destination',
-      local,
-    ]);
+  await sweptOnce(dir, q.app);
+  // a report waits apart until it is known to be the app's: what a process killed there left goes
+  for (const n of readdirSync(dir))
+    if (n.startsWith('.part-')) await rm(join(dir, n), { force: true });
+  const part = join(dir, `.part-${String(process.pid)}`);
+  // the app's process, as its bundle's folder is named (`Shop.app`), as on a simulator
+  const url = (await ctl.app(q.app))?.url;
+  const name = url && basename(fileURLToPath(url), '.app');
+  if (name) {
+    const on = ['--device', ctl.udid, '--domain-type', 'systemCrashLogs'];
+    const listed = await ctl.json(['device', 'info', 'files', ...on]);
+    const files = (listed.result as { files?: PhoneFile[] } | undefined)?.files ?? [];
+    try {
+      for (const f of endReports(files, q, name)) {
+        callSignal()?.throwIfAborted();
+        const local = join(dir, f.relativePath);
+        // shortcut: another app's report of the same process name is copied at each read, to be deleted again; keep a list of them if that is ever slow
+        if (existsSync(local)) continue;
+        await ctl.json([
+          'device',
+          'copy',
+          'from',
+          ...on,
+          '--source',
+          f.relativePath,
+          '--destination',
+          part,
+        ]);
+        if (!(await keptIfOwn(part, q.app))) continue;
+        await mkdir(dirname(local), { recursive: true, mode: 0o700 });
+        await rename(part, local);
+      }
+    } finally {
+      await rm(part, { force: true });
+    }
   }
-  const answer = { reports: await reportsIn(dir, q), source: 'devicectl systemCrashLogs' };
+  const answer = {
+    reports: await reportsIn(dir, q),
+    source: 'devicectl systemCrashLogs',
+    ...(!name && {
+      note: `${q.app} is not on this phone, and its reports are named after its process: none was copied`,
+    }),
+  };
   return q.symbols ? withSymbols(answer, q.symbols) : answer;
 }

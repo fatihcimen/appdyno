@@ -591,7 +591,9 @@ Android'de uygulamanın sürecini ve ölen son sürecini, exit info'nun verdiği
 
 Her simulator'ın raporları tek bir klasördedir, bu yüzden bir simulator'ınkiler yalnızca onu adlandıranlardır: uygulamanın yolundan ya da sürecinin içinde çalıştığı coalition'dan, ki bir sistem uygulamasınınkinde de vardır; not kaçının neden dışarıda bırakıldığını söyler. Bir iOS raporu kendi verdiği zamanla tarihlenir, çünkü macOS uygulamanın 25 raporunu tuttuktan sonra her yeni crash'te eski bir raporun dosya zamanını ileri alır; yakalanmamış bir istisnanın raporu da uygulamayı bitiren abort ile değil, istisnanın atıldığı yerle verilir. Gizli değerler çıkarılır.
 
-Android'de sistemin tuttuğu her çıkışı da nedenini eksiksiz yazarak sayar, çünkü kendiliğinden çıkan ya da öldürülen bir uygulama çökmemiştir: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
+Bir iPhone'un crash klasörü her sürecin raporlarını tutar ve her rapor kendi sürecinin adını taşır, bu yüzden bu Mac'e yalnızca uygulamanınkiler kopyalanır: bundle klasörünün adıyla, `Shop-…` için `Shop.app`. Aynı adlı başka bir uygulamanın sürecine ait bir rapor, ki her Flutter uygulamasınınki `Runner`'dır, okunur okunmaz silinir. Bir extension'ın raporları kendi sürecinin adını taşır ve telefon bunu söylemez, bu yüzden iPhone'da verilmezler. Telefonda olmayan bir uygulamaya hiç rapor verilmez, not nedenini söyler. Bir güncellemeden sonraki ilk okuma, önceki bir sürümün başka süreçlerden kopyaladıklarını siler.
+
+Android'de dropbox her uygulamanın kayıtlarını listelese de yalnızca uygulamanınkiler tutulur: crash dosyasında ve bir `measure_performance` `exits` okumasında. Sistemin tuttuğu her çıkışı da nedenini eksiksiz yazarak sayar, çünkü kendiliğinden çıkan ya da öldürülen bir uygulama çökmemiştir: `SIGNALED status 9`, `USER REQUESTED KILL BACKGROUND`, `EXIT_SELF status 3`.
 
 ### Bir release build için semboller
 

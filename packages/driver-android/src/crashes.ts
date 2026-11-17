@@ -85,12 +85,12 @@ export function exitCounts(exits: Exit[]): ExitCount[] {
 
 type Drop = { at: string; time: number; tag: string; text: string };
 
-/** The entries of `dumpsys dropbox --print <tags>` that are about `app`. */
+/** The entries of `dumpsys dropbox --print <tags>` that are about `app`: its processes (`app:push`), not `app.other`'s. */
 export function parseDropbox(text: string, app: string): Drop[] {
   return text.split(/^={10,}\s*$/m).flatMap((block) => {
     const h = /^\s*(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) (\w+) \(/.exec(block);
-    if (!h || !new RegExp(`^(Process|Package): ${app.replace(/\./g, '\\.')}\\b`, 'm').test(block))
-      return [];
+    const about = new RegExp(`^(Process|Package): ${app.replace(/\./g, '\\.')}(?=[:\\s]|$)`, 'm');
+    if (!h || !about.test(block)) return [];
     const at = must(h[1], 'a time');
     return [{ at, time: stampTime(at), tag: must(h[2], 'a tag'), text: block.trim() }];
   });

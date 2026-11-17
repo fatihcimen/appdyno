@@ -1,9 +1,17 @@
-import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assert, describe, expect, it } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { must, type CrashesQuery } from '@appdyno/core';
-import { crashExits, endReports, parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
+import {
+  crashExits,
+  endReports,
+  parseIps,
+  phoneCrashes,
+  reportsIn,
+  simulatorCrashes,
+} from '../src/crashes.js';
+import type { Devicectl } from '../src/devicectl.js';
 import { entriesOf, logShowArgs, placeLines } from '../src/logs.js';
 
 const UDID = '8BC57F11-901C-4DF6-A2B9-2A3B7DE1B79D';
@@ -57,22 +65,25 @@ describe('crash reports', () => {
     });
     const files = [
       file('19:24.spindump.txt', '2026-11-03T10:00:00Z'),
-      file('Analytics-1.ips.ca.synced', '2026-11-03T10:00:00Z', '211'),
-      file('SiriSearchFeedback-1.ips', '2026-11-03T10:00:00Z', '211'),
+      file('Fixture-1.ips.ca.synced', '2026-11-03T10:00:00Z', '211'),
+      file('Fixture-feedback.ips', '2026-11-03T10:00:00Z', '211'),
       file('Fixture-old.ips', '2026-11-01T10:00:00Z', '309'),
       file('Fixture-new.ips', '2026-11-03T10:00:00Z', '309'),
-      file('Retired/App-cpu.ips', '2026-11-02T10:00:00Z', '385'),
+      file('Retired/Fixture.cpu_resource-1.ips', '2026-11-02T10:00:00Z', '385'),
+      file('SpringBoard-1.ips', '2026-11-03T10:00:00Z', '309'),
+      file('FixtureKit-1.ips', '2026-11-03T10:00:00Z', '309'),
+      file('Retired/Other-Fixture-1.ips', '2026-11-03T10:00:00Z', '309'),
     ];
-    expect(endReports(files, { app: 'a', limit: 5 }).map((f) => f.relativePath)).toEqual([
+    const q = { app: 'a', limit: 5 };
+    expect(endReports(files, q, 'Fixture').map((f) => f.relativePath)).toEqual([
       'Fixture-new.ips',
-      'Retired/App-cpu.ips',
+      'Retired/Fixture.cpu_resource-1.ips',
       'Fixture-old.ips',
     ]);
-    expect(
-      endReports(files, { app: 'a', limit: 5, since: Date.parse('2026-11-02T12:00:00Z') }).map(
-        (f) => f.relativePath,
-      ),
-    ).toEqual(['Fixture-new.ips']);
+    const since = Date.parse('2026-11-02T12:00:00Z');
+    expect(endReports(files, { ...q, since }, 'Fixture').map((f) => f.relativePath)).toEqual([
+      'Fixture-new.ips',
+    ]);
   });
 
   it('reads what a .ips says', () => {
@@ -218,6 +229,122 @@ describe('crash reports', () => {
       "left out 1 of another simulator, and 1 that name no simulator, so none could be told to be this one's",
     );
     expect((await simulatorCrashes(UDID, { app: 'dev.none', limit: 5 }, dir)).note).toBeUndefined();
+  });
+});
+
+describe("an iPhone's crash reports", () => {
+  const PHONE = '00008110-000000000000001E';
+  const APPS: Record<string, string> = {
+    'dev.app': 'file:///private/var/containers/Bundle/Application/A/Fixture.app/',
+    'dev.two': 'file:///private/var/containers/Bundle/Application/B/Two%20Go.app/',
+  };
+  /** The phone's crash folder: every process's reports, by the bundle each is of. */
+  const ON_PHONE: Record<string, string> = {
+    'Fixture-2026-11-17-100000.ips': 'dev.app',
+    'Retired/Fixture.cpu_resource-2026-11-16-100000.ips': 'dev.app',
+    // another app's process of the same name
+    'Fixture-2026-11-17-110000.ips': 'dev.other',
+    'SpringBoard-2026-11-17-100000.ips': 'com.apple.springboard',
+    'FixtureKit-2026-11-17-100000.ips': 'dev.kit',
+    'Retired/MobileNotes-2026-11-16-100000.ips': 'com.apple.mobilenotes',
+    'Two Go-2026-11-17-100000.ips': 'dev.two',
+  };
+  let crashDir: string;
+  const files = (dir: string) => (readdirSync(dir, { recursive: true }) as string[]).sort();
+  /** `cut`: a report whose copy is written, then fails, as a read cut short. */
+  const phone = (cut?: string) => {
+    const pulled: string[] = [];
+    const ctl = {
+      udid: PHONE,
+      app: (b: string) => Promise.resolve(APPS[b] && { bundleIdentifier: b, url: APPS[b] }),
+      json: (args: string[]) => {
+        if (args[1] === 'info') {
+          const listed = Object.keys(ON_PHONE).map((relativePath) => ({
+            relativePath,
+            metadata: {
+              lastModDate: new Date().toISOString(),
+              extendedAttributes: { bug_type: '309' },
+            },
+          }));
+          return Promise.resolve({ result: { files: listed } });
+        }
+        const of = (flag: string) => must(args[args.indexOf(flag) + 1], flag);
+        pulled.push(of('--source'));
+        writeFileSync(of('--destination'), ips(must(ON_PHONE[of('--source')], 'a report'), ''));
+        return of('--source') === cut ? Promise.reject(new Error('cut')) : Promise.resolve({});
+      },
+    } as unknown as Devicectl;
+    return { ctl, pulled };
+  };
+
+  beforeEach(() => {
+    const state = mkdtempSync(join(tmpdir(), 'appdyno-phone-crashes-'));
+    vi.stubEnv('APPDYNO_STATE_DIR', state);
+    crashDir = join(state, 'crashes', PHONE);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("copies only the app's own, and writes no other process's", async () => {
+    const { ctl, pulled } = phone();
+    const a = await phoneCrashes(ctl, { app: 'dev.app', limit: 5 });
+    expect(pulled.sort()).toEqual([
+      'Fixture-2026-11-17-100000.ips',
+      'Fixture-2026-11-17-110000.ips',
+      'Retired/Fixture.cpu_resource-2026-11-16-100000.ips',
+    ]);
+    expect(files(crashDir)).toEqual([
+      '.swept',
+      'Fixture-2026-11-17-100000.ips',
+      'Retired',
+      'Retired/Fixture.cpu_resource-2026-11-16-100000.ips',
+    ]);
+    expect(a.reports).toHaveLength(2);
+    expect(a.note).toBeUndefined();
+    // what is held is not asked for again
+    const again = phone();
+    await phoneCrashes(again.ctl, { app: 'dev.app', limit: 5 });
+    expect(again.pulled).toEqual(['Fixture-2026-11-17-110000.ips']);
+  });
+
+  it('deletes, once, what a version before left of other processes, and keeps what was asked since', async () => {
+    mkdirSync(join(crashDir, 'Retired'), { recursive: true });
+    writeFileSync(join(crashDir, 'SpringBoard-old.ips'), ips('com.apple.springboard', ''));
+    writeFileSync(join(crashDir, 'Retired/MobileNotes-old.ips'), ips('com.apple.mobilenotes', ''));
+    writeFileSync(join(crashDir, 'Fixture-old.ips'), ips('dev.app', ''));
+    writeFileSync(join(crashDir, 'note.ips'), 'not a report');
+    await phoneCrashes(phone().ctl, { app: 'dev.app', limit: 5 });
+    expect(files(crashDir)).not.toContain('SpringBoard-old.ips');
+    expect(files(crashDir)).not.toContain('Retired/MobileNotes-old.ips');
+    expect(files(crashDir)).not.toContain('note.ips');
+    expect(files(crashDir)).toContain('Fixture-old.ips');
+    const two = phone();
+    const b = await phoneCrashes(two.ctl, { app: 'dev.two', limit: 5 });
+    expect(two.pulled).toEqual(['Two Go-2026-11-17-100000.ips']);
+    expect(b.reports).toHaveLength(1);
+    // the first app's stay
+    expect(files(crashDir)).toContain('Fixture-old.ips');
+    expect(files(crashDir)).toContain('Fixture-2026-11-17-100000.ips');
+  });
+
+  it('leaves no copy of a read cut short', async () => {
+    const { ctl } = phone('Fixture-2026-11-17-110000.ips');
+    await expect(phoneCrashes(ctl, { app: 'dev.app', limit: 5 })).rejects.toThrow('cut');
+    expect(files(crashDir).filter((n) => n.includes('110000') || n.startsWith('.part-'))).toEqual(
+      [],
+    );
+  });
+
+  it('copies nothing of an app the phone does not have, and says why', async () => {
+    const { ctl, pulled } = phone();
+    const a = await phoneCrashes(ctl, { app: 'dev.gone', limit: 5 });
+    expect(pulled).toEqual([]);
+    expect(a.reports).toEqual([]);
+    expect(a.note).toBe(
+      'dev.gone is not on this phone, and its reports are named after its process: none was copied',
+    );
+    expect(files(crashDir)).toEqual(['.swept']);
   });
 });
 

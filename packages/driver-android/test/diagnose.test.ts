@@ -328,6 +328,15 @@ describe('crashes', () => {
     const drops = parseDropbox(DROPBOX, 'dev.appdyno.fixture');
     expect(drops).toHaveLength(1);
     expect(drops[0]?.tag).toBe('data_app_crash');
+    const entry = (process: string) =>
+      `========================================\n2026-11-02 23:00:00 data_app_crash (text, 9 bytes)\nProcess: ${process}\n`;
+    const named = parseDropbox(
+      [entry('dev.appdyno.fixture:push'), entry('dev.appdyno.fixture.other')].join(''),
+      'dev.appdyno.fixture',
+    );
+    expect(named.map((d) => d.text)).toEqual([
+      '2026-11-02 23:00:00 data_app_crash (text, 9 bytes)\nProcess: dev.appdyno.fixture:push',
+    ]);
   });
 
   it('joins an exit with its stack and keeps to the time asked', () => {

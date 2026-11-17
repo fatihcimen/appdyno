@@ -213,7 +213,8 @@ export async function exits(
         ...(e.detail && { description: e.detail }),
       })),
     },
-    raw: `${raw}\n---\n${filed ?? ''}`,
+    // the dropbox lists every app's ANRs: only the app's are kept with the measurement
+    raw: `${raw}\n---\n${(anrFiled ?? []).map((d) => d.text).join('\n\n')}`,
     at: at(),
   };
 }
