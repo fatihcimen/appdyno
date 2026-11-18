@@ -2,7 +2,8 @@
 // and deletes after, whatever happened. It builds the runner and the fixture as scripts/ci.sh does, asks once whether
 // the simulator's helpers answer on this host, and where one does not it runs the cases by the runner alone and says so.
 // It writes what ran to .ci/smoke: report.json as vitest gives it, and device-summary.md, which names the device, its
-// OS, the Xcode and the date, the path the input and the reads took, and each suite's counts. Exits as vitest did, and 3
+// OS, the Xcode and the date, the path the input and the reads took, and each suite's counts; beside them, for each case
+// that failed, the screen and the runner's log as it failed (device-tests/failed-screen.ts). Exits as vitest did, and 3
 // where a case did not run, which vitest calls a pass. `.github/workflows/ci.yml` runs it; on a Mac, after `pnpm build`:
 //   node scripts/sim-smoke.mjs [a folder for what it writes, in place of .ci/smoke]
 // APPDYNO_SIM_DIRECT=off runs it by the runner alone on a Mac whose helpers answer, as a hosted runner's do not.
@@ -241,6 +242,7 @@ function main() {
       {
         ...env,
         APPDYNO_IOS_UDID: udid,
+        APPDYNO_SMOKE_OUT: out,
         ...(why ? { APPDYNO_SIM_DIRECT: 'off', APPDYNO_SIM_NO_DIRECT: why } : {}),
       },
     );

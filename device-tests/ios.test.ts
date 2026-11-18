@@ -414,9 +414,10 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   });
 
   it('opens a deep link into the app', async () => {
-    await d.openUrl('appdyno-fixture://open/late', APP);
-    // the link is handed over at once and the app pushes its screen when it gets to it: a hosted runner can take
-    // longer than a second, so the screen is waited for, not slept for
+    const answer = await d.openUrl('appdyno-fixture://open/late', APP);
+    // a link returns with its "Open in …?" answered and its app in front, by the runner once the app's screen moved;
+    // the screen it pushes may come a read later. Said for a failure, a read's or one that never answered in time
+    console.log(`the link answered ${JSON.stringify(answer ?? null)}`);
     await vi.waitFor(async () => expect(labels(await d.read(APP))).toContain('Clear'), {
       timeout: 10_000,
       interval: 500,
