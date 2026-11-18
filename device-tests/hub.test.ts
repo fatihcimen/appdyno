@@ -9,7 +9,7 @@ import {
 } from '../packages/core/src/index.js';
 import { simulatorProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
-import { runHub } from '../packages/hub/src/index.js';
+import { CREATE_REFUSED, runHub } from '../packages/hub/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
 import { untilWithin } from './until.js';
 
@@ -131,11 +131,16 @@ describe.runIf(udid)('the hub', () => {
       await picture('new');
       link.send({ op: 'poke', press: 'create', name: MADE });
       try {
-        // a simulator made would not be on the list the hub keeps to, so it makes none, and says why
+        // a simulator made would not be on the list the hub keeps to: the sheet says why as it opens, and Create makes none
         if (WHOLE) await until('the new simulator', named, WINDOW_MS);
         else
           await until('the refusal', () =>
-            sent.some((m) => m.op === 'note' && String(m.text).includes('allow list')),
+            sent.some(
+              (m) =>
+                m.op === 'hub' &&
+                (m.choices as Record<string, { refused?: string }> | undefined)?.simulator
+                  ?.refused === CREATE_REFUSED,
+            ),
           );
       } finally {
         if (named()) execFileSync('xcrun', ['simctl', 'delete', MADE], { stdio: 'ignore' });
