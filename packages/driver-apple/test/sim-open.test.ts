@@ -136,24 +136,89 @@ describe('a link on a simulator the helper does not read, by the runner', () => 
   /** A read of an iOS 27.2 simulator by the runner, with the alert up. */
   const read = (name: string) =>
     JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures', `${name}.json`), 'utf8')) as Tree;
-  const linked = (tree: Tree) => {
+  /** One window of `pkg` with a button of each label. */
+  const screen = (pkg: string, ...labels: string[]): Tree => ({
+    windows: [{ type: 1, pkg, layer: 0, b: [0, 0, 402, 874], active: true, focused: true }],
+    nodes: labels.map((d, i) => ({
+      p: -1,
+      w: 0,
+      c: 'Button',
+      d,
+      b: [16, 100 + 50 * i, 200, 140 + 50 * i],
+      f: 19,
+    })),
+    truncated: false,
+    elapsedMs: 0,
+    hash: labels.join(),
+  });
+  const delayed = screen(APP, 'Back', 'Loaded');
+  const late = screen(APP, 'Back', '0 ms', 'Clear');
+  /** The reads a link meets: `before` it, then what `after` gives of the taps so far and the time since the link. */
+  const linked = (before: Tree, after: (taps: number, ms: number) => Tree) => {
     const direct = { reads: false, front: () => Promise.resolve(undefined), close: vi.fn() };
     const d = new IosSimulatorDevice(UDID, quiet(), direct as never);
     const tap = vi.fn(() => Promise.resolve({}));
-    Object.assign(d, { target: () => Promise.resolve(), tree: () => Promise.resolve(tree), tap });
+    let sent: number | undefined;
+    const tree = () => {
+      if (sent === undefined) {
+        sent = Date.now();
+        return Promise.resolve(before);
+      }
+      return Promise.resolve(after(tap.mock.calls.length, Date.now() - sent));
+    };
+    Object.assign(d, { target: () => Promise.resolve(), tree, tap });
     vi.spyOn(d.apps, 'listApps').mockResolvedValue([{ id: APP, name: 'appdyno fixture' }]);
-    return { d, tap };
+    const open = async () => {
+      const r = await d.openUrl('appdyno-fixture://open/late', APP);
+      return { r, ms: Date.now() - (sent ?? 0) };
+    };
+    return { open, tap };
   };
+  const prompt = read('ios-open-in-prompt');
 
   it(
     'answers "Open in …?" by the app\'s name, and never its own notification prompt',
     fakeTimed(async () => {
-      const asks = linked(read('ios-open-in-prompt'));
-      await asks.d.openUrl('appdyno-fixture://open/list', APP);
+      const asks = linked(delayed, (taps) => (taps ? late : prompt));
+      expect((await asks.open()).r).toEqual({ answered: 'appdyno fixture' });
       expect(asks.tap).toHaveBeenCalledExactlyOnceWith({ x: 275, y: 474 }, { settle: {} });
-      const permission = linked(read('ios-notification-prompt'));
-      await permission.d.openUrl('appdyno-fixture://open/list', APP);
+      const permission = linked(delayed, () => read('ios-notification-prompt'));
+      await permission.open();
       expect(permission.tap).not.toHaveBeenCalled();
+    }),
+  );
+
+  it(
+    'answers a prompt that comes seconds after the link, and returns with its screen',
+    fakeTimed(async () => {
+      const slow = linked(delayed, (taps, ms) => (taps ? late : ms < 4_000 ? delayed : prompt));
+      expect((await slow.open()).r).toEqual({ answered: 'appdyno fixture' });
+      expect(slow.tap).toHaveBeenCalledOnce();
+    }),
+  );
+
+  it(
+    "keeps looking where the prompt's answer left the app's screen as it was, and says it answered",
+    fakeTimed(async () => {
+      const lost = linked(delayed, (taps) => (taps ? delayed : prompt));
+      const { r, ms } = await lost.open();
+      expect(r).toEqual({ answered: 'appdyno fixture' });
+      expect(ms).toBeGreaterThanOrEqual(10_000);
+      expect(lost.tap).toHaveBeenCalledOnce();
+    }),
+  );
+
+  it(
+    "returns once the app's screen moved, with no prompt to wait for, and not before a prompt could come",
+    fakeTimed(async () => {
+      const taken = linked(delayed, () => late);
+      const { r, ms } = await taken.open();
+      expect(r).toBeUndefined();
+      expect(ms).toBeLessThan(2_000);
+      expect(taken.tap).not.toHaveBeenCalled();
+      // a screen that moved by itself at once, its prompt half a second after the link
+      const early = linked(delayed, (taps, at) => (taps ? late : at < 500 ? late : prompt));
+      expect((await early.open()).r).toEqual({ answered: 'appdyno fixture' });
     }),
   );
 });

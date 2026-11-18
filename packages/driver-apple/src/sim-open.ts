@@ -1,10 +1,10 @@
 import { type DeviceQueue, must, sleep } from '@appdyno/core';
-import type { ActParams } from '@appdyno/protocol';
-import { HOME_SCREEN_APP, openButton } from './platform-screen.js';
+import type { ActParams, Point, Tree } from '@appdyno/protocol';
+import { HOME_SCREEN_APP, openButton, promptButton } from './platform-screen.js';
 import type { Simctl } from './simctl.js';
 import type { DirectSim } from './simdirect.js';
 import { schemesAndName } from './sim-links.js';
-import type { Prompt } from './simtree.js';
+import { type Prompt, sameTree } from './simtree.js';
 
 const openers = new Map<string, Promise<{ schemes: string[]; name: string }>>();
 
@@ -96,6 +96,46 @@ export async function untilOpened(app: string, name: string, looks: LinkLooks, m
     await sleep(20);
   }
   return { stayed: undefined, answered: answered > 0 };
+}
+
+/** What a link's look by reads asks: the screen, and a touch on its prompt with the settle after it. */
+export type LinkReads = { read: () => Promise<Tree>; tap: (at: Point) => Promise<unknown> };
+
+/** A read with only `app`'s own window: a prompt or a banner over it is no change of its screen. */
+const ownOf = (t: Tree, app: string): Tree => ({
+  ...t,
+  nodes: t.nodes.filter((n) => t.windows[n.w]?.pkg === app),
+});
+
+/**
+ * Until `app`'s own window differs from `before`, its read before the link, up to `ms` and no sooner than
+ * `PROMPT_COMES_MS`, as a screen that moves by itself would end it before its prompt came; its "Open in …?" answered on
+ * the way if it names it (`name`), not twice in `PROMPT_AGAIN_MS`. A prompt that comes after a look that ended at a time
+ * stays up, over the app and through its terminate and launch, and the link waits behind it; an answered prompt is no
+ * screen of the link yet. Whether a prompt was answered.
+ */
+export async function untilTaken(
+  app: string,
+  name: string,
+  before: Tree,
+  looks: LinkReads,
+  ms: number,
+) {
+  const start = Date.now();
+  const was = ownOf(before, app);
+  let answered = 0;
+  while (Date.now() < start + ms) {
+    const now = await looks.read();
+    const open = promptButton(now, name);
+    const moved = !open && !sameTree(was, ownOf(now, app));
+    if (moved && Date.now() - start >= PROMPT_COMES_MS) return answered > 0;
+    if (open && Date.now() - answered > PROMPT_AGAIN_MS) {
+      await looks.tap(open);
+      answered = Date.now();
+    }
+    await sleep(150);
+  }
+  return answered > 0;
 }
 
 const HOME_FRONT_MS = 3_000;

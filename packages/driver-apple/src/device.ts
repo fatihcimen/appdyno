@@ -36,6 +36,7 @@ import {
   type Modifier,
   type AuditType,
   type AuditResult,
+  type Point,
 } from '@appdyno/protocol';
 import { IosRunnerLauncher } from './runner.js';
 import { keepTreeDump } from './tree-dump.js';
@@ -44,10 +45,10 @@ import {
   SPOTLIGHT_APP,
   keyboardCloser,
   iosScreen,
-  promptButton,
   staticTexts,
 } from './platform-screen.js';
 import type { SettingsLinks } from './settings-pages.js';
+import { untilTaken } from './sim-open.js';
 import { assertBundle, runsBy } from './simctl.js';
 
 const SETTINGS_APP = 'com.apple.Preferences';
@@ -60,6 +61,9 @@ const KEYS_AFTER_MS = 2_000;
 
 /** The app goes 0.9 to 1.8 s after home, at load 7 to 40 on a simulator, by either input. */
 const LEAVES_MS = 5_000;
+
+/** How long a link to an app is watched for its prompt and its screen; the screen's first change ends it. */
+const LINK_LOOK_MS = 10_000;
 
 /** What differs between a simulator and a phone: whether it is up, app lifecycle, links, location. */
 export type IosDeviceOps = {
@@ -344,24 +348,20 @@ export abstract class IosDevice extends RpcDevice implements Device {
 
   /**
    * Opens a link; `pkg` names the app that should handle it (it becomes the target). A link to an app
-   * first asks "Open in …?": with the app named, the prompt's Open button is tapped.
+   * first asks "Open in …?": with the app named, the prompt's Open button is tapped, and the link returns once the
+   * app's screen moved (`untilTaken`), or after its look.
    */
   async openUrl(url: string, pkg?: string) {
     if (pkg) await this.target(pkg);
+    const before = pkg && this.ops.linkPrompt ? await this.tree() : undefined;
     await this.queue.run(() => this.ops.openUrl(url, pkg));
-    if (!pkg || !this.ops.linkPrompt) return;
+    if (!pkg || !before) return;
     const name = await this.appName(pkg).catch(() => pkg);
-    // shortcut: the prompt is looked for during 3 s after every link to an app; a link without one costs that time
-    const end = Date.now() + 3_000;
-    while (Date.now() < end) {
-      const open = promptButton(await this.tree(), name);
-      if (open) {
-        // returns once the link's screen has come
-        await this.tap(open, { settle: {} });
-        return { answered: name };
-      }
-      await sleep(150);
-    }
+    // shortcut: a link that changes nothing on the app's screen costs the whole look, until the app can say it took one
+    const looks = { read: () => this.tree(), tap: (at: Point) => this.tap(at, { settle: {} }) };
+    return (await untilTaken(pkg, name, before, looks, LINK_LOOK_MS))
+      ? { answered: name }
+      : undefined;
   }
 
   /** What every kind of iOS device has; a subclass adds what it knows of itself. */
