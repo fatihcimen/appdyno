@@ -125,6 +125,50 @@ private final class FormattingField {
     }
 }
 
+final class RegainFocusTests: XCTestCase {
+    private struct Outcome {
+        let held: Bool
+        let taps: Int
+        let now: Double
+    }
+
+    /// A field that holds the focus from `heldAt` on, once tapped `tapsToTake` times; the clock moves only by pauses.
+    private func regain(heldAt: Double?, tapsToTake: Int = 1, over: Bool = false) -> Outcome {
+        var now = 0.0, taps = 0
+        let held = (try? regainFocus(waitS: 2, FocusProbe(
+            holds: { taps >= tapsToTake && heldAt.map { now >= $0 } == true },
+            tap: { taps += 1 }, clock: { now }, pause: { now += $0 }, over: { over }))) ?? false
+        return Outcome(held: held, taps: taps, now: now)
+    }
+
+    func testAFieldThatHoldsTheFocusIsNotTapped() {
+        let held = regain(heldAt: 0, tapsToTake: 0)
+        XCTAssertTrue(held.held)
+        XCTAssertEqual(held.taps, 0)
+    }
+
+    func testAFieldThatLetGoOfItIsTappedOnceAndWaitedFor() {
+        let back = regain(heldAt: 0.5)
+        XCTAssertTrue(back.held)
+        XCTAssertEqual(back.taps, 1)
+        XCTAssertGreaterThanOrEqual(back.now, 0.5)
+    }
+
+    func testAFieldThatDoesNotTakeItBackIsGivenUpAtTheWait() {
+        let lost = regain(heldAt: nil)
+        XCTAssertFalse(lost.held)
+        XCTAssertEqual(lost.taps, 1)
+        XCTAssertGreaterThanOrEqual(lost.now, 2)
+        XCTAssertLessThan(lost.now, 2.2)
+    }
+
+    func testNothingIsWaitedForOnceTheCallerNoLongerWaits() {
+        let gone = regain(heldAt: 1, over: true)
+        XCTAssertFalse(gone.held)
+        XCTAssertEqual(gone.now, 0)
+    }
+}
+
 final class TypeEachTests: XCTestCase {
     private func typeEach(_ text: String, into field: FormattingField, over: @escaping () -> Bool = { false }) {
         try? RunnerCore.typeEach(text, waitS: 1.5, KeysProbe(send: field.type, read: field.read, clock: { field.now },

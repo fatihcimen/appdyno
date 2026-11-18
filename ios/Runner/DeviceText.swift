@@ -69,17 +69,18 @@ extension Device {
         keyboardUp(app, job: job)
         try job.stillWaited(before: "the text was typed")
         var verified: Bool? = false
+        let input = FieldInput(field: field, snap: snap, app: app, job: job, focusS: timeout)
         if field.exists {
-            if replace { clear(field, in: app) }
-            if !replace || field.exists { try type(text, into: field, perSecond: 60) }
+            if replace, try !clear(input) { throw Device.lostFocus }
+            if !replace || field.exists { try type(text, into: input, perSecond: 60) }
             // a secure field reads back as dots: waiting for it to hold the text took the whole echo wait, 1.5 s
             // a field that formats what is typed (a phone number) drops a key that comes while it rewrites itself,
-            // one of ten at 60 a second: where what it must hold is known, it is typed again, a key at a time
+            // one of ten at 60 a second: where what it must hold is known, it is typed again, a key at a time, once
+            // it holds the focus again: a field that let go of it reads back as other
             let known = replace || before.isEmpty
             verified = secure ? nil : echoed(field, job: job, givesUp: known, holds: holds)
-            if retypes(verified: verified, known: known, text: text), field.exists, !job.over {
-                clear(field, in: app)
-                let keys = KeysProbe(send: { try self.type($0, into: field, perSecond: 15) },
+            if retypes(verified: verified, known: known, text: text), field.exists, !job.over, try clear(input) {
+                let keys = KeysProbe(send: { try self.type($0, into: input, perSecond: 15) },
                                      read: { self.currentText(field) }, clock: { Date().timeIntervalSince1970 },
                                      pause: { Thread.sleep(forTimeInterval: $0) }, over: { job.over })
                 try typeEach(text, waitS: Device.echoWaitS, keys)
@@ -90,17 +91,63 @@ extension Device {
         let verdict = secure ? nil : verified
         let submits = submitsText(asked: request.submit, verified: verdict)
         // a field that is gone has taken the text and submitted it already
-        if submits, field.exists, !job.over { field.typeText("\n") }
+        if submits, field.exists, !job.over { try type("\n", into: input, perSecond: 60) }
         let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         let wire = textWire(focusMs: focusMs, verified: verdict, notSubmitted: request.submit && !submits)
         return out.merging(wire) { $1 }
     }
 
-    /// shortcut: with the synthesizer gone XCUI's typing writes plain text into the test's log and result bundle
-    private func type(_ text: String, into field: XCUIElement, perSecond: UInt64) throws {
+    /// The field keys go to: its element, the snapshot that found its focus, its app, the request, and how long a tap
+    /// that gives it the focus again is waited for.
+    struct FieldInput {
+        let field: XCUIElement
+        let snap: XCUIElementSnapshot
+        let app: XCUIApplication
+        let job: Job
+        let focusS: Double
+    }
+
+    static let lostFocus = AgentError(
+        "NO_FOCUS", "the field let go of the keyboard focus, and a tap did not give it back",
+        hint: "read the screen, then tap the field and type again"
+    )
+
+    /// Keys by the synthesizer, which records no failure whatever has the focus. shortcut: with the synthesizer gone
+    /// XCUI's typing writes plain text into the test's log and result bundle, and goes only to a field that holds the
+    /// focus, as with none it records a failure that ends the runner's test.
+    private func type(_ text: String, into input: FieldInput, perSecond: UInt64) throws {
         if try !EventShim.type(text, orientation: Device.keysOrientation(), perSecond: perSecond) {
-            field.typeText(text)
+            guard holdsFocus(input) else { throw Device.lostFocus }
+            input.field.typeText(text)
         }
+    }
+
+    /// Whether the field holds the keyboard focus now: by its identifier where it has one (one query), else by its
+    /// place.
+    private func holdsFocus(_ input: FieldInput) -> Bool {
+        let snap = input.snap
+        guard !snap.identifier.isEmpty else { return focusedField(input.app)?.snap.frame == snap.frame }
+        return input.app.descendants(matching: snap.elementType).matching(identifier: snap.identifier)
+            .matching(NSPredicate(format: "hasKeyboardFocus == true")).firstMatch.exists
+    }
+
+    /// Whether the field holds the focus as keys go to it, tapped once and waited for where it let go of it
+    /// (`regainFocus`), its keyboard waited for after such a tap.
+    private func focused(_ input: FieldInput) throws -> Bool {
+        var tapped = false
+        let frame = input.snap.frame
+        let held = try regainFocus(waitS: input.focusS, FocusProbe(
+            holds: { self.holdsFocus(input) },
+            tap: {
+                NSLog("appdyno runner: the field let go of the keyboard focus: it is tapped again")
+                try input.job.stillWaited(before: "the field was tapped again")
+                self.point(frame.midX, frame.midY).tap()
+                tapped = true
+            },
+            clock: { Date().timeIntervalSince1970 }, pause: { Thread.sleep(forTimeInterval: $0) },
+            over: { input.job.over }))
+        if held, tapped { keyboardUp(input.app, job: input.job) }
+        return held
     }
 
     /**
@@ -130,15 +177,18 @@ extension Device {
     private func typeUnfocused(_ request: TextRequest, into app: XCUIApplication, job: Job,
                                focusMs: Int) throws -> [String: Any] {
         let orientation = Device.keysOrientation()
+        // XCUI's typing with no element reporting the focus records a failure that ends the runner's test
+        let noFocus = AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first")
         if try !EventShim.type(request.text, orientation: orientation) {
-            guard app.keyboards.firstMatch.exists else {
-                throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first")
-            }
+            guard app.keyboards.firstMatch.exists, focusedField(app) != nil else { throw noFocus }
             app.typeText(request.text)
         }
         if request.submit {
             try job.stillWaited(before: "the Enter")
-            if try !EventShim.type("\n", orientation: orientation) { app.typeText("\n") }
+            if try !EventShim.type("\n", orientation: orientation) {
+                guard focusedField(app) != nil else { throw noFocus }
+                app.typeText("\n")
+            }
         }
         let out = try after(request.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         return out.merging(textWire(focusMs: focusMs, verified: nil)) { $1 }
@@ -146,14 +196,18 @@ extension Device {
 
     /// Clears what the text replaces: all of it selected and deleted at once, as deleting a formatting field's
     /// characters one by one moves its cursor and scrambles what is typed after (live: a phone number typed out of
-    /// order).
-    private func clear(_ field: XCUIElement, in app: XCUIApplication) {
-        typeKey("a", .command, in: app)
-        field.typeText(XCUIKeyboardKey.delete.rawValue)
-        if let left = currentText(field), !left.isEmpty {
+    /// order). The focus is made sure of before the selection and before the delete: a hosted Mac's field had let go of
+    /// it there, and XCUI's delete ended the runner. False where it did not come back.
+    private func clear(_ input: FieldInput) throws -> Bool {
+        guard try focused(input) else { return false }
+        typeKey("a", .command, in: input.app)
+        guard try focused(input) else { return false }
+        try type(XCUIKeyboardKey.delete.rawValue, into: input, perSecond: 60)
+        if let left = currentText(input.field), !left.isEmpty {
             NSLog("appdyno runner: select all left %d characters, deleted one by one", left.count)
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count))
+            try type(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count), into: input, perSecond: 60)
         }
+        return true
     }
 
     /// A field that just took the focus may not take key commands before its keyboard is up.

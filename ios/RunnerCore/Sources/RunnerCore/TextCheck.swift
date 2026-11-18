@@ -24,6 +24,30 @@ public func retypes(verified: Bool?, known: Bool, text: String) -> Bool {
     verified == false && known && !text.contains(where: \.isNewline)
 }
 
+/// What `regainFocus` asks of its caller: whether the field holds the keyboard focus, a tap on it, the time in seconds,
+/// a pause, and whether the caller no longer waits.
+public struct FocusProbe {
+    public let holds: () -> Bool
+    public let tap: () throws -> Void
+    public let clock: () -> Double
+    public let pause: (Double) -> Void
+    public let over: () -> Bool
+}
+
+/// Whether the field holds the keyboard focus as keys go to it: one that let go of it is tapped once and waited for,
+/// `waitS` at most. XCUI's typing into a field without the focus records a failure that ends the runner's test, and
+/// the synthesizer's keys go to another field or nowhere: a hosted Mac's field lost it before its text was cleared.
+public func regainFocus(waitS: Double, _ field: FocusProbe) throws -> Bool {
+    if field.holds() { return true }
+    try field.tap()
+    let end = field.clock() + waitS
+    while !field.holds() {
+        if field.clock() >= end || field.over() { return false }
+        field.pause(0.08)
+    }
+    return true
+}
+
 /// What `typeEach` asks of its caller: a key typed, the field's text (nil: it is gone), the time in seconds, a pause,
 /// and whether the caller no longer waits.
 public struct KeysProbe {
