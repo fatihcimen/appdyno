@@ -429,4 +429,15 @@ describe('what the app shows over its screen', () => {
       ),
     ).toBeUndefined();
   });
+
+  it('knows a launcher by its package', () => {
+    for (const pkg of [
+      'com.google.android.apps.nexuslauncher',
+      'com.android.launcher3',
+      'com.sec.android.app.launcher',
+      'com.miui.home',
+    ])
+      expect(androidScreen.homeScreen?.(pkg), pkg).toBe(true);
+    expect(androidScreen.homeScreen?.('dev.app')).toBe(false);
+  });
 });

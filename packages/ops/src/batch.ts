@@ -47,6 +47,10 @@ type Planned =
 const answerText = (r: ToolResult) =>
   r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
 
+/** What a tap on an icon of the home screen adds to its answer, once a call. */
+const LAUNCH_HINT =
+  'launch_app opens an app more steadily than its icon: it waits for the app in front, and settles';
+
 /** What a step names its element by, as its refusal says it: a ref, or a selector. */
 const targetOf = (st: Step | undefined) =>
   st && 'ref' in st && st.ref
@@ -138,6 +142,14 @@ export function stepsOp(
       /** What was last known in front, through the steps that read nothing. */
       let seen = s.fresh?.foreground;
       const waits = shownByWaits(clean);
+      let hinted = false;
+      /** A step's answer, with what a tap on an icon of the home screen says once. */
+      const told = (st: Step, said: string, fg: string | undefined) => {
+        const home = st.action === 'tap' && !!fg && !!s.device.platformScreen.homeScreen?.(fg);
+        if (!home || hinted) return said;
+        hinted = true;
+        return `${said}; ${LAUNCH_HINT}`;
+      };
       for (const [i, p] of plan.entries()) {
         const last = i === plan.length - 1;
         const name = p.tool;
@@ -213,7 +225,7 @@ export function stepsOp(
               });
             if (x.screen && st.action === 'wait_for' && !st.gone)
               waits.passed(targetOf(st), i + 1, x.screen);
-            done.push(`${i + 1}. ${x.done}`);
+            done.push(`${i + 1}. ${told(st, x.done, fg)}`);
             continue;
           }
           let stepDone = '';
@@ -222,6 +234,7 @@ export function stepsOp(
           let back: ((x: Screen) => boolean) | undefined;
           let at: Point | undefined;
           let found: Screen | undefined;
+          const fg = front ?? seen;
           const r = await act(
             s,
             reads,
@@ -241,7 +254,7 @@ export function stepsOp(
           );
           if (found && st.action === 'wait_for' && !st.gone)
             waits.passed(targetOf(st), i + 1, found);
-          done.push(`${i + 1}. ${answerText(r)}`);
+          done.push(`${i + 1}. ${told(st, answerText(r), fg)}`);
           if (last) ending = r;
           front = r.data.foreground;
         } catch (e) {

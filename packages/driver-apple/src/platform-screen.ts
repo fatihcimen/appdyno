@@ -242,6 +242,8 @@ export const iosScreen: PlatformScreen = {
     return region && sheet && { kind: 'sheet', rect: sheet, close: SHEET_CLOSES };
   },
 
+  homeScreen: (pkg) => pkg === HOME_SCREEN_APP,
+
   /** The navigation bars across the screen that begin where the status bar ends, at most as tall as it gets. */
   topBars(elements) {
     return elements.flatMap((e, i) =>

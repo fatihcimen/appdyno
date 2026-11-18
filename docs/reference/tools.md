@@ -321,7 +321,7 @@ With `file` it saves the picture at full size, or as wide as `width` asks, and s
 
 `run_steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It stops at the first failure, says which step and why, and shows the screen as the call's `read` asks: what differs from the screen shown last, all of it, or, with `none`, nothing past the failing step's own line. A step that is no tool refuses the whole call before anything is done, and says so.
 
-A step refused because its target is not there, after a wait in the same call showed that target, says what came between on the next line: `id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4`, as an app that moves on by itself after its screen held still.
+A step refused because its target is not there, after a wait in the same call showed that target, says what came between on the next line: `id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4`, as an app that moves on by itself after its screen held still. A tap on the home screen, as on an app's icon there, adds once a call that `launch_app` opens an app more steadily, as it waits for the app in front and settles.
 
 `check_element` with `timeoutMs` and selectors wait on the device, so the tree crosses the wire only when the screen changed.
 

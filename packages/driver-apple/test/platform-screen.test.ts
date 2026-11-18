@@ -332,4 +332,9 @@ describe('what the app shows over its screen', () => {
     expect(over('form-letters-keyboard')).toBeUndefined();
     expect(over('list-under-status-bar')).toBeUndefined();
   });
+
+  it('knows the home screen by its app', () => {
+    expect(iosScreen.homeScreen?.('com.apple.springboard')).toBe(true);
+    expect(iosScreen.homeScreen?.('dev.appdyno.fixture')).toBe(false);
+  });
 });

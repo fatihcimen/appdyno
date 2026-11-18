@@ -28,6 +28,8 @@ const APP_WINDOW = 1;
 const SHEET_SCRIM = ':id/touch_outside';
 const SHEET = ':id/design_bottom_sheet';
 const CLOSES = 'close it (back, or a tap outside) or act in it';
+// shortcut: a launcher by its package's name, as AOSP's, Pixel's, Samsung's and Xiaomi's are; ask the system for HOME when one is missed
+const LAUNCHER = /launcher|^com\.miui\.home$/i;
 
 /**
  * A window that stands clear of the screen's sides and below the status bar, as a dialog's does: an activity's reaches
@@ -143,4 +145,6 @@ export const androidScreen: PlatformScreen = {
       ? { kind: 'dialog', rect: { x: l, y: t, width: r - l, height: b - t }, close: CLOSES }
       : undefined;
   },
+
+  homeScreen: (pkg) => LAUNCHER.test(pkg),
 };

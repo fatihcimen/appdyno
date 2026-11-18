@@ -60,6 +60,8 @@ export type PlatformScreen = {
   readonly lateAfterLaunch?: boolean;
   /** The app's own sheet or dialog over the rest of its screen; a system alert is `systemAlert`'s. */
   overlay?(tree: Tree, elements: UiElement[]): Overlay | undefined;
+  /** The app that shows the home screen, where a tap on an icon opens another app. */
+  homeScreen?(pkg: string): boolean;
 };
 
 /** What makes a tree a screen: its platform's rules, and the app it is read for. */

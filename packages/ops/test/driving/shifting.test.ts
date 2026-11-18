@@ -143,3 +143,27 @@ describe('what came between two steps', () => {
     }),
   );
 });
+
+describe('a tap on an icon of the home screen', () => {
+  it('says once a call that launch_app opens an app more steadily', async () => {
+    const d = new FakeDevice();
+    d.fixture = recorded('android-home');
+    d.foreground = () => Promise.resolve('com.google.android.apps.nexuslauncher');
+    const { call } = await connect(d, {
+      defaults: { app: 'com.google.android.apps.nexuslauncher' },
+    });
+    const r = await call('run_steps', {
+      steps: [
+        { tool: 'tap_screen', x: 540, y: 1200 },
+        { tool: 'tap_screen', x: 540, y: 1200 },
+      ],
+      read: 'none',
+    });
+    const hint =
+      'launch_app opens an app more steadily than its icon: it waits for the app in front, and settles';
+    expect(r.text.split('\n').slice(0, 2)).toEqual([
+      `1. tapped 540,1200; ${hint}`,
+      '2. tapped 540,1200',
+    ]);
+  });
+});

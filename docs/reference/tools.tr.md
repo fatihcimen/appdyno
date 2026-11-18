@@ -321,7 +321,7 @@ Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyle
 
 `run_steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir. İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı çağrının `read`'inin istediği gibi gösterir: son gösterilen ekrandan farkını, tamamını ya da `none` ile başarısız adımın kendi satırından başka hiçbir şeyi. Araç olmayan bir adım, hiçbir şey yapılmadan bütün çağrıyı reddettirir ve yanıt bunu söyler.
 
-Aynı çağrıdaki bir bekleme hedefini gösterdikten sonra hedefi orada olmadığı için reddedilen bir adım, aradan ne geçtiğini sonraki satırda söyler: `id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4`; ekranı durulduktan sonra kendiliğinden ilerleyen bir uygulamada olduğu gibi.
+Aynı çağrıdaki bir bekleme hedefini gösterdikten sonra hedefi orada olmadığı için reddedilen bir adım, aradan ne geçtiğini sonraki satırda söyler: `id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4`; ekranı durulduktan sonra kendiliğinden ilerleyen bir uygulamada olduğu gibi. Ana ekrana, oradaki bir uygulama simgesine olduğu gibi, bir dokunuş, çağrı başına bir kez, `launch_app`'in bir uygulamayı daha sağlam açtığını ekler, çünkü uygulama öne gelene ve ekran durulana kadar bekler.
 
 `timeoutMs` ile `check_element` ve seçiciler cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir.
 
