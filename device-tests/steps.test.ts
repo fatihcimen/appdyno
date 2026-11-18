@@ -2,7 +2,13 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
+import {
+  Adb,
+  androidProvider,
+  simulatorProvider,
+  Simctl,
+  type AndroidDevice,
+} from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
@@ -63,6 +69,103 @@ function stepsOf(get: () => Call) {
   });
 }
 
+/** The delay an iOS fixture's page moves on after, by its own link: none, its 300 ms. */
+const iosDelay = (get: () => Call) => (ms?: number) =>
+  get()('open_link', { url: `appdyno-fixture://cost/moves_on/${String(ms ?? 0)}` });
+
+/**
+ * Steps on screens that change under them: a sheet that opens with its page, and a page that moves on by itself after
+ * it appears, `delay` setting how long after (none: the fixture's 300 ms).
+ */
+function shiftsOf(get: () => Call, delay: (ms?: number) => Promise<unknown>) {
+  const call: Call = (n, a) => get()(n, a);
+  const fresh = async () => {
+    await call('manage_app', { action: 'stop' });
+    ok(await call('launch_app'));
+  };
+
+  it('says first that a sheet over the app stands between a step and its target', async () => {
+    await fresh();
+    ok(await call('open_link', { url: 'appdyno-fixture://open/sheet' }));
+    const r = await call('run_steps', {
+      steps: [{ tool: 'tap_screen', selector: { id: 'next_button' } }],
+      read: 'none',
+    });
+    expect(r.text).toMatch(
+      /^NOT_FOUND: 1\. tap_screen failed, the rest were not run: a (bottom )?sheet is open over the app: "Choose a plan"; close it \(.+\) or act in it; no element matches id="next_button"/,
+    );
+  });
+
+  it('passes no wait on a screen on its way out, and says what came between', async () => {
+    await fresh();
+    const r = await call('run_steps', {
+      steps: [
+        { tool: 'open_link', url: 'appdyno-fixture://open/moves_on' },
+        { tool: 'check_element', selector: { id: 'begin_button' }, timeoutMs: 3000 },
+        { tool: 'take_screenshot' },
+        { tool: 'tap_screen', selector: { id: 'begin_button' } },
+      ],
+      read: 'none',
+    });
+    console.log(r.text);
+    expect(r.error).toBe(true);
+    // the page moved on by itself, in the link's settle, in the wait, or after it
+    if (/^2\. id="begin_button" shown$/m.test(r.text))
+      expect(r.text).toContain(
+        'id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4',
+      );
+    else expect(r.text).toMatch(/^2\. check_element failed.*"Details"/m);
+  });
+
+  it('says a page that held through the wait moved on before a later step', async () => {
+    await fresh();
+    await delay(1_500);
+    try {
+      const r = await call('run_steps', {
+        steps: [
+          { tool: 'open_link', url: 'appdyno-fixture://open/moves_on' },
+          { tool: 'check_element', selector: { id: 'begin_button' }, timeoutMs: 3000 },
+          // the page it opens holds the old one in its read as it slides in, on iOS
+          {
+            tool: 'check_element',
+            selector: { id: 'begin_button' },
+            check: 'absent',
+            timeoutMs: 5000,
+          },
+          { tool: 'tap_screen', selector: { id: 'begin_button' } },
+        ],
+        read: 'none',
+      });
+      expect(r.text.split('\n').slice(1, 5)).toEqual([
+        '2. id="begin_button" shown',
+        '3. id="begin_button" gone',
+        expect.stringMatching(/^4\. tap_screen failed, the rest were not run: no element matches/),
+        'id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4',
+      ]);
+    } finally {
+      await delay();
+    }
+  });
+
+  it('says once that launch_app opens an app more steadily than its icon', async () => {
+    await fresh();
+    ok(await call('press_key', { key: 'home' }));
+    const r = ok(
+      await call('run_steps', {
+        steps: [
+          { tool: 'tap_screen', selector: { text: 'appdyno fixture' } },
+          // the fixture's home, which a stop and a launch left it on
+          { tool: 'check_element', selector: { text: 'Form' }, timeoutMs: 5000 },
+        ],
+        read: 'none',
+      }),
+    );
+    expect(r.text).toMatch(
+      /^1\. tapped .*appdyno fixture"; launch_app opens an app more steadily than its icon: it waits for the app in front, and settles$/m,
+    );
+  });
+}
+
 describe.skipIf(!ANDROID)('steps on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
@@ -71,6 +174,15 @@ describe.skipIf(!ANDROID)('steps on Android', () => {
   });
   afterAll(() => o.ctx.close());
   stepsOf(() => o.call);
+  shiftsOf(
+    () => o.call,
+    async (ms) =>
+      ((await o.ctx.session()).device as AndroidDevice).shell(
+        ms === undefined
+          ? `run-as ${APP} rm -f files/moves_on_ms`
+          : `run-as ${APP} sh -c 'mkdir -p files; echo ${String(ms)} > files/moves_on_ms'`,
+      ),
+  );
 });
 
 describe.skipIf(!SIMULATOR)('steps on a simulator', () => {
@@ -82,6 +194,10 @@ describe.skipIf(!SIMULATOR)('steps on a simulator', () => {
   }, 300_000);
   afterAll(() => o.ctx.close());
   stepsOf(() => o.call);
+  shiftsOf(
+    () => o.call,
+    iosDelay(() => o.call),
+  );
 });
 
 describe.skipIf(!IPHONE)('steps on an iPhone', () => {
@@ -96,4 +212,8 @@ describe.skipIf(!IPHONE)('steps on an iPhone', () => {
     o.ctx.close();
   }, 60_000);
   stepsOf(() => o.call);
+  shiftsOf(
+    () => o.call,
+    iosDelay(() => o.call),
+  );
 });
