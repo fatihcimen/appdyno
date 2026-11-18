@@ -74,12 +74,15 @@ extension Device {
             if !replace || field.exists { try type(text, into: field, perSecond: 60) }
             // a secure field reads back as dots: waiting for it to hold the text took the whole echo wait, 1.5 s
             // a field that formats what is typed (a phone number) drops a key that comes while it rewrites itself,
-            // one of ten at 60 a second: where what it must hold is known, it is typed again, slower
+            // one of ten at 60 a second: where what it must hold is known, it is typed again, a key at a time
             let known = replace || before.isEmpty
             verified = secure ? nil : echoed(field, job: job, givesUp: known, holds: holds)
-            if verified == false, known, field.exists, !job.over {
+            if retypes(verified: verified, known: known, text: text), field.exists, !job.over {
                 clear(field, in: app)
-                try type(text, into: field, perSecond: 15)
+                let keys = KeysProbe(send: { try self.type($0, into: field, perSecond: 15) },
+                                     read: { self.currentText(field) }, clock: { Date().timeIntervalSince1970 },
+                                     pause: { Thread.sleep(forTimeInterval: $0) }, over: { job.over })
+                try typeEach(text, waitS: Device.echoWaitS, keys)
                 verified = echoed(field, job: job, givesUp: false, holds: holds)
             }
         }
@@ -101,19 +104,22 @@ extension Device {
     }
 
     /**
-     * Whether the field holds the text once the keys are handled, within the echo wait: a field that formats what is
-     * typed takes a moment more. `givesUp`: one whose text has held still for half a second will not; nil: the field is
+     * Whether the field holds the text once the keys are handled: a field that formats what is typed takes a moment
+     * more, and a loaded Mac's app takes its keys in long after they went. The wait lasts while the text keeps
+     * changing, until it has held still for the echo wait (`givesUp`: half a second), counted from the read that last
+     * saw it change, as one read of a slow app took most of a second, and for `echoMostS` at most; nil: the field is
      * gone (a code entry that submitted itself took the text).
      */
     private func echoed(_ field: XCUIElement, job: Job, givesUp: Bool, holds: (String) -> Bool) -> Bool? {
-        let end = Date().addingTimeInterval(Device.echoWaitS)
+        let stillS = givesUp ? 0.5 : Device.echoWaitS
+        let end = Date().addingTimeInterval(Device.echoMostS)
         var last = currentText(field)
-        var still = Date()
-        while let now = last, !holds(now), Date() < end, !job.over {
-            if givesUp, Date().timeIntervalSince(still) >= 0.5 { return false }
+        var changed = Date()
+        while let now = last, !holds(now), Date().timeIntervalSince(changed) < stillS, Date() < end, !job.over {
             Thread.sleep(forTimeInterval: 0.05)
+            let readAt = Date()
             let next = currentText(field)
-            if next != last { still = Date() }
+            if next != last { changed = readAt }
             last = next
         }
         return last.map(holds)

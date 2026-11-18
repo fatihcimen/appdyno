@@ -32,6 +32,9 @@ import XCTest
     static let animationWaitS = 1.0
     /// How long typed text has to show in its field before it counts as not gone in.
     static let echoWaitS = 1.5
+    /// The most a read-back waits on a field whose text keeps changing: a loaded Mac's app took keys in for seconds
+    /// after they went, and a field that changes by itself would hold it to the request's deadline.
+    static let echoMostS = 10.0
     /// After this much of a read, no other group of a control's copies is asked of XCUI: each query walks the app's
     /// whole tree, 0.1 to 0.4 s on a real app's home grid.
     static let copiesAskS = 0.5

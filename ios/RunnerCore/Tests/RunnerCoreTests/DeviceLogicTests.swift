@@ -84,6 +84,79 @@ final class TextCheckTests: XCTestCase {
         XCTAssertTrue(holdsText("(599) 999", before: "(599)", text: "999", replace: false))
         XCTAssertFalse(holdsText("(599) 999-99", before: "", text: "5999999900", replace: true))
     }
+
+    func testTextReadBackAsOtherIsTypedAgainOnlyWhereNothingCanHaveBeenSent() {
+        XCTAssertTrue(retypes(verified: false, known: true, text: "5999999900"))
+        // a secure field has no verdict, and a field that held other text before has no known whole
+        XCTAssertFalse(retypes(verified: nil, known: true, text: "hunter2"))
+        XCTAssertFalse(retypes(verified: false, known: false, text: "abc"))
+        XCTAssertFalse(retypes(verified: true, known: true, text: "abc"))
+        // its Return may have sent the form already
+        XCTAssertFalse(retypes(verified: false, known: true, text: "kapı\n"))
+        XCTAssertFalse(retypes(verified: false, known: true, text: "a\r\nb"))
+    }
+}
+
+/// A field that writes its digits as a phone number, rewriting itself `rewriteS` after each key it takes and dropping
+/// a key that comes meanwhile; it answers a read once its rewrite is done, as an app answers a snapshot on its main
+/// thread.
+private final class FormattingField {
+    var now = 0.0
+    private var digits = ""
+    private var busyUntil = 0.0
+    private let rewriteS: Double
+    private(set) var sent: [String] = []
+
+    init(rewriteS: Double) { self.rewriteS = rewriteS }
+
+    func type(_ keys: String) {
+        sent.append(keys)
+        for key in keys {
+            if now >= busyUntil, key.isNumber {
+                digits.append(key)
+                busyUntil = now + rewriteS
+            }
+        }
+    }
+
+    func read() -> String {
+        now = max(now, busyUntil)
+        return digits.isEmpty ? "" : "(\(digits))"
+    }
+}
+
+final class TypeEachTests: XCTestCase {
+    private func typeEach(_ text: String, into field: FormattingField, over: @escaping () -> Bool = { false }) {
+        try? RunnerCore.typeEach(text, waitS: 1.5, KeysProbe(send: field.type, read: field.read, clock: { field.now },
+                                                             pause: { field.now += $0 }, over: over))
+    }
+
+    func testAFieldThatRewritesItselfSlowerThanTheKeysComeLosesNoneTypedOneByOne() {
+        // the keys at 15 a second, as the runner typed them again: a rewrite of 0.1 s dropped every second one
+        let fixed = FormattingField(rewriteS: 0.1)
+        for key in "5999999900" {
+            fixed.type(String(key))
+            fixed.now += 1.0 / 15
+        }
+        XCTAssertNotEqual(fixed.read(), "(5999999900)")
+        let field = FormattingField(rewriteS: 0.1)
+        typeEach("5999999900", into: field)
+        XCTAssertEqual(field.read(), "(5999999900)")
+        XCTAssertEqual(field.sent.count, 10)
+    }
+
+    func testAKeyTheFieldNeverShowsSendsTheRestAtOnce() {
+        let field = FormattingField(rewriteS: 0.01)
+        typeEach("5a12", into: field)
+        XCTAssertEqual(field.sent, ["5", "a", "12"])
+        XCTAssertGreaterThanOrEqual(field.now, 1.5)
+    }
+
+    func testNothingMoreGoesOnceTheCallerNoLongerWaits() {
+        let field = FormattingField(rewriteS: 0.01)
+        typeEach("123", into: field, over: { field.sent.count >= 1 })
+        XCTAssertEqual(field.sent, ["1"])
+    }
 }
 
 final class RepeatedControlTests: XCTestCase {
