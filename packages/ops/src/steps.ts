@@ -28,6 +28,7 @@ import { scrollingFor } from './scroll.js';
 import { checksFor, selectorOf } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
 import { aim, missed, NO_MATCH_HINT, pick, wordsOf, type Aim, type Aimed } from './targets.js';
+import { wentAgain } from './between.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 export { NO_MATCH_WAIT_MS } from './targets.js';
@@ -82,6 +83,8 @@ type Done = {
   found?: boolean;
   back?: ((x: Screen) => boolean) | undefined;
   at?: Point;
+  /** What a wait found its element on. */
+  screen?: Screen;
 };
 
 /** A touch's options, compared with the read a selector found each of its targets on. */
@@ -101,7 +104,7 @@ type Kit = {
   missing: (
     s: Session,
     screen: Screen,
-    a: { gone: boolean; selector?: SelectorOf | undefined },
+    a: { gone: boolean; selector?: SelectorOf | undefined; seen?: boolean },
   ) => { over: string; said: string; hint: string };
 };
 
@@ -288,14 +291,18 @@ async function call(
       const w = await checks.waitFor(s, st);
       const what = st.ref ?? showSelector(selectorOf(st.selector) ?? {});
       if (!w.met) {
-        const why = kit.missing(s, w.screen, st);
+        const why = kit.missing(s, w.screen, { ...st, seen: !!w.seen });
         throw new ToolError(
           `${why.over}${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms${why.said}`,
           'CHECK_FAILED',
           why.hint,
         );
       }
-      return { r: treeIfAsked(opts, w.screen), done: `${what} ${st.gone ? 'gone' : 'shown'}` };
+      return {
+        r: treeIfAsked(opts, w.screen),
+        done: `${what} ${st.gone ? 'gone' : 'shown'}`,
+        screen: w.screen,
+      };
     }
     case 'assert': {
       const c = await checks.checkNow(s, st);
@@ -348,7 +355,7 @@ export function stepsFor(
       : missed(s, screen, a.selector?.text ?? a.selector?.id, words);
     return {
       over: why.over,
-      said: why.said,
+      said: `${a.seen ? wentAgain(screen, clean) : ''}${why.said}`,
       hint: why.hint ?? 'call again to wait longer, or read the screen',
     };
   };

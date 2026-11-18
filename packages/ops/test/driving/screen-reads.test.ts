@@ -34,7 +34,7 @@ describe('waiting on the device', () => {
     };
   }
 
-  it('crosses the wire only for a changed screen, and reads no tree itself', async () => {
+  it('crosses the wire only for a changed screen, and reads no tree itself, nor to hold what it found', async () => {
     const d = new Waiting();
     const { call } = await connect(d);
     await call('read_screen');
@@ -43,7 +43,8 @@ describe('waiting on the device', () => {
     d.screen = 'home';
     const r = await call('check_element', { selector: { text: 'Bilgiler' }, timeoutMs: 5_000 });
     expect(r.data.met).toBe(true);
-    expect(d.waits).toEqual([undefined, 'a']);
+    // the last: the quiet window after the screen it found, which stayed
+    expect(d.waits).toEqual([undefined, 'a', 'b']);
     expect(d.calls.filter((c) => c.name === 'tree')).toHaveLength(1);
   });
 

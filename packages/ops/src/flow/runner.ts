@@ -211,7 +211,11 @@ export function flowRunner(
     if (!st.selector || LOOKS_ONLY.has(st.action) || st.action === 'scroll_to') return;
     await keyboardFirst(s, st.selector);
     // no error here: if it never comes, the op itself refuses, with the nearest candidates
-    await steps.waitFor(s, { selector: st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
+    await steps.waitFor(
+      s,
+      { selector: st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS },
+      false,
+    );
     await steps.holdsStill(s, st.selector);
   };
 

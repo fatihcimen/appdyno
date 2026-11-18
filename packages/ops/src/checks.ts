@@ -1,11 +1,14 @@
 import {
   attributesOf,
+  frontChanged,
+  frontOf,
   must,
   selectIn,
   type Screen,
   type ScreenElement,
   type Selector as SelectorOf,
 } from '@appdyno/core';
+import { SETTLE_DEFAULT } from '@appdyno/protocol';
 import type { z } from 'zod';
 import { overApp } from './between.js';
 import type { ServerContext } from './context.js';
@@ -19,6 +22,17 @@ export const UNREAD = 'read_screen reads it once more and says what the device a
 
 /** How long a check watches with no time of its own. */
 const WATCH_CHECK_MS = 2_000;
+
+/**
+ * Whether what a wait found on `first` holds through the settle's quiet window: still there on the screen after it, with
+ * the same app and system windows in front and no window sliding. A screen whose content still moves, as a banner, holds.
+ */
+async function held(s: Session, first: Screen, there: (x: Screen) => boolean, end: number) {
+  const now = await s.after(first, Math.min(SETTLE_DEFAULT.quietMs, Math.max(0, end - Date.now())));
+  if (!now) return { held: false, screen: first };
+  const same = !frontChanged(frontOf(first.tree), frontOf(now.tree));
+  return { held: there(now) && same && !now.tree.moving, screen: now };
+}
 
 /** A selector that names something: its words, with no key set to nothing. */
 export const selectorOf = (a: SelectorOf | undefined): SelectorOf | undefined =>
@@ -150,10 +164,15 @@ export function checksFor({
     return { screen, done: `check passed: ${v.why}` };
   };
 
-  /** Waits for an element to show or go, on the device where its agent can. */
+  /**
+   * Waits for an element to show or go, on the device where its agent can. One shown counts once it holds through the
+   * settle's quiet window, as a frame of a screen on its way in or out does not; `seen`: one that was shown and went
+   * before it held. `hold: false`: what a touch looks for, which holds still before it by itself.
+   */
   const waitFor = async (
     s: Session,
     a: { ref?: string; selector?: SelectorOf; gone: boolean; timeoutMs: number },
+    hold = true,
   ) => {
     const sel = selectorOf(a.selector);
     if (!a.ref && !sel)
@@ -166,11 +185,25 @@ export function checksFor({
       (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, must(sel, 'a selector')))[
         sel?.index ?? 0
       ];
-    const { screen, met } = await s.until((x) => !!found(x) !== a.gone, a.timeoutMs);
-    if (!screen)
-      throw new ToolError('the screen could not be read: nothing to look in', 'NOT_FOUND');
-    if (a.gone && met) unread(s, a.ref ?? showSelector(must(sel, 'a selector')));
-    return { screen, met, found: found(screen) };
+    const end = Date.now() + a.timeoutMs;
+    let seen: Screen | undefined;
+    for (;;) {
+      const { screen, met } = await s.until(
+        (x) => !!found(x) !== a.gone,
+        Math.max(0, end - Date.now()),
+      );
+      if (!screen)
+        throw new ToolError('the screen could not be read: nothing to look in', 'NOT_FOUND');
+      if (a.gone && met) unread(s, a.ref ?? showSelector(must(sel, 'a selector')));
+      if (!met || a.gone || !hold) return { screen, met, found: found(screen), seen };
+      const now = await held(s, screen, (x) => !!found(x), end);
+      // at the end of the time one still there counts: a window that never rests is no reason to fail
+      if (now.held || Date.now() >= end) {
+        const there = found(now.screen);
+        return { screen: now.screen, met: !!there, found: there, seen: there ? undefined : screen };
+      }
+      seen = screen;
+    }
   };
 
   return { checkNow, waitFor };

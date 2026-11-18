@@ -75,17 +75,38 @@ export class Session {
           if (this.wordless) return undefined;
           const r = await this.device.waitChange(since, ms).catch(() => undefined);
           if (!r?.tree) return r && { sig: r.sig, unchanged: true };
-          // no app window: a dark screen, which only the device's own read wakes
-          const now = r.tree.windows.some((w) => w.type === 1)
-            ? await this.seen(r.tree)
-            : await this.read().catch(() => undefined);
-          if (now) this.remember(now);
+          const now = await this.waited(r.tree);
+          if (now) this.signed.set(now, r.sig);
           return { sig: r.sig, screen: now };
         },
       },
       met,
       timeoutMs,
     );
+  }
+
+  /** What the device's wait said of the screens it gave: a wait from one crosses no tree while it stays. */
+  private readonly signed = new WeakMap<Screen, string>();
+
+  /** A tree a wait gave, as a screen; with no app window a dark screen, which only the device's own read wakes. */
+  private async waited(tree: Tree) {
+    const now = tree.windows.some((w) => w.type === 1)
+      ? await this.seen(tree)
+      : await this.read().catch(() => undefined);
+    if (now) this.remember(now);
+    return now;
+  }
+
+  /**
+   * The screen `ms` after `first`, by the device's own wait where it gave `first`: one that stayed is `first`, and no
+   * tree crosses for it. Else a read; undefined where that failed.
+   */
+  async after(first: Screen, ms: number): Promise<Screen | undefined> {
+    const sig = this.signed.get(first);
+    const r = sig && (await this.device.waitChange(sig, ms).catch(() => undefined));
+    if (r) return r.tree ? this.waited(r.tree) : first;
+    await pause(ms);
+    return this.read().catch(() => undefined);
   }
 
   /** This session's reads until the layout has held for `quietMs`, at most `maxMs`: see `settleBy`. */

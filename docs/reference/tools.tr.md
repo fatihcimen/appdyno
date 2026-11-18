@@ -321,6 +321,8 @@ Bir ekran görüntüsünün yanıtı, pikselinin nereye dokunulacağını söyle
 
 `run_steps`, ekranlar arasında en fazla 30 adım çalıştırır. Bir ref ya da seçicinin yalnızca kendi adımı çalıştığında var olması gerekir. İlk başarısızlıkta durur, hangi adımda ve neden olduğunu söyler ve ekranı çağrının `read`'inin istediği gibi gösterir: son gösterilen ekrandan farkını, tamamını ya da `none` ile başarısız adımın kendi satırından başka hiçbir şeyi. Araç olmayan bir adım, hiçbir şey yapılmadan bütün çağrıyı reddettirir ve yanıt bunu söyler.
 
+Aynı çağrıdaki bir bekleme hedefini gösterdikten sonra hedefi orada olmadığı için reddedilen bir adım, aradan ne geçtiğini sonraki satırda söyler: `id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4`; ekranı durulduktan sonra kendiliğinden ilerleyen bir uygulamada olduğu gibi.
+
 `timeoutMs` ile `check_element` ve seçiciler cihazda bekler, böylece ağaç bağlantı üzerinden yalnızca ekran değiştiğinde gönderilir.
 
 ### Uygulama bir işlemin altında ölürse
@@ -334,6 +336,8 @@ Bir saniyeden uzun süren bir işlemde uygulamanın süreci izlenir ve süreç g
 ### Beklemeler ve seçiciler
 
 `check_element`, açıklamasının söylediği gibi, bir çağrıda en fazla 15000 ms bekler; bir argümanın sınırını aşan bir sayı, ipucunda sınırıyla reddedilir. `check` `moves`, öğeyi ya da öğe verilmezse bütün ekranı `timeoutMs` boyunca, verilmezse 2000 ms, izler ve `expect: false` ile yalnızca kıpırdamadığında geçer; `equals`, bir `text` denetiminin beklediği metindir, `expect: false` ise her denetimin tersini ister.
+
+Bir öğenin görünmesini bekleyen bir bekleme, öğe durulmanın sessiz penceresi olan 200 ms'den sonra, önde aynı pencerelerle ve Android'de kayan bir pencere olmadan hâlâ oradaysa geçer: gelmekte ya da gitmekte olan bir ekranın bir karesi hiçbir beklemeyi geçirmez. Duran bir ekranda bu, sessiz pencereyi ve bir bekleme ya da okuma ekler: 2026-11-18'de tek başına bir bekleme, bir API 36 emulator'ünde önce 13 ms sürerken 226 ms, bir iOS 26.5 simulator'ünde önce 20 ms sürerken 251 ms sürdü, host load 10 ile 24 arasındaydı. Öğesinin yerleşmeden gittiğini gören bir bekleme bunu söyler: `it was shown, then the screen changed to "Details"`. İçeriği durmadan kıpırdayan bir ekran, bir banner gibi, öğe kaldıkça yerleşmiş sayılır.
 
 Bir seçici, onu alan her araçta ve adımda, aralarında `read_screen` ve `check_element` de olmak üzere, `selector`'a girer, `{"tool":"tap_screen","selector":{"text":"OK"}}` gibi: sözcükleri en üstte verildiğinde, ipucunda çağrı bu biçimde gösterilerek reddedilir.
 

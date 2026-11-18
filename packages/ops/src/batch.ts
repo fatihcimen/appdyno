@@ -14,9 +14,11 @@ import {
   pidInAnswer,
 } from './app-death.js';
 import type { ServerContext } from './context.js';
+import { shownByWaits } from './between.js';
+import { selectorOf } from './checks.js';
 import { renamedHint } from './renamed.js';
 import { ActionOut } from './schemas.js';
-import { LOOKS_ONLY, Read, Step } from './step-schemas.js';
+import { LOOKS_ONLY, Read, showSelector, Step } from './step-schemas.js';
 import { hintWithScreen, type Steps } from './steps.js';
 import { NOT_A_STEP } from './tool-kinds.js';
 import {
@@ -44,6 +46,14 @@ type Planned =
 
 const answerText = (r: ToolResult) =>
   r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
+
+/** What a step names its element by, as its refusal says it: a ref, or a selector. */
+const targetOf = (st: Step | undefined) =>
+  st && 'ref' in st && st.ref
+    ? st.ref
+    : st && 'selector' in st && st.selector
+      ? showSelector(selectorOf(st.selector) ?? {})
+      : undefined;
 
 /** Whether a step looks at the screen, so that the step before it must have settled. */
 const readsScreen = (st: Step | undefined) =>
@@ -127,6 +137,7 @@ export function stepsOp(
       let began = since;
       /** What was last known in front, through the steps that read nothing. */
       let seen = s.fresh?.foreground;
+      const waits = shownByWaits(clean);
       for (const [i, p] of plan.entries()) {
         const last = i === plan.length - 1;
         const name = p.tool;
@@ -200,6 +211,8 @@ export function stepsOp(
                 clean,
                 cleanLog,
               });
+            if (x.screen && st.action === 'wait_for' && !st.gone)
+              waits.passed(targetOf(st), i + 1, x.screen);
             done.push(`${i + 1}. ${x.done}`);
             continue;
           }
@@ -208,6 +221,7 @@ export function stepsOp(
           let said = LOOKS_ONLY.has(st.action);
           let back: ((x: Screen) => boolean) | undefined;
           let at: Point | undefined;
+          let found: Screen | undefined;
           const r = await act(
             s,
             reads,
@@ -217,6 +231,7 @@ export function stepsOp(
               said ||= x.found === true;
               back = x.back;
               at = x.at;
+              found = x.screen;
               return x.r;
             },
             () => stepDone,
@@ -224,6 +239,8 @@ export function stepsOp(
             (x) => back?.(x) ?? true,
             () => at,
           );
+          if (found && st.action === 'wait_for' && !st.gone)
+            waits.passed(targetOf(st), i + 1, found);
           done.push(`${i + 1}. ${answerText(r)}`);
           if (last) ending = r;
           front = r.data.foreground;
@@ -235,12 +252,14 @@ export function stepsOp(
           const appDied = own
             ? undefined
             : await diedUnder(s, was.app, screen?.foreground, was.pid, since, clean, was.up);
+          const between = waits.since(targetOf(p.st), i + 1, e.code, screen);
           throw new ToolError(
             [
               ...done,
               own
                 ? `${i + 1}. ${e.message}\nthe app died in step ${i + 1}, ${name}: the rest were not run`
                 : `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
+              ...(between ? [between] : []),
               ...(appDied ? [`${diedLine(appDied)}, by step ${i + 1}`] : []),
               // as the call asked to read: what differs from the screen shown last, all of it, or none of it
               ...(shown ? [left(s, shown, read === 'diff' ? 'diff' : 'full')] : []),

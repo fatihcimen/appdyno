@@ -321,6 +321,8 @@ With `file` it saves the picture at full size, or as wide as `width` asks, and s
 
 `run_steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It stops at the first failure, says which step and why, and shows the screen as the call's `read` asks: what differs from the screen shown last, all of it, or, with `none`, nothing past the failing step's own line. A step that is no tool refuses the whole call before anything is done, and says so.
 
+A step refused because its target is not there, after a wait in the same call showed that target, says what came between on the next line: `id="begin_button" was shown at step 2, and the screen changed to "Details" before step 4`, as an app that moves on by itself after its screen held still.
+
 `check_element` with `timeoutMs` and selectors wait on the device, so the tree crosses the wire only when the screen changed.
 
 ### When the app dies under an action
@@ -334,6 +336,8 @@ An action still running after a second has its app's process watched, and is ref
 ### Waits and selectors
 
 `check_element` waits 15000 ms at most a call, as its description says, and a number past an argument's limit is refused with the limit in the hint. `check` `moves` watches the element, or the whole screen, for `timeoutMs`, 2000 ms unless given, and with `expect: false` passes only where it keeps still; `equals` is the text a `text` check wants, and `expect: false` asks the opposite of any check.
+
+A wait for an element to show passes once the element is still there after the settle's quiet window, 200 ms, with the same windows in front and, on Android, none sliding: a frame of a screen on its way in or out passes no wait. On a still screen that adds the quiet window and a wait or read: on 2026-11-18 a wait alone took 226 ms where it took 13 ms before on an API 36 emulator, and 251 ms where it took 20 ms on an iOS 26.5 simulator, at host load 10 to 24. A wait that saw its element go before it held says so: `it was shown, then the screen changed to "Details"`. A screen whose content keeps moving, as a banner, holds while the element stays.
 
 A selector goes in `selector` in every tool and step that takes one, `read_screen` and `check_element` among them, as `{"tool":"tap_screen","selector":{"text":"OK"}}`: its words given at the top are refused, with the call in that shape in the hint.
 

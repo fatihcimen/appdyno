@@ -243,7 +243,7 @@ export function readOps(
       run: async ({ read, ...a }) => {
         const s = await ctx.session();
         const before = s.shown;
-        const { screen: last, met, found } = await waitFor(s, a);
+        const { screen: last, met, found, seen } = await waitFor(s, a);
         const { gone, timeoutMs } = a;
         show(s, last);
         const hit = met && !gone ? must(found, 'what was found') : undefined;
@@ -263,7 +263,7 @@ export function readOps(
           read === 'diff' && before
             ? diffText(diffScreens(before, last.list), last.list.length, clean)
             : undefined;
-        const why = met ? undefined : missing(s, last, a);
+        const why = met ? undefined : missing(s, last, { ...a, seen: !!seen });
         const told = `${why?.over ?? ''}${head}${why?.said ?? ''}`;
         const said = read === 'none' ? told : `${told}\n${diff ?? header(last)}`;
         // the screen is in the answer: its hint sends nobody to read it
