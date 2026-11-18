@@ -327,7 +327,7 @@ If the app dies under an action, the action is refused with `APP_NOT_RUNNING`: t
 
 The app watched is the selected one, else the one in front as the touch was aimed, which a launch or a link earlier in the call may have opened. A later step that fails because an earlier crash left no app adds `APP_NOT_RUNNING` and what to do to its own error, and so does a flow's step.
 
-An action still running after a second has its app's process watched, and is refused as soon as the process is gone, whatever the device answers after: a crash under a touch could hold the device's answer for its whole 15 s, which read as a stuck agent.
+An action still running after a second has its app's process watched, and is refused as soon as the process is gone, whatever the device answers after: a crash under a touch could hold the device's answer for its whole time, which read as a stuck agent.
 
 ### Waits and selectors
 

@@ -327,7 +327,7 @@ Uygulama bir işlemin altında ölürse işlem `APP_NOT_RUNNING` ile reddedilir:
 
 İzlenen uygulama seçili olandır, yoksa dokunuş hedeflenirken önde olandır; onu aynı çağrıda daha önceki bir başlatma ya da bağlantı açmış olabilir. Önceki bir crash geride uygulama bırakmadığı için başarısız olan sonraki bir adım, kendi hatasına `APP_NOT_RUNNING`'i ve ne yapılacağını ekler; bir flow'un adımı da öyle.
 
-Bir saniyeden uzun süren bir işlemde uygulamanın süreci izlenir ve süreç gider gitmez, cihaz sonra ne yanıtlarsa yanıtlasın, işlem reddedilir: bir dokunuşun altındaki bir crash cihazın yanıtını tam 15 s tutabiliyordu, bu da takılmış bir ajan gibi okunuyordu.
+Bir saniyeden uzun süren bir işlemde uygulamanın süreci izlenir ve süreç gider gitmez, cihaz sonra ne yanıtlarsa yanıtlasın, işlem reddedilir: bir dokunuşun altındaki bir crash cihazın yanıtını süresinin sonuna kadar tutabiliyordu, bu da takılmış bir ajan gibi okunuyordu.
 
 ### Beklemeler ve seçiciler
 
