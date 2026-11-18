@@ -264,7 +264,7 @@ export function readOps(
             ? diffText(diffScreens(before, last.list), last.list.length, clean)
             : undefined;
         const why = met ? undefined : missing(s, last, a);
-        const told = `${head}${why?.said ?? ''}`;
+        const told = `${why?.over ?? ''}${head}${why?.said ?? ''}`;
         const said = read === 'none' ? told : `${told}\n${diff ?? header(last)}`;
         // the screen is in the answer: its hint sends nobody to read it
         if (why)

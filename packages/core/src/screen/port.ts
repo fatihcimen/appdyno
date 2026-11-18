@@ -2,6 +2,9 @@ import type { AuditType, Tree } from '@appdyno/protocol';
 import type { AlertAction, AlertButton, AlertWords, SystemAlert } from './alert.js';
 import type { Rect, UiElement } from './elements.js';
 
+/** What the app shows over its own screen, keeping the rest from a read and a touch: its kind, where, and how it closes. */
+export type Overlay = { kind: string; rect: Rect; close: string };
+
 /** What only a platform knows about what its screen shows. */
 export type PlatformScreen = {
   /** What of this platform's audit is about contrast: a type it does not have refuses the whole audit. */
@@ -55,6 +58,8 @@ export type PlatformScreen = {
   readonly watchesTaps?: boolean;
   /** What a launch that starts the app shows may come in bulk after its screen held still, as a first-run sheet. */
   readonly lateAfterLaunch?: boolean;
+  /** The app's own sheet or dialog over the rest of its screen; a system alert is `systemAlert`'s. */
+  overlay?(tree: Tree, elements: UiElement[]): Overlay | undefined;
 };
 
 /** What makes a tree a screen: its platform's rules, and the app it is read for. */

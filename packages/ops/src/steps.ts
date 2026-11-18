@@ -102,7 +102,7 @@ type Kit = {
     s: Session,
     screen: Screen,
     a: { gone: boolean; selector?: SelectorOf | undefined },
-  ) => { said: string; hint: string };
+  ) => { over: string; said: string; hint: string };
 };
 
 /** A screen a step only looked at, as the device's answer when the action asked for its tree. */
@@ -290,7 +290,7 @@ async function call(
       if (!w.met) {
         const why = kit.missing(s, w.screen, st);
         throw new ToolError(
-          `${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms${why.said}`,
+          `${why.over}${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms${why.said}`,
           'CHECK_FAILED',
           why.hint,
         );
@@ -344,9 +344,13 @@ export function stepsFor(
   /** What a wait that ran out says: the nearest of what it waited to show, and what to do next. */
   const missing: Kit['missing'] = (s, screen, a) => {
     const why = a.gone
-      ? { said: '' }
-      : missed(s, screen, a.selector?.text ?? a.selector?.id, offer);
-    return { said: why.said, hint: why.hint ?? 'call again to wait longer, or read the screen' };
+      ? { over: '', said: '' }
+      : missed(s, screen, a.selector?.text ?? a.selector?.id, words);
+    return {
+      over: why.over,
+      said: why.said,
+      hint: why.hint ?? 'call again to wait longer, or read the screen',
+    };
   };
   const kit: Kit = { policy: ctx.policy, settleRead, target, scrolling, checks, missing };
 

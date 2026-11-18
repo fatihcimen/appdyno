@@ -18,6 +18,7 @@ import {
   shownLabel,
 } from '@appdyno/core';
 import type { Point } from '@appdyno/protocol';
+import { overApp } from './between.js';
 import { UNREAD } from './checks.js';
 import type { Session } from './session.js';
 import { NAME_AN_ELEMENT, showSelector } from './step-schemas.js';
@@ -93,13 +94,13 @@ export function missed(
   s: Session,
   screen: Screen,
   want: string | undefined,
-  offer: Words['offer'],
-) {
+  { clean, offer }: Words,
+): { over: string; said: string; hint?: string } {
   const { appId } = s;
   const front = screen.foreground;
   if (appId && front && front !== appId && !s.leftApp)
-    return { said: `; ${appId} is not in front (${front})`, hint: GONE_HINT };
-  return { said: offer(screen.list, want) };
+    return { over: '', said: `; ${appId} is not in front (${front})`, hint: GONE_HINT };
+  return { over: overApp(s, screen, clean), said: offer(screen.list, want) };
 }
 
 /** How a session's read gives its elements: a ref names one of the list, else one of the whole tree. */
@@ -171,16 +172,16 @@ export async function aim(s: Session, a: Aim, words: Words): Promise<Aimed> {
   if ('ref' in target) {
     const was = s.refWords.get(target.ref);
     throw new ToolError(
-      `${STALE}: ${target.ref}${was ? ` ${JSON.stringify(clean(was))}` : ''} is not on this screen${was ? offer(got.screen.list, was) : ''}`,
+      `${missed(s, got.screen, undefined, words).over}${STALE}: ${target.ref}${was ? ` ${JSON.stringify(clean(was))}` : ''} is not on this screen${was ? offer(got.screen.list, was) : ''}`,
       'STALE',
       STALE_HINT,
     );
   }
   // several, or an index past the last: refused with the matches listed
   if (got.miss !== 'none') pick(got.hits, target, line);
-  const why = missed(s, got.screen, target.text ?? target.id, offer);
+  const why = missed(s, got.screen, target.text ?? target.id, words);
   throw new ToolError(
-    `no element matches ${showSelector(target)} after ${NO_MATCH_WAIT_MS} ms${why.said}`,
+    `${why.over}no element matches ${showSelector(target)} after ${NO_MATCH_WAIT_MS} ms${why.said}`,
     'NOT_FOUND',
     why.hint ?? NO_MATCH_HINT,
   );

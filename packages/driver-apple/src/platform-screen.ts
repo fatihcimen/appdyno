@@ -122,6 +122,10 @@ const STATUS_BAND_PT = 64;
 /** Status bar items are root elements in this band. */
 const STATUS_BAR_PT = 50;
 
+/** What a sheet's dimmed surround is named, in any language: a tap on it closes the sheet. */
+const DISMISS_REGION = 'PopoverDismissRegion';
+const SHEET_CLOSES = 'close it (swipe it down, or a tap outside) or act in it';
+
 /** A caller testing in another language passes its own. */
 export const ALERT_WORDS: AlertWords = {
   allow:
@@ -220,6 +224,23 @@ export const iosScreen: PlatformScreen = {
 
   // a first-run sheet, or a grid's content, comes some time after a started app's screen held still
   lateAfterLaunch: true,
+
+  /**
+   * The app's own alert or action sheet, the home screen app's being a system alert; else a sheet by the region a tap
+   * outside it closes it by, beside it, as UIKit's and SwiftUI's have. Under either, a read lists nothing of the app.
+   */
+  overlay(_tree, elements) {
+    const e = elements.find(
+      (x) => /^(alert|sheet)$/.test(bare(x.type)) && x.visible && x.pkg !== HOME_SCREEN_APP,
+    );
+    if (e?.rect)
+      return { kind: bare(e.type), rect: e.rect, close: 'answer it with one of its buttons' };
+    const region = elements.find((x) => x.identifier === DISMISS_REGION);
+    const sheet = elements.find(
+      (x) => x.parent === region?.parent && x.identifier !== DISMISS_REGION,
+    )?.rect;
+    return region && sheet && { kind: 'sheet', rect: sheet, close: SHEET_CLOSES };
+  },
 
   /** The navigation bars across the screen that begin where the status bar ends, at most as tall as it gets. */
   topBars(elements) {

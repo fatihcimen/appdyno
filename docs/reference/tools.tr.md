@@ -242,6 +242,8 @@ Metin, `selector` ile `read_screen`'deki gibi büyük-küçük harfe ve aksanlar
 
 Birden çok eşleşmede işlem `AMBIGUOUS` ile reddedilir ve eşleşmeler ref'leriyle listelenir, son eşleşmenin ötesindeki bir index de kaç eşleşme olduğunu söyler; eşleşme yoksa bir an beklenir, sonra en yakın etiketlerle reddedilir; önde başka bir uygulama varsa ve uygulama bilerek ayrılmadıysa, bunun yerine uygulamanın önde olmadığı söylenir. Süresi dolan `timeoutMs` ile bir `check_element` de aynısını ve yeniden çağırmanın daha uzun beklediğini söyler.
 
+Uygulama ekranının geri kalanının üstünde bir sheet ya da dialog gösterdiğinde, bir okuma altındaki uygulamadan hiçbir şey listelemez. O zaman bulunamayan bir hedef, süresi dolan bir bekleme ve hiçbir şey bulamayan bir denetim bunu önce söyler, içindeki ilk sözcüklerle ve nasıl kapandığıyla: `a bottom sheet is open over the app: "Choose a plan"; close it (back, or a tap outside) or act in it`. Android'de bu, `touch_outside` ve `design_bottom_sheet`'iyle Material'ın modal bottom sheet'i ve penceresi ekranın kenarlarından ve durum çubuğunun altından uzak duran bir dialog'dur; iOS'ta uygulamanın kendi alert'i ya da action sheet'i ve dışına dokunmanın onu kapattığı bölgeyle tanınan bir sheet. Bir sistem uyarısı eskisi gibi, sistemin sorduğu olarak söylenir.
+
 `NOT_FOUND` ya da `STALE` ile reddedilen bir dokunuş, bir yanıtın yaptığı gibi ekranı şimdiki haliyle içerir: son gösterilen ekrandan farkını, `read` `full` ise ya da önde başka bir uygulama varsa tamamını, `read` `none` ise hiçbirini. Bir sonraki denemeden önce ekranı okumak gerekmez.
 
 ### Klavyenin altındaki bir hedef

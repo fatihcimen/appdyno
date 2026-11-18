@@ -7,6 +7,7 @@ import {
   type Selector as SelectorOf,
 } from '@appdyno/core';
 import type { z } from 'zod';
+import { overApp } from './between.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { type Check, NAME_AN_ELEMENT, showSelector } from './step-schemas.js';
@@ -51,7 +52,7 @@ export function checksFor({
   offer: (list: ScreenElement[], want?: string) => string;
 }) {
   /** Whether a check holds on this screen, and why or why not in words. */
-  const judge = (screen: Screen, a: Judged): { pass: boolean; why: string } => {
+  const judge = (screen: Screen, a: Judged): { pass: boolean; why: string; none?: boolean } => {
     const sel = selectorOf(a.selector) ?? {};
     const what = a.ref ?? showSelector(sel);
     const all = a.ref ? screen.list.filter((e) => e.ref === a.ref) : selectIn(screen.list, sel);
@@ -61,18 +62,18 @@ export function checksFor({
       const want = a.check === 'absent' ? !a.expect : a.expect;
       if (hits.length > 0 === want)
         return { pass: true, why: `${what} is ${want ? 'on' : 'not on'} the screen` };
-      return {
-        pass: false,
-        why: want ? missing : `${what} is on the screen: ${hits.slice(0, 5).map(line).join('; ')}`,
-      };
+      return want
+        ? { pass: false, why: missing, none: true }
+        : {
+            pass: false,
+            why: `${what} is on the screen: ${hits.slice(0, 5).map(line).join('; ')}`,
+          };
     }
-    if (hits.length !== 1)
+    if (hits.length === 0) return { pass: false, why: missing, none: true };
+    if (hits.length > 1)
       return {
         pass: false,
-        why:
-          hits.length === 0
-            ? missing
-            : `${hits.length} elements match ${what}: ${hits.slice(0, 5).map(line).join('; ')}`,
+        why: `${hits.length} elements match ${what}: ${hits.slice(0, 5).map(line).join('; ')}`,
       };
     const at = attributesOf(screen.elements, must(hits[0], 'the one match'));
     if (a.check === 'text') {
@@ -142,7 +143,8 @@ export function checksFor({
     const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
     if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND', UNREAD);
     const v = judge(screen, a);
-    if (!v.pass) throw new ToolError(v.why, 'CHECK_FAILED');
+    if (!v.pass)
+      throw new ToolError(`${v.none ? overApp(s, screen, clean) : ''}${v.why}`, 'CHECK_FAILED');
     if ((a.check === 'absent') === a.expect && (a.check === 'absent' || a.check === 'exists'))
       unread(s, a.ref ?? showSelector(selectorOf(a.selector) ?? {}));
     return { screen, done: `check passed: ${v.why}` };

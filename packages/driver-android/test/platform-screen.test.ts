@@ -358,3 +358,75 @@ describe('wire tree to screen', () => {
     expect(buildScreen(tree, { port: androidScreen }).window).toEqual({ w: 2400, h: 1080 });
   });
 });
+
+describe('what the app shows over its screen', () => {
+  const STATUS = window(3, [0, 0, 1080, 142], 'com.android.systemui');
+  const node = (id: string, b: [number, number, number, number], w = 0) => ({
+    p: -1,
+    w,
+    c: 'android.view.View',
+    id,
+    b,
+    f: 17,
+  });
+  const over = (windows: Tree['windows'], nodes: Tree['nodes'] = []) => {
+    const t = { ...treeOf(windows), nodes };
+    return androidScreen.overlay?.(t, elementsOf(t));
+  };
+
+  it("names Material's bottom sheet by its scrim and sheet, and where the sheet is", () => {
+    const sheet = over(
+      [window(1, [0, 142, 1080, 2361]), STATUS],
+      [
+        node('dev.app:id/touch_outside', [0, 142, 1080, 2361]),
+        node('dev.app:id/design_bottom_sheet', [0, 1908, 1080, 2361]),
+      ],
+    );
+    expect(sheet).toEqual({
+      kind: 'bottom sheet',
+      rect: { x: 0, y: 1908, width: 1080, height: 453 },
+      close: 'close it (back, or a tap outside) or act in it',
+    });
+  });
+
+  it('names a dialog by its window, clear of the sides and below the status bar, the keyboard aside', () => {
+    expect(over([window(1, [28, 995, 1052, 1508]), STATUS])?.kind).toBe('dialog');
+    const keyboard = {
+      ...window(2, [0, 1657, 1080, 2424], 'com.google.android.inputmethod.latin'),
+      active: false,
+    };
+    expect(over([window(1, [243, 725, 836, 1074]), keyboard, STATUS])?.rect).toEqual({
+      x: 243,
+      y: 725,
+      width: 593,
+      height: 349,
+    });
+  });
+
+  it('names none over a whole screen, in split screen, beside the bars, or a system dialog or the share sheet', () => {
+    for (const b of [
+      [0, 0, 1080, 2424],
+      [0, 142, 1080, 2361],
+      [0, 1250, 1080, 2424],
+      [130, 0, 2300, 1080],
+    ] as const)
+      expect(over([window(1, [...b]), STATUS]), String(b)).toBeUndefined();
+    for (const pkg of [
+      'com.google.android.permissioncontroller',
+      'com.android.intentresolver',
+      'android',
+    ])
+      expect(over([window(1, [28, 995, 1052, 1508], pkg), STATUS]), pkg).toBeUndefined();
+    // a sheet's ids in a window that is not the app's active one, as a keyboard's
+    const ime = { ...window(2, [0, 142, 1080, 2424], 'ime'), active: false };
+    expect(
+      over(
+        [window(1, [0, 0, 1080, 2424]), ime],
+        [
+          node('ime:id/touch_outside', [0, 142, 1080, 2424], 1),
+          node('ime:id/design_bottom_sheet', [0, 900, 1080, 2424], 1),
+        ],
+      ),
+    ).toBeUndefined();
+  });
+});

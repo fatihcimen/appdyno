@@ -242,6 +242,8 @@ A `swipe_screen` with `until` that finds its element cut by the edge its swipes 
 
 Several matches refuse with `AMBIGUOUS` and list them with their refs, and an index past the last match says how many there are; no match waits a moment, then refuses with the nearest labels, or, where another app is in front and the app did not leave on purpose, says that the app is not; a `check_element` with `timeoutMs` that runs out says the same, and that calling again waits longer.
 
+Where the app shows a sheet or a dialog over the rest of its screen, a read lists nothing of the app under it. A target not found, a wait that ran out and a check that found nothing then say so first, with the first words in it and how it closes: `a bottom sheet is open over the app: "Choose a plan"; close it (back, or a tap outside) or act in it`. On Android that is Material's modal bottom sheet, by its `touch_outside` and `design_bottom_sheet`, and a dialog, by its window standing clear of the screen's sides and below the status bar; on iOS the app's own alert or action sheet, and a sheet, by the region a tap outside it closes it by. A system alert is said as before, as the system asking.
+
 A touch refused as `NOT_FOUND` or `STALE` holds the screen as it is now, as an answer does: what differs from the screen shown last, or all of it with `read` `full` or another app in front, and none with `read` `none`. No read of the screen is needed before the next try.
 
 ### A target under the keyboard

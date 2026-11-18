@@ -5,6 +5,7 @@ import {
   personNeeded,
   type PlatformScreen,
 } from '@appdyno/core';
+import type { Tree } from '@appdyno/protocol';
 
 const INPUT_METHOD_WINDOW = 2;
 const SYSTEM_WINDOW = 3;
@@ -22,6 +23,24 @@ const BIOMETRIC_PROMPT = 'com.android.systemui:id/biometric_';
 /** Android 17 asks for the credential inside the biometric prompt, by a view of its own there. */
 const CREDENTIAL_PROMPT =
   /^com\.android\.(systemui:id\/(lockPassword|lockPattern|lockPIN|compose_credential_view)|settings:id\/(password_entry|lockPattern))/;
+const APP_WINDOW = 1;
+/** Material's modal bottom sheet, in the app's own package: the scrim a touch outside closes it by, and the sheet. */
+const SHEET_SCRIM = ':id/touch_outside';
+const SHEET = ':id/design_bottom_sheet';
+const CLOSES = 'close it (back, or a tap outside) or act in it';
+
+/**
+ * A window that stands clear of the screen's sides and below the status bar, as a dialog's does: an activity's reaches
+ * a side, in split screen and in landscape beside the navigation bar too. A modal one is all a read lists of the app.
+ */
+function floating(tree: Tree, w: Tree['windows'][number]) {
+  const right = Math.max(...tree.windows.map((x) => x.b[2]));
+  const bar = Math.max(
+    0,
+    ...tree.windows.flatMap((x) => (x.type === SYSTEM_WINDOW && x.b[1] === 0 ? [x.b[3]] : [])),
+  );
+  return w.b[0] > 0 && w.b[2] < right && w.b[1] > bar;
+}
 
 export const androidScreen: PlatformScreen = {
   /**
@@ -110,4 +129,18 @@ export const androidScreen: PlatformScreen = {
   windowByBars: () => undefined,
 
   listsByIdAlone: false,
+
+  /** In the app's active window: Material's modal bottom sheet by its ids, else a dialog by its window. */
+  overlay(tree, elements) {
+    const w = tree.windows.find((x) => x.type === APP_WINDOW && x.active);
+    if (!w?.pkg || SYSTEM_DIALOGS.test(w.pkg) || w.pkg === SHARE_SHEET) return undefined;
+    const own = elements.filter((e) => e.pkg === w.pkg);
+    const sheet = own.find((e) => e.identifier?.endsWith(SHEET))?.rect;
+    if (sheet && own.some((e) => e.identifier?.endsWith(SHEET_SCRIM)))
+      return { kind: 'bottom sheet', rect: sheet, close: CLOSES };
+    const [l, t, r, b] = w.b;
+    return floating(tree, w)
+      ? { kind: 'dialog', rect: { x: l, y: t, width: r - l, height: b - t }, close: CLOSES }
+      : undefined;
+  },
 };

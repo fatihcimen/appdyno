@@ -5,6 +5,7 @@ import { iosScreen } from '@appdyno/driver-apple';
 import type { ActParams, Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import { fakeTimed } from '@appdyno/testing/fake-time.js';
 import { connect } from './shared.js';
 
 beforeEach(() => {
@@ -230,4 +231,17 @@ describe('an iOS screen', () => {
       expect.objectContaining({ kind: 'tap', x: 342, y: 441 }),
     ]);
   });
+});
+
+describe('a sheet over an iOS app', () => {
+  it(
+    'is said first where a touch finds no target, as a read lists nothing of the app under it',
+    fakeTimed(async () => {
+      const { call } = await connect(new Simulator(recorded('sheet')), APP);
+      const r = await call('tap_screen', { selector: { id: 'next_button' }, read: 'none' });
+      expect(r.text).toContain(
+        'NOT_FOUND: a sheet is open over the app: "Choose a plan"; close it (swipe it down, or a tap outside) or act in it; no element matches id="next_button" after 1500 ms',
+      );
+    }),
+  );
 });

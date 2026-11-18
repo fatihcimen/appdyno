@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { screenElements, windowRect, withStableRefs, type UiElement } from '@appdyno/core';
+import {
+  elementsOf,
+  screenElements,
+  windowRect,
+  withStableRefs,
+  type UiElement,
+} from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { iosScreen, keyboardCloser } from '../src/platform-screen.js';
 
@@ -295,5 +301,35 @@ describe('closing the keyboard', () => {
     const page = form(tr);
     page.nodes.push({ p: 1, w: 0, c: 'Button', d: 'Gönder', b: [350, 520, 400, 570], f: 19 });
     expect(keyboardCloser(page)).toEqual({ x: 361, y: 532 });
+  });
+});
+
+describe('what the app shows over its screen', () => {
+  const over = (name: string) => {
+    const t = JSON.parse(
+      readFileSync(join(import.meta.dirname, `fixtures/ios-screens/${name}.json`), 'utf8'),
+    ) as Tree;
+    return iosScreen.overlay?.(t, elementsOf(t));
+  };
+
+  it("is the app's own alert, which a button answers", () => {
+    expect(over('dialog-alert')).toEqual({
+      kind: 'alert',
+      rect: { x: 41, y: 375, width: 320, height: 152 },
+      close: 'answer it with one of its buttons',
+    });
+  });
+
+  it('is a sheet, beside the region a tap outside it closes it by', () => {
+    expect(over('sheet')).toEqual({
+      kind: 'sheet',
+      rect: { x: 8, y: 415, width: 386, height: 451 },
+      close: 'close it (swipe it down, or a tap outside) or act in it',
+    });
+  });
+
+  it('is none over a whole screen, with its keyboard up or not', () => {
+    expect(over('form-letters-keyboard')).toBeUndefined();
+    expect(over('list-under-status-bar')).toBeUndefined();
   });
 });

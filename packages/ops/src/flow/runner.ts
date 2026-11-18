@@ -17,6 +17,7 @@ import {
 import { z } from 'zod';
 import type { Answers } from '../answers.js';
 import { asStepBegan, diedHint, diedLine, diedUnder } from '../app-death.js';
+import { overApp } from '../between.js';
 import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
 import { LOOKS_ONLY } from '../step-schemas.js';
@@ -237,7 +238,7 @@ export function flowRunner(
       const screen = await s.read();
       const near = nearest(screen.list, st.selector?.text ?? st.selector?.id).map(steps.line);
       throw new ToolError(
-        `${st.args.gone ? 'still there' : 'not shown'} after ${String(st.args.timeoutMs ?? REPLAY_WAIT_MS)} ms${near.length > 0 ? `; nearest: ${near.join('; ')}` : ''}`,
+        `${st.args.gone ? '' : overApp(s, screen, clean)}${st.args.gone ? 'still there' : 'not shown'} after ${String(st.args.timeoutMs ?? REPLAY_WAIT_MS)} ms${near.length > 0 ? `; nearest: ${near.join('; ')}` : ''}`,
         'TIMEOUT',
       );
     });

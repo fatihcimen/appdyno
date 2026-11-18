@@ -136,6 +136,20 @@ assert id=result check=text equals="Gönderildi"
       expect(e.message).toContain('not shown after 300 ms; nearest: ');
     });
 
+    it('says first that a sheet over the app stands between a wait and its element', async () => {
+      device.fixture = JSON.parse(
+        readFileSync(
+          join(import.meta.dirname, '../fixtures/apps/android-fixture-sheet.json'),
+          'utf8',
+        ),
+      ) as typeof device.fixture;
+      const file = flowFile('app dev.appdyno.fixture\nwait_for id="next_button" timeoutMs=300\n');
+      const e = await refusal(callerOf(context())('run_flow', { action: 'run', file }));
+      expect(e.message).toContain(
+        'a bottom sheet is open over the app: "Choose a plan"; close it (back, or a tap outside) or act in it; not shown after 300 ms',
+      );
+    });
+
     it('stops at a miss with the nearest candidates, the screen, the step and the line', async () => {
       const ctx = context();
       const file = flowFile(`app dev.app\n\n# the form\ntap text="Formm"\ntap text="Form"\n`);
