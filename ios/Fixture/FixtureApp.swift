@@ -55,6 +55,7 @@ struct FixtureApp: App {
         "form": { _ in AnyView(FormScreen()) },
         "focus_drop": { _ in AnyView(FocusDropScreen()) },
         "list": { _ in AnyView(ListScreen()) },
+        "search": { _ in AnyView(SearchScreen()) },
         "list_heavy": { _ in AnyView(CostListScreen(drawMs: 40)) },
         "list_stall": { _ in AnyView(CostListScreen(stallMs: 1000)) },
         "dialog": { _ in AnyView(DialogScreen()) },

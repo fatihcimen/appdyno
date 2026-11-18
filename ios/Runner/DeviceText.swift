@@ -123,12 +123,19 @@ extension Device {
     }
 
     /// Whether the field holds the keyboard focus now: by its identifier where it has one (one query), else by its
-    /// place.
+    /// place and its words, as a search field moves as it takes the focus (`sameField`).
     private func holdsFocus(_ input: FieldInput) -> Bool {
         let snap = input.snap
-        guard !snap.identifier.isEmpty else { return focusedField(input.app)?.snap.frame == snap.frame }
+        guard !snap.identifier.isEmpty else {
+            return sameField(was: Device.mark(snap), now: focusedField(input.app).map { Device.mark($0.snap) })
+        }
         return input.app.descendants(matching: snap.elementType).matching(identifier: snap.identifier)
             .matching(NSPredicate(format: "hasKeyboardFocus == true")).firstMatch.exists
+    }
+
+    private static func mark(_ snap: XCUIElementSnapshot) -> FieldMark {
+        FieldMark(type: snap.elementType.rawValue, label: snap.label, placeholder: snap.placeholderValue ?? "",
+                  frame: snap.frame)
     }
 
     /// Whether the field holds the focus as keys go to it, tapped once and waited for where it let go of it

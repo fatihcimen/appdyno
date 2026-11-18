@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// Letters and digits only: a formatting field shows "(599) 999-9900" for "5999999900".
@@ -32,6 +33,31 @@ public struct FocusProbe {
     public let clock: () -> Double
     public let pause: (Double) -> Void
     public let over: () -> Bool
+}
+
+/// A field with no identifier as a snapshot shows it: what tells it from another field.
+public struct FieldMark {
+    public let type: UInt
+    public let label: String
+    public let placeholder: String
+    public let frame: CGRect
+
+    public init(type: UInt, label: String, placeholder: String, frame: CGRect) {
+        self.type = type
+        self.label = label
+        self.placeholder = placeholder
+        self.frame = frame
+    }
+}
+
+/// Whether the field with the keyboard focus now is the one keys were found going to. A field that takes the focus may
+/// move and change its size, as Settings' search field rises with the keyboard and makes room for its close button: it
+/// is that field where it still overlaps the place it was found at, or where it has its words, as another field of a
+/// form has words of its own. None with the focus: the field let go of it.
+public func sameField(was: FieldMark, now: FieldMark?) -> Bool {
+    guard let now, now.type == was.type else { return false }
+    let named = !(was.label.isEmpty && was.placeholder.isEmpty)
+    return now.frame.intersects(was.frame) || (named && now.label == was.label && now.placeholder == was.placeholder)
 }
 
 /// Whether the field holds the keyboard focus as keys go to it: one that let go of it is tapped once and waited for,

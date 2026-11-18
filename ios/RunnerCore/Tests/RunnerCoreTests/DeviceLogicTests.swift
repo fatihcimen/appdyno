@@ -169,6 +169,40 @@ final class RegainFocusTests: XCTestCase {
     }
 }
 
+final class SameFieldTests: XCTestCase {
+    private func field(_ label: String, _ frame: CGRect, placeholder: String = "") -> FieldMark {
+        FieldMark(type: 49, label: label, placeholder: placeholder, frame: frame)
+    }
+
+    /// Settings' search field on an iOS 27.2 simulator, found at the bottom as the tap focused it, and once it has
+    /// risen with the keyboard and narrowed for its close button.
+    private let search = CGRect(x: 28, y: 808, width: 346, height: 28)
+    private let risen = CGRect(x: 8, y: 500, width: 326, height: 28)
+
+    func testASearchFieldThatRoseWithTheKeyboardStillHoldsTheFocus() {
+        XCTAssertTrue(sameField(was: field("Search", search), now: field("Search", risen)))
+    }
+
+    func testAFieldThatOnlyNarrowedForItsCloseButtonStillHoldsTheFocus() {
+        let narrowed = CGRect(x: 28, y: 808, width: 286, height: 28)
+        XCTAssertTrue(sameField(was: field("", search), now: field("", narrowed)))
+    }
+
+    func testTheNextFieldOfAFormIsAnotherField() {
+        let below = CGRect(x: 28, y: 850, width: 346, height: 28)
+        XCTAssertFalse(sameField(was: field("", search, placeholder: "Name"),
+                                 now: field("", below, placeholder: "Surname")))
+        // with no words to tell them apart, only the place does
+        XCTAssertFalse(sameField(was: field("", search), now: field("", below)))
+        XCTAssertFalse(sameField(was: field("Search", search),
+                                 now: FieldMark(type: 50, label: "Search", placeholder: "", frame: risen)))
+    }
+
+    func testAFieldThatLetGoOfTheFocusHoldsNone() {
+        XCTAssertFalse(sameField(was: field("Search", search), now: nil))
+    }
+}
+
 final class TypeEachTests: XCTestCase {
     private func typeEach(_ text: String, into field: FormattingField, over: @escaping () -> Bool = { false }) {
         try? RunnerCore.typeEach(text, waitS: 1.5, KeysProbe(send: field.type, read: field.read, clock: { field.now },

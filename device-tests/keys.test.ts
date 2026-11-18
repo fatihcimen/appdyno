@@ -174,6 +174,20 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
       }),
     );
   });
+  it('types into a search field that has moved away from where the tap found it, as it took the focus', async () => {
+    // the bottom bar's field rises with the keyboard, which the focus check before the clear took for a field let go of
+    ok(await o.call('open_link', { url: 'appdyno-fixture://open/search' }));
+    const search = { text: 'Search rows' };
+    ok(await o.call('type_text', { selector: search, text: 'Kapı', replace: true }));
+    ok(
+      await o.call('check_element', {
+        selector: search,
+        check: 'text',
+        equals: 'Kapı',
+        timeoutMs: 3_000,
+      }),
+    );
+  });
   viewsOf(() => o.call, {
     control: /"Add Controls"/,
     // the date view holds only the date and time it lists, so a read leaves it out and a selector reaches it
