@@ -4,9 +4,23 @@
 
 ## Yayımlanmamış
 
+## 1.3.2
+
+appdyno 1.3.2 yavaş bir Mac'te runner'ı ayakta ve yazmasını eksiksiz tutar, bir adım hiçbir şey bulamadığında uygulamanın üstünde ne durduğunu önce söyler, bir beklemeyi öğesi yerinde kalana kadar tutar ve daha ayrıntılı bir ejderha getirir.
+
 ### Değişenler
 
 - **Daha ayrıntılı bir ejderha.** Sitenin, disk image penceresinin ve karşılamanın ejderhası yeniden yapıldı: aynı karakter, artık derinliği olan ve ışığı yakalayan gözleri, ince pulları, daha keskin dikenleri ve pençeleri, arkasına katlanan daha büyük kanatlarıyla. Sitenin modeli 270 KB yerine 332 KB.
+- **Bir bekleme tutar.** Bir öğenin görünmesini bekleyen bir bekleme artık yalnızca öğe durulmanın sessiz penceresinden sonra hâlâ oradaysa geçiyor, böylece gelmekte ya da gitmekte olan bir ekranın bir karesi onu geçirmiyor; öğesinin gittiğini gören bir bekleme ekranın değiştiğini ve neye değiştiğini söylüyor. Duran bir ekranda bir bekleme yaklaşık 200 ms daha uzun sürüyor.
+- Ana ekrana, oradaki bir uygulama simgesine olduğu gibi, bir `run_steps` dokunuşu, çağrı başına bir kez, `launch_app`'in bir uygulamayı daha sağlam açtığını söylüyor.
+- **Yavaş bir cihazda süresini geçen bir çağrı.** iOS ve Android: süresi dolduğunda cihazın ajanının hâlâ üzerinde çalıştığı bir çağrı, ajan bir ping'e yanıt verdiği sürece 15 s daha beklenir ve yanıtı cihazın yavaş olduğunu, çağrıyı ve ne kadar sürdüğünü söyler. Barındırılan bir Mac'te yeni açılmış bir uygulamanın okunması 15 s'sini, bir dokunuş 18 s'sini geçti; runner o zaman takılmış sayılıp yeniden başlatılıyordu (orada 40 ile 70 s süren bir başlatma) ve adım başarısız oluyordu. 15 s'den sonra da yanıtlanmamış bir çağrı eskisi gibi bırakılır; takılmış bir runner çağrıdan 21 s yerine yaklaşık 36 s sonra yeniden başlatılır.
+
+### Düzeltilenler
+
+- **Hiçbir şey bulamayan bir adım uygulamanın üstünde ne durduğunu söylemiyordu.** Hedef bulamayan bir adım, süresi dolan bir bekleme ve hiçbir şey bulamayan bir denetim artık önce uygulamanın ekranının üstünde ne gösterdiğini ve onu nasıl kapatacağını söylüyor: `a bottom sheet is open over the app: "Choose a plan"; close it (back, or a tap outside) or act in it`. Android'de Material'ın modal bottom sheet'i ve bir dialog, iOS'ta uygulamanın kendi alert'i, action sheet'i ya da sheet'i.
+- `run_steps`'te aynı çağrının bir beklemesinin gösterdiği hedefi bulamayan bir adım, sonraki satırda hedefin hangi adımda göründüğünü ve ekranın bu adımdan önce değiştiğini söylüyor.
+- **Bir alan klavye odağını bırakınca runner bitiyordu.** iOS: metin bir alana yalnızca alan klavye odağını tutarken yazılır. Odağı bırakan bir alana bir kez dokunulur ve beklenir; odağı geri almayan bir alan hiçbir tuştan önce `NO_FOCUS`, ilk yazma girmişse `verified: false` yanıtını verir. Barındırılan bir Mac'te bir telefon alanı metni silinmeden önce odağı kaybetti ve XCUI'nin ona sildirmesi runner'ı bitirdi; sonraki adım başka bir runner buldu. Silmeler ve Return artık metin gibi XCTest'in olay sentezleyicisiyle gider.
+- **Yazılanı biçimlendiren bir alan yavaş bir Mac'te bir tuş kaybediyordu.** iOS: bir alanın başka bir metin olarak geri okuduğu metin, her tuş alan bir öncekini gösterdikten sonra olmak üzere tek tek yeniden yazılır: yazılanı biçimlendiren bir telefon alanı, barındırılan bir Mac'te saniyede 15 tuşla giden ikinci yazmada da bir tuş kaybetti. Geri okuma, alanın metni değişmeye devam ettiği sürece en çok 10 s bekler. Satır sonu içeren metin, Return'ü bir formu göndermiş olabileceği için hiçbir zaman ikinci kez yazılmaz.
 
 ## 1.3.1
 

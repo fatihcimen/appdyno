@@ -4,9 +4,23 @@
 
 ## Unreleased
 
+## 1.3.2
+
+appdyno 1.3.2 keeps a slow Mac's runner alive and its typing whole, says first what stands over the app when a step finds nothing, holds a wait until its element stays, and brings a more detailed dragon.
+
 ### Changed
 
 - **A more detailed dragon.** The dragon of the site, the disk image's window and the welcome is made again: the same character, now with eyes that have depth and catch the light, fine scales, crisper spikes and claws, and larger wings that fold back behind it. The site's model is 332 KB, from 270 KB.
+- **A wait holds.** A wait for an element to show passes only once the element is still there after the settle's quiet window, so no frame of a screen on its way in or out passes it; one that saw its element go says the screen changed, and to what. On a still screen a wait takes about 200 ms more.
+- A `run_steps` tap on the home screen, as on an app's icon there, says once a call that `launch_app` opens an app more steadily.
+- **A call past its time on a slow device.** iOS and Android: a call the device's agent is still working on when its time is up is waited for 15 s more as long as the agent answers a ping, and its answer says the device was slow, naming the call and how long it took. On a hosted Mac a read of an app that had just launched went past its 15 s and a touch past its 18 s; the runner was then restarted as stuck, a start of 40 to 70 s there, and the step failed. A call still unanswered after the 15 s is given up as before, and a stuck runner is restarted about 36 s after the call instead of 21 s.
+
+### Fixed
+
+- **A step that found nothing never said what stood over the app.** A step that finds no target, a wait that runs out and a check that finds nothing now say first what the app shows over its screen and how to close it, as `a bottom sheet is open over the app: "Choose a plan"; close it (back, or a tap outside) or act in it`: Material's modal bottom sheet and a dialog on Android, the app's own alert, action sheet or sheet on iOS.
+- In `run_steps`, a step whose target is gone after a wait of the same call showed it says on the next line at which step it was shown and that the screen changed before this one.
+- **The runner ended when a field let go of its keyboard focus.** iOS: text is typed into a field only while it holds the keyboard focus. A field that let go of it is tapped once and waited for, and one that does not take it back answers `NO_FOCUS` before any key, or `verified: false` where its first typing went in. On a hosted Mac a phone field lost the focus before its text was cleared, and XCUI's delete into it ended the runner; the next step then found another one. Deletes and Return now go by XCTest's event synthesizer, as the text does.
+- **A field that formats what is typed lost a key on a slow Mac.** iOS: text a field read back as other is typed again a key at a time, each once the field shows the one before it: a phone field that formats what is typed lost a key on a hosted Mac on the second typing too, which went at 15 keys a second. The read-back waits while the field's text is still changing, up to 10 s. Text with a line break is never typed a second time, as its Return may have sent a form.
 
 ## 1.3.1
 
