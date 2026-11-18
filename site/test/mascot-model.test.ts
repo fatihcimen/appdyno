@@ -26,8 +26,9 @@ async function load() {
     unknown
   >;
   for (const key of ['images', 'textures', 'samplers']) delete scene[key];
-  for (const material of scene['materials'] as { pbrMetallicRoughness?: object }[])
-    delete material.pbrMetallicRoughness;
+  for (const material of scene['materials'] as Record<string, unknown>[])
+    for (const key of Object.keys(material))
+      if (key === 'pbrMetallicRoughness' || key.endsWith('Texture')) delete material[key];
   for (const key of ['extensionsUsed', 'extensionsRequired'])
     scene[key] = (scene[key] as string[]).filter((name) => name !== 'EXT_texture_webp');
   const text = Buffer.from(JSON.stringify(scene));
@@ -112,17 +113,22 @@ test('the jaw is shut in every clip but puff, which opens it while its fire burn
   const jaw = bone('Jaw');
   const bound = jaw.quaternion.clone();
   const open = (q: Quaternion) => (bound.angleTo(q) * 180) / Math.PI;
+  // the mouth was made open, so shut is a turn from where the jaw was bound: where idle holds it
+  const [shut = 0] = play(clip('idle'), 0, () => open(jaw.quaternion));
+  assert.ok(shut > 10, `shutting the mouth turns the jaw (${shut.toFixed(1)}°)`);
+  const held = (gape: number) => Math.abs(gape - shut) < 2;
   for (const name of CLIPS) {
     const gape = play(clip(name), 12, () => open(jaw.quaternion));
-    if (name !== 'puff') assert.ok(Math.min(...gape) > 40, `${name} holds the jaw shut`);
+    if (name !== 'puff') assert.ok(gape.every(held), `${name} holds the jaw shut`);
   }
   const puff = clip('puff');
   const { fire, until } = puff.userData as { fire: number; until: number };
   assert.ok(fire > 0 && until > fire && until < puff.duration, 'puff says when its fire burns');
   const gape = play(puff, 48, (time) => ({ time, gape: open(jaw.quaternion) }));
   for (const frame of gape)
-    if (frame.time >= fire && frame.time <= until) assert.ok(frame.gape < 12, 'open in the fire');
-  assert.ok((gape[0]?.gape ?? 0) > 40 && (gape.at(-1)?.gape ?? 0) > 40, 'shut before and after');
+    if (frame.time >= fire && frame.time <= until)
+      assert.ok(frame.gape < shut / 2, 'open in the fire, past halfway back to how it was made');
+  assert.ok(held(gape[0]?.gape ?? 0) && held(gape.at(-1)?.gape ?? 0), 'shut before and after');
 });
 
 test('the walk moves the feet and leaves the root in place', () => {

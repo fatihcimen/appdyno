@@ -1,6 +1,9 @@
-# The dragon's pictures outside the site, drawn from the site's own model, site/public/models/dyno.glb, by Blender:
-#   blender -b --factory-startup --python scripts/render-dragon.py -- still <mac/App/dragon.png>
-#   blender -b --factory-startup --python scripts/render-dragon.py -- welcome <welcome-prores.mov>
+# The dragon's pictures outside the site, by Blender, from the site's model, site/public/models/dyno.glb, or from a
+# model with the same bones and clips given after the output. The committed pictures are drawn from the full model the
+# site's is lightened from, its legs held as it was made so the hand stays on the thigh, and its feet where the site's
+# stand:
+#   blender -b --factory-startup --python scripts/render-dragon.py -- still <mac/App/dragon.png> [model.glb]
+#   blender -b --factory-startup --python scripts/render-dragon.py -- welcome <welcome-prores.mov> [model.glb]
 #   avconvert -p PresetHEVCHighestQualityWithAlpha -s welcome-prores.mov -o mac/Viewer/welcome.mov
 # `still` is the dragon of the disk image's window. `welcome` is the first launch's moment: it flies in, lands and
 # breathes fire, on no ground, for mac/Viewer/Welcome.m to lay over its own, from frames it leaves beside the movie. It
@@ -24,12 +27,15 @@ TALL = 150
 # a camera a little above it and turned to its face, as the site's poster shows it
 AZIMUTH, ELEVATION = 35, 12
 
-mode, out = sys.argv[sys.argv.index("--") + 1 :][:2]
+args = sys.argv[sys.argv.index("--") + 1 :]
+mode, out = args[:2]
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.gltf(filepath=MODEL)
+bpy.ops.import_scene.gltf(filepath=args[2] if len(args) > 2 else MODEL)
 scene = bpy.context.scene
-# the model carries a sphere of its own for the site's picking: no part of the picture
-bpy.data.objects["Icosphere"].hide_render = True
+# Blender's importer adds a sphere it draws bones with: no part of the picture
+for shape in bpy.data.objects:
+    if shape.name.startswith("Icosphere"):
+        shape.hide_render = True
 rig, mesh = bpy.data.objects["rig"], bpy.data.objects["dyno"]
 rig.animation_data_create()
 rig.animation_data.action = None

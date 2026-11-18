@@ -1,6 +1,6 @@
 // The first time the hub opens, a moment of welcome: the site's dragon flies in, lands and breathes the word alight, and
 // under it the three things a person does first, each a button that does it. Help → Welcome opens it again.
-// The dragon is welcome.mov beside these sources, which scripts/render-dragon.py draws from the site's model; the fire
+// The dragon is welcome.mov beside these sources, which scripts/render-dragon.py draws from the dragon's model; the fire
 // and the word are drawn here, so the word is in the Mac's language. A person who asked for less motion gets the end.
 #import "Defaults.h"
 #import "HubParts.h"
@@ -10,7 +10,7 @@
 static NSString *const kWelcomed = @"welcomed";
 static const double kWide = 560, kStageTall = 240, kTall = 520, kSide = 28;
 /// Where the fire leaves the mouth on the stage, from its top left, as scripts/render-dragon.py says of the movie.
-static const NSPoint kMouth = {187, 159};
+static const NSPoint kMouth = {190, 167};
 /// Where the word stands: from just past the mouth to the stage's edge, its middle a little over the mouth.
 static const double kWordLeft = 214, kWordMiddle = 140, kWordSize = 50;
 /// When in the movie the fire burns, and when the movie ends: the clip's own times, from where it starts in the movie.

@@ -421,8 +421,8 @@ export function dmgBackground(scale, dragon) {
   const angle = Math.atan2(84, (x1 - x0) / 2);
   const tip = (/** @type {number} */ turn) =>
     `${n(x1 - 15 * Math.cos(angle + turn))} ${n(y - 15 * Math.sin(angle + turn))}`;
-  // its feet on the floor, at half the size it was drawn
-  const [dw, dh] = [183.5, 220];
+  // its feet on the floor, at half the size it was drawn: mac/App/dragon.png is 378 by 440
+  const [dw, dh] = [189, 220];
   const [dx, feet] = [DMG.hidden[0] - dw / 2 + 6, DMG.app[1] + half + 22];
   return (
     `<svg ${SVG} width="${w * scale}" height="${H * scale}" viewBox="0 0 ${w} ${H}"><defs>${blooms.join('')}` +
