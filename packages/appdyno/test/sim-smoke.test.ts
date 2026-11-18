@@ -11,7 +11,7 @@ const SUITES = ['ios', 'keys', 'views.simulator', 'flows-ci'].map(
 );
 
 /** How many cases of each suite a release is held to, in the order above. */
-const CASES = [10, 4, 4, 3];
+const CASES = [10, 5, 4, 3];
 const HID =
   'Failed to find service com.apple.coredevice.feature.remote.hid.digitizer in session; the runner does this instead';
 
@@ -116,7 +116,7 @@ describe('the simulator smoke', () => {
     expect(r.summary).toMatch(
       /\| device \| OS \| Xcode \| date \|\n\| --- \| --- \| --- \| --- \|\n\| iPhone 17 simulator \| iOS 26\.5 \(B1\) \| 26\.5 \(17F42\) \| \d{4}-\d\d-\d\d \|/,
     );
-    expect(r.summary).toContain('Commit `abc`. 21 cases of 4 suites.');
+    expect(r.summary).toContain('Commit `abc`. 22 cases of 4 suites.');
     expect(r.summary).toContain('| ios.test.ts | 10 | 0 | 0 | 61 |');
   });
 
@@ -172,7 +172,7 @@ describe('the simulator smoke', () => {
   it('fails where a case did not run, which vitest calls a pass, and deletes its simulator all the same', () => {
     const r = run({ statuses: [undefined, ['skipped']] });
     expect(r.status).toBe(3);
-    expect(r.stderr).toContain('ran 17 of 21 cases');
+    expect(r.stderr).toContain('ran 17 of 22 cases');
     expect(r.summary).toContain('| keys.test.ts | 0 | 0 | 1 | 61 |');
     expect(r.log.at(-1)).toBe('xcrun simctl delete FAKE-UDID');
   });

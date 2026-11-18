@@ -37,6 +37,7 @@ const CASES = {
     'selects all and deletes by a shortcut, and presses count times',
     'copies and pastes by shortcuts, and types a letter and a digit as keys',
     'takes escape and a held arrow on a field, and leaves the app on the screen',
+    'types again into a field that let go of the focus with its first text, and the runner lives on',
   ],
   'views.simulator': [
     'reads the home screen as SwiftUI once launch_app puts the probe in',

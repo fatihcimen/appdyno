@@ -119,3 +119,28 @@ struct CopiesCarouselScreen: View {
         .onReceive(timer) { _ in turn += 1 }
     }
 }
+
+/// A field that takes nothing the first time and lets go of the keyboard as it does, as a form that resets a field
+/// once: text typed whole into it reads back as other, and the second typing finds the field without the focus.
+struct FocusDropScreen: View {
+    @State private var text = ""
+    @State private var dropped = false
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            TextField("Drops once", text: $text)
+                .focused($focused)
+                .accessibilityIdentifier("drop_input")
+                .onChange(of: text) { _, value in
+                    guard !dropped, !value.isEmpty else { return }
+                    dropped = true
+                    text = ""
+                    focused = false
+                }
+            Spacer()
+        }
+        .textFieldStyle(.roundedBorder)
+        .padding()
+    }
+}

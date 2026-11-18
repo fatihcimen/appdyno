@@ -156,6 +156,24 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
   }, 300_000);
   afterAll(() => o.ctx.close());
   keysOf(() => o.call);
+  it('types again into a field that let go of the focus with its first text, and the runner lives on', async () => {
+    await o.call('manage_app', { action: 'stop' });
+    ok(await o.call('launch_app'));
+    ok(await o.call('open_link', { url: 'appdyno-fixture://open/focus_drop' }));
+    // no US keyboard's text, so the runner types it with the helpers or without them; XCUI's delete into the field
+    // without the focus ended the runner
+    const drop = { id: 'drop_input' };
+    const r = ok(await o.call('type_text', { selector: drop, text: 'Ayşe', replace: true }));
+    expect(r.text).not.toMatch(/holds other text/);
+    ok(
+      await o.call('check_element', {
+        selector: drop,
+        check: 'text',
+        equals: 'Ayşe',
+        timeoutMs: 3_000,
+      }),
+    );
+  });
   viewsOf(() => o.call, {
     control: /"Add Controls"/,
     // the date view holds only the date and time it lists, so a read leaves it out and a selector reaches it

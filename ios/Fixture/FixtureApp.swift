@@ -53,6 +53,7 @@ struct FixtureApp: App {
 
     private static let screens: [String: (String) -> AnyView] = [
         "form": { _ in AnyView(FormScreen()) },
+        "focus_drop": { _ in AnyView(FocusDropScreen()) },
         "list": { _ in AnyView(ListScreen()) },
         "list_heavy": { _ in AnyView(CostListScreen(drawMs: 40)) },
         "list_stall": { _ in AnyView(CostListScreen(stallMs: 1000)) },
