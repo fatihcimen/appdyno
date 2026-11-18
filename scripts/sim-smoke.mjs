@@ -69,17 +69,21 @@ const newestFirst = (a, b) => b.localeCompare(a, undefined, { numeric: true });
 /**
  * The iOS runtime of the Xcode in use, by its SDK's version, else the newest there is, and on it the newest iPhone
  * with a plain name: an image's own simulators differ from one image to the next, and this pair is said in the summary.
+ * A runtime made for one model, as the iPhone Duo's beside iOS 27.2's own, runs no such iPhone and is passed over.
  * @param {Runtime[]} runtimes
  * @param {string} sdk
  */
 function pick(runtimes, sdk) {
+  /** @param {Runtime} r */
+  const iphone = (r) =>
+    r.supportedDeviceTypes
+      .filter((t) => /^iPhone \d+$/.test(t.name))
+      .sort((a, b) => newestFirst(a.name, b.name))[0];
   const ios = runtimes
-    .filter((r) => r.isAvailable && r.name.startsWith('iOS '))
+    .filter((r) => r.isAvailable && r.name.startsWith('iOS ') && iphone(r))
     .sort((a, b) => newestFirst(a.version, b.version));
   const runtime = ios.find((r) => r.version === sdk) ?? ios[0];
-  const type = runtime?.supportedDeviceTypes
-    .filter((t) => /^iPhone \d+$/.test(t.name))
-    .sort((a, b) => newestFirst(a.name, b.name))[0];
+  const type = runtime && iphone(runtime);
   if (!runtime || !type) throw new Error('no iOS runtime with an iPhone on this Mac');
   return { runtime, type };
 }

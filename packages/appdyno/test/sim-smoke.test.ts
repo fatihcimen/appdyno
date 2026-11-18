@@ -47,17 +47,28 @@ const runtime = (version: string, isAvailable = true) => ({
 
 /**
  * A run of the script on those tools: a suite's tests by their statuses where they are not its cases passed, what
- * vitest exits with, what doctor says of the input helper, and what the shell sets.
+ * vitest exits with, what doctor says of the input helper, what the shell sets, and the runtimes simctl lists.
  */
 function run(
-  o: { statuses?: (string[] | undefined)[]; vitest?: number; input?: string; env?: object } = {},
+  o: {
+    statuses?: (string[] | undefined)[];
+    vitest?: number;
+    input?: string;
+    env?: object;
+    runtimes?: object[];
+  } = {},
 ) {
   const fake = mkdtempSync(join(tmpdir(), 'appdyno-smoke-'));
   for (const [name, body] of Object.entries(FAKES)) {
     writeFileSync(join(fake, name), `#!/bin/sh\necho "${name} $*" >>"$FAKE/log"\n${body}\n`);
     chmodSync(join(fake, name), 0o755);
   }
-  const runtimes = [runtime('18.6'), runtime('26.5'), runtime('27.2'), runtime('27.4', false)];
+  const runtimes = o.runtimes ?? [
+    runtime('18.6'),
+    runtime('26.5'),
+    runtime('27.2'),
+    runtime('27.4', false),
+  ];
   writeFileSync(join(fake, 'runtimes.json'), JSON.stringify({ runtimes }));
   const testResults = SUITES.map((file, i) => ({
     name: join(root, file),
@@ -107,6 +118,20 @@ describe('the simulator smoke', () => {
     );
     expect(r.summary).toContain('Commit `abc`. 21 cases of 4 suites.');
     expect(r.summary).toContain('| ios.test.ts | 10 | 0 | 0 | 61 |');
+  });
+
+  it("passes over a runtime of the SDK's version made for one model, which runs no plain iPhone", () => {
+    // as Xcode 27.2 lists the iPhone Duo's runtime before iOS 27.2's own
+    const duo = {
+      ...runtime('26.5'),
+      identifier: 'runtime.26.5-duo',
+      supportedDeviceTypes: [{ name: 'iPhone Duo', identifier: 'type.iPhone-Duo' }],
+    };
+    const r = run({ runtimes: [duo, runtime('26.5'), runtime('27.2')] });
+    expect(r.status).toBe(0);
+    expect(r.log.join('\n')).toMatch(
+      /^xcrun simctl create appdyno-ci-\d+ type\.iPhone-17 runtime\.26\.5$/m,
+    );
   });
 
   it('names cases that are there, each in a suite it runs: one renamed would run no more', () => {
