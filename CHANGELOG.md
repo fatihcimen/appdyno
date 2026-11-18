@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **A more detailed dragon.** The dragon of the site, the disk image's window and the welcome is made again: the same character, now with eyes that have depth and catch the light, fine scales, crisper spikes and claws, and larger wings that fold back behind it. The site's model is 332 KB, from 270 KB.
+
 ## 1.3.1
 
 appdyno 1.3.1 closes several ways a run could read PASS for what it did not check, puts back a simulator's turn, and adds a guide for the move from 1.2. The Mac app now lists every simulator and emulator with Start, makes a new simulator, looks for its own updates, and gives an AI client started from the Dock a command it can run. A simulator types, launches and brings an app to the front sooner.

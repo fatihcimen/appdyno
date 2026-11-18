@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+### Değişenler
+
+- **Daha ayrıntılı bir ejderha.** Sitenin, disk image penceresinin ve karşılamanın ejderhası yeniden yapıldı: aynı karakter, artık derinliği olan ve ışığı yakalayan gözleri, ince pulları, daha keskin dikenleri ve pençeleri, arkasına katlanan daha büyük kanatlarıyla. Sitenin modeli 270 KB yerine 332 KB.
+
 ## 1.3.1
 
 appdyno 1.3.1, bir çalıştırmanın denetlemediği bir şey için PASS okuyabildiği yollardan birkaçını kapatır, bir simulator'ın dönüşünü geri koyar ve 1.2'den geçiş için bir kılavuz ekler. Mac uygulaması artık her simulator'ı ve emulator'ü Başlat ile listeler, yeni bir simulator yapar, kendi güncellemelerini arar ve Dock'tan başlatılan bir AI istemcisine çalıştırabileceği bir komut verir. Bir simulator daha erken yazar, launch eder ve bir uygulamayı öne getirir.
