@@ -126,10 +126,11 @@ describe.skipIf(!udid)('screen views on a simulator', () => {
 
   it("never says what a secure field holds, the field's own views' text among it", async () => {
     await open('form');
-    expect(
-      (await t.call('tap_screen', { selector: { id: 'password_input' }, read: 'none' })).error,
-    ).toBe(false);
-    expect((await t.call('type_text', { text: SECRET, read: 'none' })).error).toBe(false);
+    // a refusal's own words, as a hosted run that failed here said no more than that one came
+    const tap = await t.call('tap_screen', { selector: { id: 'password_input' }, read: 'none' });
+    expect(tap.error ? tap.text : '').toBe('');
+    const typed = await t.call('type_text', { text: SECRET, read: 'none' });
+    expect(typed.error ? typed.text.replaceAll(SECRET, '…') : '').toBe('');
     const form = await views();
     const field = form.views.find((v) => v.id === 'password_input');
     console.log(JSON.stringify(field));
