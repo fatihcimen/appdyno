@@ -6,22 +6,113 @@ What [the tools](tools.md) were run on, and what each run showed. The device sui
 
 ## Tested versions
 
-Each device, OS and Xcode that a run on this page names whole, newest first. The simulator smoke of [CI and releases](ci.md) writes the same four columns at the top of its `device-summary.md`, which each release holds as a file: a row there that is not here names a pair that only the smoke's suites ran on. The smoke ran 18 cases in its rows here; from 1.3.0 it runs 21, the keys with a modifier among them, and no run of the 21 on GitHub's runner is recorded yet.
+Each device, OS and Xcode that a run on this page names whole, newest first. The simulator smoke of [CI and releases](ci.md) writes the same four columns at the top of its `device-summary.md`, which each release holds as a file: a row there that is not here names a pair that only the smoke's suites ran on. The smoke ran 18 cases in its rows of 2026-11-16; from 1.3.0 it runs 21, the keys with a modifier among them, and no run of the 21 on GitHub's runner is recorded yet.
 
-| device                             | OS                                      | Xcode         | date       | what ran                                                                                                                                                                              |
-| ---------------------------------- | --------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-17 | 41 suites, one file at a time: 292 passed, 2 failed: [1.3.0 on the simulators](#130-on-the-simulators)                                                                                |
-| iPhone Duo simulator               | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-17 | `fold.test.ts` three times: 6 of 6 once, 5 of 6 twice: [A fold](#a-fold)                                                                                                              |
-| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-17 | 41 suites, one file at a time: 292 passed, 2 failed: [1.3.0 on the simulators](#130-on-the-simulators)                                                                                |
-| Android emulator, Pixel 7          | Android 16, API 36 (BE2A.250530.026.F3) | none          | 2026-11-17 | 50 suites, one file at a time: 348 passed, 4 failed: [1.3.0 on the emulators](#130-on-the-emulators)                                                                                  |
-| Android emulator, Pixel 9 Pro Fold | Android 15, API 35 (AE3A.240806.043)    | none          | 2026-11-17 | a fold, the conditions, the battery page and the window's bar: 24 passed, none failed: [1.3.0 on the emulators](#130-on-the-emulators)                                                |
-| iPhone 13 Pro Max                  | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | every suite that takes a phone but `person-prompts`, in two passes: 132 passed, 1 failed: [An iPhone on iOS 27.2](#an-iphone-on-ios-272)                                              |
-| Xiaomi REDMI 15C                   | Android 16, API 36, HyperOS 3.0.301.0   | none          | 2026-11-17 | every suite that takes a phone, in two passes: 235 passed, none failed: [A Xiaomi on HyperOS 3](#a-xiaomi-on-hyperos-3)                                                               |
-| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | the simulator smoke on GitHub's hosted macOS runner: its 18 cases passed by the runner alone, as the host has no simulator HID service, in 417 s of suites (15 min for the whole job) |
-| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | the simulator smoke on a Mac: its 18 cases passed by the simulator's helpers in 189 s, and by the runner alone in 219 s, at host load 40 to 329 on 10 cores                           |
-| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | the simulator suites, one file at a time: [Xcode 27.2](#xcode-272)                                                                                                                    |
-| iPhone Duo simulator               | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-15 | a trial outside the tools, before 1.3.0: its hinge event folded and unfolded it, and appdyno 1.2.0 read it open: [A fold](#a-fold)                                                    |
-| Android emulator                   | Android 17, API 37 (CE2A.260420.051.A3) | none          | 2026-11-08 | every Android suite: [Android 17](#android-17)                                                                                                                                        |
+| device                             | OS                                      | Xcode         | date       | what ran                                                                                                                                                                                                           |
+| ---------------------------------- | --------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-18 | 41 suites, one file at a time: 292 passed, 2 failed, each passing run again alone; the simulator smoke's 21 cases passed by the helpers and by the runner alone: [1.3.1 on the simulators](#131-on-the-simulators) |
+| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-18 | 41 suites, one file at a time: 292 passed, 2 failed; the simulator smoke's 21 cases passed by the helpers and by the runner alone: [1.3.1 on the simulators](#131-on-the-simulators)                               |
+| Android emulator, Pixel 7          | Android 16, API 36 (BE2A.250530.026.F3) | none          | 2026-11-18 | 50 suites, one file at a time: 346 passed, 4 failed: [1.3.1 on an emulator](#131-on-an-emulator)                                                                                                                   |
+| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-17 | 41 suites, one file at a time: 292 passed, 2 failed: [1.3.0 on the simulators](#130-on-the-simulators)                                                                                                             |
+| iPhone Duo simulator               | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-17 | `fold.test.ts` three times: 6 of 6 once, 5 of 6 twice: [A fold](#a-fold)                                                                                                                                           |
+| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-17 | 41 suites, one file at a time: 292 passed, 2 failed: [1.3.0 on the simulators](#130-on-the-simulators)                                                                                                             |
+| Android emulator, Pixel 7          | Android 16, API 36 (BE2A.250530.026.F3) | none          | 2026-11-17 | 50 suites, one file at a time: 348 passed, 4 failed: [1.3.0 on the emulators](#130-on-the-emulators)                                                                                                               |
+| Android emulator, Pixel 9 Pro Fold | Android 15, API 35 (AE3A.240806.043)    | none          | 2026-11-17 | a fold, the conditions, the battery page and the window's bar: 24 passed, none failed: [1.3.0 on the emulators](#130-on-the-emulators)                                                                             |
+| iPhone 13 Pro Max                  | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | every suite that takes a phone but `person-prompts`, in two passes: 132 passed, 1 failed: [An iPhone on iOS 27.2](#an-iphone-on-ios-272)                                                                           |
+| Xiaomi REDMI 15C                   | Android 16, API 36, HyperOS 3.0.301.0   | none          | 2026-11-17 | every suite that takes a phone, in two passes: 235 passed, none failed: [A Xiaomi on HyperOS 3](#a-xiaomi-on-hyperos-3)                                                                                            |
+| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | the simulator smoke on GitHub's hosted macOS runner: its 18 cases passed by the runner alone, as the host has no simulator HID service, in 417 s of suites (15 min for the whole job)                              |
+| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | the simulator smoke on a Mac: its 18 cases passed by the simulator's helpers in 189 s, and by the runner alone in 219 s, at host load 40 to 329 on 10 cores                                                        |
+| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | the simulator suites, one file at a time: [Xcode 27.2](#xcode-272)                                                                                                                                                 |
+| iPhone Duo simulator               | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-15 | a trial outside the tools, before 1.3.0: its hinge event folded and unfolded it, and appdyno 1.2.0 read it open: [A fold](#a-fold)                                                                                 |
+| Android emulator                   | Android 17, API 37 (CE2A.260420.051.A3) | none          | 2026-11-08 | every Android suite: [Android 17](#android-17)                                                                                                                                                                     |
+
+## 1.3.1 on the simulators
+
+Every simulator suite ran one file at a time on 2026-11-18, on 1.3.1 before its release, on the Mac of [1.3.0 on the simulators](#130-on-the-simulators): on a new iPhone 17 simulator with iOS 26.5 (23F77) under Xcode 26.5 (17F42), at host load 2 to 254, and on a new iPhone 17 simulator with iOS 27.2 (24B8117) under Xcode 27.2 (27B52), used through `DEVELOPER_DIR` with the runner and the fixtures built by it, at host load 2 to 408, as other work ran on the Mac. What was left out, and what skipped, is as in 1.3.0. A case that failed ran again alone, and a suite fixed ran again whole.
+
+What the runs found, each fixed and run again:
+
+- A simulator's waits for a change read its helper in 1.3.1, where the helper reads the app, so the device itself answers such a wait with nothing. `driving.test.ts` and `ios.test.ts` still asked it to wait, and failed in each run on both systems: they now hold that answer, and the runner's wait where the runner works alone.
+- The New Simulator sheet of a hub kept to an allow list says, as it opens, that the hub makes none, and holds its Create off. `hub.test.ts` waited for a note the hub no longer sends.
+- The simulator smoke took the first runtime of its Xcode's iOS version, and Xcode 27.2 lists the iPhone Duo's own iOS 27.2 runtime first, which runs no iPhone with a plain name: the smoke ended before it made a simulator. It now takes the runtime that runs one.
+
+Three cases failed in the iOS 27.2 sweep and passed run again alone at host load 5: the web view case of `evidence.test.ts` that adds what the tree does not hold, at host load 129 to 408, whose whole file then passed 22 of 22; the core at work off the main thread of `gate-why.test.ts`, which the gate called noisy at host load 65; and the 500 ms slow start of `ios-perf.test.ts`, read as 158 ms at host load 243. The Face ID sheet of `ios.test.ts` and XCTest's metrics of `ios-perf.test.ts`, open in 1.3.0 on iOS 27.2, passed there.
+
+Still failing on iOS 26.5, as in 1.3.0: the CPU profile and the trace query of `ios-perf.test.ts`, in each of their runs. Xcode 26.5's `xctrace` started no recording, and an `xctrace record` with a 2 s limit kept running until it was ended.
+
+Open, and older than 1.3.1: the web view block of `evidence.test.ts` run alone, with no runner up, failed its setup on iOS 27.2, on 1.3.1 and on 1.3.0 alike, in 2 runs of 2 each. Its wait of 5 s for the page's words read only the native Back button: the read helper hands a page to the runner once it sees the page's content, and while no runner is up a read answers with the helper's own tree. The page's words were read once a runner was up, 8.7 s after a cold start. In a whole run the file's earlier blocks have a runner up, and the block passes.
+
+Each suite's count is its last whole run. Passed, failed and skipped:
+
+| suite               | iOS 26.5    | iOS 27.2    |
+| ------------------- | ----------- | ----------- |
+| `allow-apps`        | 4, 0, 5     | 4, 0, 5     |
+| `app-data`          | 1, 0, 3     | 1, 0, 3     |
+| `ask-person`        | 8, 0, 0     | 8, 0, 0     |
+| `build-and-run`     | 2, 0, 2     | 2, 0, 2     |
+| `crashes`           | 2, 0, 2     | 2, 0, 2     |
+| `diagnose`          | 3, 0, 10    | 3, 0, 10    |
+| `driving`           | 22, 0, 41   | 22, 0, 41   |
+| `evidence`          | 22, 0, 42   | 22, 0, 42   |
+| `flows-ci`          | 7, 0, 7     | 7, 0, 7     |
+| `flows`             | 9, 0, 21    | 9, 0, 21    |
+| `fold`              | 0, 0, 12    | 0, 0, 12    |
+| `gate-why`          | 4, 0, 8     | 3, 1, 8     |
+| `guards`            | 1, 0, 9     | 1, 0, 9     |
+| `hub.device`        | 1, 0, 0     | 1, 0, 0     |
+| `hub`               | 2, 0, 0     | 2, 0, 0     |
+| `install-ipa`       | 2, 0, 1     | 2, 0, 1     |
+| `ios`               | 42, 0, 0    | 42, 0, 0    |
+| `ios-perf`          | 15, 2, 0    | 16, 1, 0    |
+| `keys`              | 8, 0, 17    | 8, 0, 17    |
+| `lifecycle`         | 5, 0, 7     | 5, 0, 7     |
+| `mcp-stdio`         | 8, 0, 8     | 8, 0, 8     |
+| `measures-sim`      | 7, 0, 0     | 7, 0, 0     |
+| `mirror.hud`        | 2, 0, 1     | 2, 0, 1     |
+| `mirror.record`     | 4, 0, 14    | 4, 0, 14    |
+| `mirror.simulator`  | 5, 0, 3     | 5, 0, 3     |
+| `mirror.window`     | 10, 0, 0    | 10, 0, 0    |
+| `network.simulator` | 18, 0, 0    | 18, 0, 0    |
+| `open-settings`     | 23, 0, 30   | 23, 0, 30   |
+| `perf-compare`      | 1, 0, 2     | 1, 0, 2     |
+| `person-prompts`    | 1, 0, 4     | 1, 0, 4     |
+| `picture-words`     | 2, 0, 4     | 2, 0, 4     |
+| `push`              | 8, 0, 10    | 8, 0, 10    |
+| `scroll`            | 3, 0, 6     | 3, 0, 6     |
+| `settings`          | 4, 0, 16    | 4, 0, 16    |
+| `small-tools`       | 11, 0, 20   | 11, 0, 20   |
+| `steps`             | 2, 0, 4     | 2, 0, 4     |
+| `timeline`          | 2, 0, 6     | 2, 0, 6     |
+| `views.simulator`   | 9, 0, 0     | 9, 0, 0     |
+| `watch`             | 7, 0, 14    | 7, 0, 14    |
+| `window.push-token` | 2, 0, 0     | 2, 0, 0     |
+| `window.sends`      | 3, 0, 2     | 3, 0, 2     |
+| all 41              | 292, 2, 331 | 292, 2, 331 |
+
+The case `mirror.hud.test.ts` skips is Android's own, the fold of its bar, which the table of 1.3.0 does not count.
+
+The simulator smoke, `node scripts/sim-smoke.mjs`, made its own iPhone 17 simulator on each Xcode's iOS and passed its 21 cases in each of four runs, its suites taking:
+
+| Xcode        | input and reads         | suites | host load  |
+| ------------ | ----------------------- | ------ | ---------- |
+| 26.5 (17F42) | the simulator's helpers | 140 s  | 146 to 151 |
+| 26.5 (17F42) | the runner alone        | 200 s  | 71 to 151  |
+| 27.2 (27B52) | the simulator's helpers | 219 s  | 23 to 167  |
+| 27.2 (27B52) | the runner alone        | 248 s  | 66 to 167  |
+
+## 1.3.1 on an emulator
+
+Every Android suite ran one file at a time on 2026-11-18, on 1.3.1 before its release, on a new emulator with a Pixel 7's profile and Android 16, API 36, the image and build of [1.3.0 on the emulators](#130-on-the-emulators), emulator 37.2.12, drawing on the Mac's GPU, at host load 2 to 317 on 10 cores, as other work ran on the Mac. 50 suites passed 346 tests and failed 4, each suite counted in its last whole run; 323 were skipped, as a simulator's, an iPhone's, a foldable's, or a window's that opens only when asked. The emulator was first started by hand with no gRPC port, and the case of `mirror.android.test.ts` that reads its own picture by gRPC passed once it was started with `-grpc`, as `manage_simulator` starts one. `baseline-profile.test.ts` and `push.test.ts` ran again whole once their fixtures were built and installed, and passed 5 of 5 and 10 of 10.
+
+Still failing, as in 1.3.0: the battery page of `open-settings.test.ts`; `frame-cause.test.ts`'s case of a 100 ms GC in each frame, named `busy`; `measures-android.test.ts`'s energy case; and `vitals.test.ts`'s light screen, read as 99.34 % slow frames.
+
+Failed once and passed run again: the case of `settings.test.ts` that writes down the rotation lock a turn sets. In the sweep, at host load 4 to 5, `restore` put auto-rotate back off where the case had turned it on before its turn; it passed alone, with its whole file, and after `scroll.test.ts`, which ran before it in the sweep, and why it failed once is not known. The first case of `allow-apps.test.ts`, the first suite on the new emulator, found the fixture on its permission screen after a link to its form, and its file passed whole run again.
+
+## The Mac app in 1.3.1
+
+The app was built from the same commit by `scripts/build-app.mjs`, signed ad hoc, on 2026-11-18. The viewer's self test, `packages/core/test/viewer-self-test.test.ts`, passed with no check failed and none left unrun, and `scripts/check-app.mjs` passed its 16 steps. A person's own `dev.appdyno.app` and `dev.appdyno.window` read the same after every run here as before the first.
+
+Then the app's own binary was started as a person opens it, its windows on the screen, with a preferences domain of the run's own and an allow list of one shut-down simulator of the run, and its windows were read and pressed through the Accessibility API. The Welcome opened at the first launch, and each of its buttons took the hub where it says: AI Clients to AI Clients, New Simulator… to the New Simulator sheet, with this Mac's models and systems and, as the hub kept to its list, its refusal and Create off, and Connect a Phone to Connect a Phone. Help's Welcome opened it again, and Appdyno Help opened Help. With the simulator chosen, Device offered Start, with Shake and the screen's items off. Start booted it, and Device then offered Shut Down and the device's own items, Shake still off, as a simulator has none to shake: Home took the fixture to the home screen and App Switcher showed the switcher, as the simulator's own screenshots showed, and Shut Down shut it down. Documentation, Tools Reference and Report an Issue each open a web page and were not pressed; each of their pages, in English and in Turkish, answered.
 
 ## 1.3.0 on the simulators
 

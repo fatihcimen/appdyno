@@ -6,22 +6,113 @@
 
 ## Test edilen sürümler
 
-Bu sayfadaki bir çalıştırmanın eksiksiz adlandırdığı her cihaz, işletim sistemi ve Xcode, en yeniden eskiye. [CI ve sürümler](ci.tr.md) sayfasındaki simulator smoke'u aynı dört sütunu, her sürümün bir dosya olarak taşıdığı `device-summary.md` dosyasının başına yazar: orada olup burada olmayan bir satır, yalnızca smoke'un suite'lerinin çalıştığı bir ikiliyi adlandırır. Smoke buradaki satırlarında 18 durum çalıştırdı; 1.3.0'dan bu yana değiştirici tuşlu basışlar da içinde olmak üzere 21 durum çalıştırır ve 21 durumun GitHub'ın runner'ında bir çalıştırması henüz kayıtlı değildir.
+Bu sayfadaki bir çalıştırmanın eksiksiz adlandırdığı her cihaz, işletim sistemi ve Xcode, en yeniden eskiye. [CI ve sürümler](ci.tr.md) sayfasındaki simulator smoke'u aynı dört sütunu, her sürümün bir dosya olarak taşıdığı `device-summary.md` dosyasının başına yazar: orada olup burada olmayan bir satır, yalnızca smoke'un suite'lerinin çalıştığı bir ikiliyi adlandırır. Smoke 2026-11-16 tarihli satırlarında 18 durum çalıştırdı; 1.3.0'dan bu yana değiştirici tuşlu basışlar da içinde olmak üzere 21 durum çalıştırır ve 21 durumun GitHub'ın runner'ında bir çalıştırması henüz kayıtlı değildir.
 
-| cihaz                              | işletim sistemi                         | Xcode         | tarih      | ne çalıştı                                                                                                                                                                   |
-| ---------------------------------- | --------------------------------------- | ------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-17 | 41 suite, her seferinde bir dosya: 292 geçti, 2 kaldı: [Simulator'larda 1.3.0](#simulatorlarda-130)                                                                          |
-| iPhone Duo simulator'ı             | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-17 | `fold.test.ts` üç kez: bir kez 6'da 6, iki kez 6'da 5: [Katlanma](#katlanma)                                                                                                 |
-| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-17 | 41 suite, her seferinde bir dosya: 292 geçti, 2 kaldı: [Simulator'larda 1.3.0](#simulatorlarda-130)                                                                          |
-| Android emulator, Pixel 7          | Android 16, API 36 (BE2A.250530.026.F3) | yok           | 2026-11-17 | 50 suite, her seferinde bir dosya: 348 geçti, 4 kaldı: [Emulator'larda 1.3.0](#emulatorlarda-130)                                                                            |
-| Android emulator, Pixel 9 Pro Fold | Android 15, API 35 (AE3A.240806.043)    | yok           | 2026-11-17 | bir katlanma, koşullar, pil sayfası ve pencerenin çubuğu: 24 geçti, hiçbiri kalmadı: [Emulator'larda 1.3.0](#emulatorlarda-130)                                              |
-| iPhone 13 Pro Max                  | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | `person-prompts` dışında telefon alan her suite, iki turda: 132 geçti, 1 kaldı: [iOS 27.2'li bir iPhone](#ios-272li-bir-iphone)                                              |
-| Xiaomi REDMI 15C                   | Android 16, API 36, HyperOS 3.0.301.0   | yok           | 2026-11-17 | telefon alan her suite, iki turda: 235 geçti, hiçbiri kalmadı: [HyperOS 3'lü bir Xiaomi](#hyperos-3lü-bir-xiaomi)                                                            |
-| iPhone 17 simulator'ı              | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | GitHub'ın barındırdığı macOS runner'ında simulator smoke'u: 18 durumu yalnızca runner ile geçti, çünkü makinede simulator HID servisi yok; suite'ler 417 s (bütün job 15 dk) |
-| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | bir Mac'te simulator smoke'u: 18 durumu simulator'ın yardımcılarıyla 189 s'de, yalnızca runner ile 219 s'de geçti, 10 çekirdekte host yükü 40 ile 329 arasında               |
-| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | simulator suite'leri, her seferinde bir dosya: [Xcode 27.2](#xcode-272)                                                                                                      |
-| iPhone Duo simulator'ı             | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-15 | 1.3.0'dan önce, araçların dışında bir deneme: menteşe olayı onu katlayıp açtı, appdyno 1.2.0 da açıkken onu okudu: [Katlanma](#katlanma)                                     |
-| Android emulator                   | Android 17, API 37 (CE2A.260420.051.A3) | yok           | 2026-11-08 | her Android suite'i: [Android 17](#android-17)                                                                                                                               |
+| cihaz                              | işletim sistemi                         | Xcode         | tarih      | ne çalıştı                                                                                                                                                                                                                     |
+| ---------------------------------- | --------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-18 | 41 suite, her seferinde bir dosya: 292 geçti, 2 kaldı, ikisi de tek başına yeniden çalışınca geçti; simulator smoke'unun 21 durumu yardımcılarla da yalnızca runner ile de geçti: [Simulator'larda 1.3.1](#simulatorlarda-131) |
+| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-18 | 41 suite, her seferinde bir dosya: 292 geçti, 2 kaldı; simulator smoke'unun 21 durumu yardımcılarla da yalnızca runner ile de geçti: [Simulator'larda 1.3.1](#simulatorlarda-131)                                              |
+| Android emulator, Pixel 7          | Android 16, API 36 (BE2A.250530.026.F3) | yok           | 2026-11-18 | 50 suite, her seferinde bir dosya: 346 geçti, 4 kaldı: [Bir emulator'da 1.3.1](#bir-emulatorda-131)                                                                                                                            |
+| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-17 | 41 suite, her seferinde bir dosya: 292 geçti, 2 kaldı: [Simulator'larda 1.3.0](#simulatorlarda-130)                                                                                                                            |
+| iPhone Duo simulator'ı             | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-17 | `fold.test.ts` üç kez: bir kez 6'da 6, iki kez 6'da 5: [Katlanma](#katlanma)                                                                                                                                                   |
+| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-17 | 41 suite, her seferinde bir dosya: 292 geçti, 2 kaldı: [Simulator'larda 1.3.0](#simulatorlarda-130)                                                                                                                            |
+| Android emulator, Pixel 7          | Android 16, API 36 (BE2A.250530.026.F3) | yok           | 2026-11-17 | 50 suite, her seferinde bir dosya: 348 geçti, 4 kaldı: [Emulator'larda 1.3.0](#emulatorlarda-130)                                                                                                                              |
+| Android emulator, Pixel 9 Pro Fold | Android 15, API 35 (AE3A.240806.043)    | yok           | 2026-11-17 | bir katlanma, koşullar, pil sayfası ve pencerenin çubuğu: 24 geçti, hiçbiri kalmadı: [Emulator'larda 1.3.0](#emulatorlarda-130)                                                                                                |
+| iPhone 13 Pro Max                  | iOS 27.2 (24B119)                       | 27.2 (27B52)  | 2026-11-17 | `person-prompts` dışında telefon alan her suite, iki turda: 132 geçti, 1 kaldı: [iOS 27.2'li bir iPhone](#ios-272li-bir-iphone)                                                                                                |
+| Xiaomi REDMI 15C                   | Android 16, API 36, HyperOS 3.0.301.0   | yok           | 2026-11-17 | telefon alan her suite, iki turda: 235 geçti, hiçbiri kalmadı: [HyperOS 3'lü bir Xiaomi](#hyperos-3lü-bir-xiaomi)                                                                                                              |
+| iPhone 17 simulator'ı              | iOS 26.5 (23F77)                        | 26.6 (17F113) | 2026-11-16 | GitHub'ın barındırdığı macOS runner'ında simulator smoke'u: 18 durumu yalnızca runner ile geçti, çünkü makinede simulator HID servisi yok; suite'ler 417 s (bütün job 15 dk)                                                   |
+| iPhone 17 simulator                | iOS 26.5 (23F77)                        | 26.5 (17F42)  | 2026-11-16 | bir Mac'te simulator smoke'u: 18 durumu simulator'ın yardımcılarıyla 189 s'de, yalnızca runner ile 219 s'de geçti, 10 çekirdekte host yükü 40 ile 329 arasında                                                                 |
+| iPhone 17 simulator                | iOS 27.2 (24B8117)                      | 27.2 (27B52)  | 2026-11-16 | simulator suite'leri, her seferinde bir dosya: [Xcode 27.2](#xcode-272)                                                                                                                                                        |
+| iPhone Duo simulator'ı             | iOS 27.2 (24B91016s)                    | 27.2 (27B52)  | 2026-11-15 | 1.3.0'dan önce, araçların dışında bir deneme: menteşe olayı onu katlayıp açtı, appdyno 1.2.0 da açıkken onu okudu: [Katlanma](#katlanma)                                                                                       |
+| Android emulator                   | Android 17, API 37 (CE2A.260420.051.A3) | yok           | 2026-11-08 | her Android suite'i: [Android 17](#android-17)                                                                                                                                                                                 |
+
+## Simulator'larda 1.3.1
+
+Her simulator suite'i 2026-11-18'de, yayımlanmadan önceki 1.3.1 üzerinde, [Simulator'larda 1.3.0](#simulatorlarda-130) bölümündeki Mac'te her seferinde bir dosya çalıştı: Xcode 26.5 (17F42) altında iOS 26.5 (23F77) yüklü yeni bir iPhone 17 simulator'ında, 2 ile 254 arası host yükünde; ve `DEVELOPER_DIR` ile kullanılan Xcode 27.2 (27B52) altında, runner'ı ve fixture'ları onunla derlenmiş, iOS 27.2 (24B8117) yüklü yeni bir iPhone 17 simulator'ında, Mac'te başka işler çalışırken 2 ile 408 arası host yükünde. Dışarıda bırakılanlar ve atlananlar 1.3.0'dakiyle aynıdır. Kalan bir durum tek başına yeniden çalıştı, düzeltilen bir suite de bütün olarak yeniden çalıştı.
+
+Çalıştırmaların bulduğu, her biri düzeltilip yeniden çalıştırılan:
+
+- 1.3.1'de bir simulator'ın bir değişiklik için beklemeleri, yardımcı uygulamayı okuduğu yerde yardımcıyı okur; bu yüzden böyle bir beklemeye cihazın kendisi hiçbir şeyle cevap verir. `driving.test.ts` ve `ios.test.ts` ondan hâlâ beklemesini istiyordu ve iki sistemde de her çalıştırmada kaldı: artık bu cevabı, runner'ın tek başına çalıştığı yerde de runner'ın beklemesini tutarlar.
+- Bir izin listesine bağlı bir hub'ın New Simulator sheet'i, açılırken hub'ın hiçbir simulator yapmadığını söyler ve Create'ini kapalı tutar. `hub.test.ts`, hub'ın artık göndermediği bir notu bekliyordu.
+- Simulator smoke'u, Xcode'unun iOS sürümünün ilk runtime'ını alıyordu; Xcode 27.2 de iPhone Duo'nun kendi iOS 27.2 runtime'ını, düz adlı hiçbir iPhone çalıştırmayanı, önce listeler: smoke bir simulator yapmadan bitti. Artık birini çalıştıran runtime'ı alır.
+
+iOS 27.2 taramasında üç durum kaldı ve 5 host yükünde tek başına yeniden çalışınca geçti: `evidence.test.ts`'in ağacın tutmadığını ekrana ekleyen web view durumu, 129 ile 408 arası host yükünde, ardından bütün dosyası 22'de 22 geçti; `gate-why.test.ts`'in ana thread dışında çalışan çekirdeği, geçidin 65 host yükünde gürültülü dediği; ve `ios-perf.test.ts`'in 500 ms'lik yavaş başlatması, 243 host yükünde 158 ms okundu. 1.3.0'da iOS 27.2'de açık kalan `ios.test.ts`'in Face ID sheet'i ve `ios-perf.test.ts`'in XCTest metrikleri orada geçti.
+
+iOS 26.5'te, 1.3.0'daki gibi, hâlâ kalan: `ios-perf.test.ts`'in CPU profili ve trace sorgusu, her çalıştırmasında. Xcode 26.5'in `xctrace`'i hiçbir kayıt başlatmadı, 2 sn sınırlı bir `xctrace record` da sonlandırılana kadar çalışır kaldı.
+
+Açık ve 1.3.1'den eski: `evidence.test.ts`'in web view bloğu, açık bir runner yokken tek başına çalıştırıldığında, iOS 27.2'de, 1.3.1'de de 1.3.0'da da, her birinde 2 çalıştırmanın 2'sinde kurulumunda kaldı. Sayfanın sözcükleri için 5 sn'lik beklemesi yalnızca yerel Back düğmesini okudu: okuma yardımcısı bir sayfayı, içeriğini gördüğünde runner'a bırakır, açık bir runner yokken de bir okuma yardımcının kendi ağacıyla cevap verir. Sayfanın sözcükleri bir runner açılınca, soğuk bir başlangıçtan 8,7 sn sonra okundu. Bütün bir çalıştırmada dosyanın önceki blokları runner'ı açmış olur ve blok geçer.
+
+Her suite'in sayısı son bütün çalıştırmasıdır. Geçen, kalan ve atlanan:
+
+| suite               | iOS 26.5    | iOS 27.2    |
+| ------------------- | ----------- | ----------- |
+| `allow-apps`        | 4, 0, 5     | 4, 0, 5     |
+| `app-data`          | 1, 0, 3     | 1, 0, 3     |
+| `ask-person`        | 8, 0, 0     | 8, 0, 0     |
+| `build-and-run`     | 2, 0, 2     | 2, 0, 2     |
+| `crashes`           | 2, 0, 2     | 2, 0, 2     |
+| `diagnose`          | 3, 0, 10    | 3, 0, 10    |
+| `driving`           | 22, 0, 41   | 22, 0, 41   |
+| `evidence`          | 22, 0, 42   | 22, 0, 42   |
+| `flows-ci`          | 7, 0, 7     | 7, 0, 7     |
+| `flows`             | 9, 0, 21    | 9, 0, 21    |
+| `fold`              | 0, 0, 12    | 0, 0, 12    |
+| `gate-why`          | 4, 0, 8     | 3, 1, 8     |
+| `guards`            | 1, 0, 9     | 1, 0, 9     |
+| `hub.device`        | 1, 0, 0     | 1, 0, 0     |
+| `hub`               | 2, 0, 0     | 2, 0, 0     |
+| `install-ipa`       | 2, 0, 1     | 2, 0, 1     |
+| `ios`               | 42, 0, 0    | 42, 0, 0    |
+| `ios-perf`          | 15, 2, 0    | 16, 1, 0    |
+| `keys`              | 8, 0, 17    | 8, 0, 17    |
+| `lifecycle`         | 5, 0, 7     | 5, 0, 7     |
+| `mcp-stdio`         | 8, 0, 8     | 8, 0, 8     |
+| `measures-sim`      | 7, 0, 0     | 7, 0, 0     |
+| `mirror.hud`        | 2, 0, 1     | 2, 0, 1     |
+| `mirror.record`     | 4, 0, 14    | 4, 0, 14    |
+| `mirror.simulator`  | 5, 0, 3     | 5, 0, 3     |
+| `mirror.window`     | 10, 0, 0    | 10, 0, 0    |
+| `network.simulator` | 18, 0, 0    | 18, 0, 0    |
+| `open-settings`     | 23, 0, 30   | 23, 0, 30   |
+| `perf-compare`      | 1, 0, 2     | 1, 0, 2     |
+| `person-prompts`    | 1, 0, 4     | 1, 0, 4     |
+| `picture-words`     | 2, 0, 4     | 2, 0, 4     |
+| `push`              | 8, 0, 10    | 8, 0, 10    |
+| `scroll`            | 3, 0, 6     | 3, 0, 6     |
+| `settings`          | 4, 0, 16    | 4, 0, 16    |
+| `small-tools`       | 11, 0, 20   | 11, 0, 20   |
+| `steps`             | 2, 0, 4     | 2, 0, 4     |
+| `timeline`          | 2, 0, 6     | 2, 0, 6     |
+| `views.simulator`   | 9, 0, 0     | 9, 0, 0     |
+| `watch`             | 7, 0, 14    | 7, 0, 14    |
+| `window.push-token` | 2, 0, 0     | 2, 0, 0     |
+| `window.sends`      | 3, 0, 2     | 3, 0, 2     |
+| 41'inin tümü        | 292, 2, 331 | 292, 2, 331 |
+
+`mirror.hud.test.ts`'in atladığı durum Android'indir, çubuğunun katlanması; 1.3.0'ın tablosu onu saymaz.
+
+Simulator smoke'u, `node scripts/sim-smoke.mjs`, her Xcode'un iOS'unda kendi iPhone 17 simulator'ını yaptı ve dört çalıştırmanın her birinde 21 durumunu geçti; suite'leri şu kadar sürdü:
+
+| Xcode        | girdi ve okumalar         | suite'ler | host yükü   |
+| ------------ | ------------------------- | --------- | ----------- |
+| 26.5 (17F42) | simulator'ın yardımcıları | 140 s     | 146 ile 151 |
+| 26.5 (17F42) | yalnızca runner           | 200 s     | 71 ile 151  |
+| 27.2 (27B52) | simulator'ın yardımcıları | 219 s     | 23 ile 167  |
+| 27.2 (27B52) | yalnızca runner           | 248 s     | 66 ile 167  |
+
+## Bir emulator'da 1.3.1
+
+Her Android suite'i 2026-11-18'de, yayımlanmadan önceki 1.3.1 üzerinde, Pixel 7 profilli, Android 16, API 36 yüklü yeni bir emulator'da her seferinde bir dosya çalıştı: [Emulator'larda 1.3.0](#emulatorlarda-130) bölümünün imajı ve build'i, emulator 37.2.12, Mac'in GPU'sunda çizen, Mac'te başka işler çalışırken 10 çekirdekte 2 ile 317 arası host yükünde. 50 suite 346 testi geçti, 4'ünde kaldı; her suite son bütün çalıştırmasıyla sayıldı. 323'ü bir simulator'ın, bir iPhone'un, katlanabilir bir cihazın ya da yalnızca istenince açılan bir pencerenin olduğu için atlandı. Emulator önce elle, gRPC portu olmadan başlatıldı; `mirror.android.test.ts`'in kendi görüntüsünü gRPC ile okuyan durumu, emulator `manage_simulator`'ın başlattığı gibi `-grpc` ile başlatılınca geçti. `baseline-profile.test.ts` ve `push.test.ts`, fixture'ları derlenip kurulunca bütün olarak yeniden çalıştı ve 5'te 5 ile 10'da 10 geçti.
+
+1.3.0'daki gibi hâlâ kalanlar: `open-settings.test.ts`'in pil sayfası; `frame-cause.test.ts`'in her karede 100 ms'lik GC durumu, `busy` diye adlandırılır; `measures-android.test.ts`'in enerji durumu; ve `vitals.test.ts`'in açık ekranı, %99,34 yavaş kare okunur.
+
+Bir kez kalıp yeniden çalışınca geçen: `settings.test.ts`'in bir dönüşün koyduğu döndürme kilidini not eden durumu. Taramada, 4 ile 5 arası host yükünde, `restore` otomatik döndürmeyi, durumun dönüşünden önce açtığı yerde kapalı olarak geri koydu; tek başına, bütün dosyasıyla ve taramada ondan önce çalışan `scroll.test.ts`'ten sonra geçti; neden bir kez kaldığı bilinmiyor. Yeni emulator'daki ilk suite olan `allow-apps.test.ts`'in ilk durumu, formuna giden bir link'ten sonra fixture'ı izin ekranında buldu; dosyası bütün olarak yeniden çalışınca geçti.
+
+## 1.3.1'de Mac uygulaması
+
+Uygulama 2026-11-18'de aynı commit'ten `scripts/build-app.mjs` ile derlendi ve ad hoc imzalandı. Görüntüleyicinin kendi testi, `packages/core/test/viewer-self-test.test.ts`, hiçbir denetimi kalmadan ve çalıştırılmadan bırakılan olmadan geçti; `scripts/check-app.mjs` de 16 adımını geçti. Bir kişinin kendi `dev.appdyno.app` ve `dev.appdyno.window` tercihleri buradaki her çalıştırmadan sonra ilkinden önceki gibi okundu.
+
+Ardından uygulamanın kendi ikilisi bir kişinin açtığı gibi, pencereleri ekranda, koşunun kendi tercih alanıyla ve koşunun kapalı bir simulator'ından oluşan bir izin listesiyle başlatıldı; pencereleri Erişilebilirlik API'siyle okunup basıldı. Karşılama ilk açılışta açıldı ve düğmelerinin her biri hub'ı söylediği yere götürdü: AI Clients AI Clients'a, New Simulator… bu Mac'in modelleri ve sistemleriyle ve hub listesine bağlı olduğundan reddiyle ve kapalı Create'iyle New Simulator sheet'ine, Connect a Phone da Connect a Phone'a. Yardım'ın Hoş geldiniz'i onu yeniden açtı, Appdyno Yardımı da Yardım'ı açtı. Simulator seçiliyken Device, Shake ve ekranın öğeleri kapalı olarak Start'ı sundu. Start onu açtı; Device ardından Shut Down'ı ve cihazın kendi öğelerini sundu, bir simulator'ın sallanacak bir şeyi olmadığından Shake yine kapalıydı: simulator'ın kendi ekran görüntülerinin gösterdiği gibi Home fixture'ı ana ekrana götürdü, App Switcher değiştiriciyi gösterdi, Shut Down da onu kapattı. Documentation, Tools Reference ve Report an Issue her biri bir web sayfası açar ve basılmadı; sayfalarının her biri, İngilizcesi de Türkçesi de cevap verdi.
 
 ## Simulator'larda 1.3.0
 
