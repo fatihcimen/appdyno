@@ -9,6 +9,7 @@ import {
   type Tree,
 } from '@appdyno/protocol';
 import { agentLeft } from '../src/agent-hosts.js';
+import { noting } from '../src/call.js';
 import { readStateFile, writeStateFile } from '../src/state.js';
 import { assertLatLon, RpcDevice } from '../src/rpc-device.js';
 import { greet, type RpcClient } from '../src/rpc.js';
@@ -442,6 +443,38 @@ describe('an agent that gets stuck again on the screen that held the last', () =
         hint: expect.stringMatching(/restarted/) as unknown,
       });
       expect(d.restarts).toBe(3);
+    }),
+  );
+});
+
+describe('an agent slow to answer, as on a loaded Mac', () => {
+  class Counted extends TestDevice {
+    restarts = 0;
+    protected override restartStuck() {
+      this.restarts++;
+      return Promise.resolve(undefined);
+    }
+  }
+  afterEach(() => vi.restoreAllMocks());
+
+  it(
+    "is waited for past the call's time while it answers a ping, restarted for none of it, and said slow",
+    fakeTimed(async () => {
+      const said = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const late: FakeHandler = () =>
+        new Promise((r) => setTimeout(() => r({ result: wireTree([{ t: 'Merhaba' }]) }), 9_000));
+      const d = new Counted([
+        { 'tree.get': late, ping: () => ({ result: { uptimeMs: 1, atMs: 1 } }) },
+      ]);
+      const { value, notes } = await noting(() => d.tree());
+      expect(value.nodes).toHaveLength(2);
+      expect(d.restarts).toBe(0);
+      expect(notes).toEqual([
+        expect.stringMatching(
+          /^the device was slow: tree\.get took 9\.\d s, past its 1 s, and was waited for/,
+        ),
+      ]);
+      expect(String(said.mock.calls[0]?.[0])).toMatch(/^a-device: the device was slow/);
     }),
   );
 });

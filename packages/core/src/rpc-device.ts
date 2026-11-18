@@ -15,6 +15,7 @@ import {
   type Tree,
 } from '@appdyno/protocol';
 import { agentEnded, agentMet } from './agent-hosts.js';
+import { noteInAnswer } from './call.js';
 import { must } from './must.js';
 import { TIMEOUTS, type ActOptions, type TreeOptions } from './device.js';
 import { DeviceQueue } from './queue.js';
@@ -29,6 +30,13 @@ import { afterTimeout } from './stuck.js';
  */
 const STUCK_RESTARTS = 2;
 const STUCK_WHY = 'stuck: a call and a quick look after it went unanswered, so it was restarted';
+
+/**
+ * How much longer than its own time a call is waited for while its agent answers a ping: on a hosted Mac a read of an
+ * app just launched went unanswered past its 15 s, the quick look after it waited behind it, and the runner was
+ * restarted as stuck, a start of 40 to 70 s there. A call that runs past both is taken for stuck.
+ */
+const LATE_MS = TIMEOUTS.read;
 
 /** The failure of an action that left for the device: unless an agent refused it first, it may have come after the touch. */
 export function failedAfterSending(e: unknown): never {
@@ -190,7 +198,7 @@ export abstract class RpcDevice extends DeviceActions {
     try {
       if (closes !== this.closes) throw closedHere();
       rpc = await this.ensure();
-      const answer = await rpc.call(method, params, { timeoutMs });
+      const answer = await this.ask(rpc, method, params, timeoutMs);
       this.stuckInARow = 0;
       return answer;
     } catch (e) {
@@ -203,11 +211,29 @@ export abstract class RpcDevice extends DeviceActions {
       if (!this.retrySafe.has(method)) throw e;
       this.rpc = undefined;
       await this.beforeRetry(e);
-      const answer = await (await this.ensure()).call(method, params, { timeoutMs });
+      const answer = await this.ask(await this.ensure(), method, params, timeoutMs);
       // an agent that answers, on a new connection too, is no longer stuck
       this.stuckInARow = 0;
       return answer;
     }
+  }
+
+  /** The agent's answer, waited for `LATE_MS` past its time while the agent lives, and said where it took that. */
+  private async ask<M extends Method>(
+    rpc: RpcClient,
+    method: M,
+    params: ParamsOf<M>,
+    timeoutMs: number,
+  ) {
+    const began = Date.now();
+    const answer = await rpc.call(method, params, { timeoutMs, lateMs: LATE_MS });
+    const ms = Date.now() - began;
+    if (ms > timeoutMs) {
+      const line = `the device was slow: ${method} took ${(ms / 1000).toFixed(1)} s, past its ${String(timeoutMs / 1000)} s, and was waited for as its agent was still at it`;
+      noteInAnswer(line);
+      process.stderr.write(`${this.serial}: ${line}\n`);
+    }
+    return answer;
   }
 
   private restartOrLeave(rpc: RpcClient): Promise<string | undefined | { left: string }> {

@@ -20,6 +20,9 @@ import { callSignal, cancelled } from './call.js';
 /** Extra time the host gives a request over the agent's own deadline before it gives up itself. */
 const DEADLINE_SLACK_MS = 1_000;
 
+/** How long an agent has to answer a ping, which it does at once whatever its work lane holds. */
+const PING_MS = 3_000;
+
 /** The timeouts this host gave up on: an agent's own TIMEOUT is an answer, and its lane moved. */
 const unanswered = new WeakSet<Error>();
 export const noAnswer = (e: unknown) => e instanceof Error && unanswered.has(e);
@@ -84,18 +87,24 @@ export class RpcClient {
     this.closeListeners.push(fn);
   }
 
+  /**
+   * `lateMs`: past `timeoutMs`, an agent that still answers a ping is waited for this much longer, once; its deadline
+   * is the two together. Without it the call is given up at its time.
+   */
   async call<M extends Method>(
     method: M,
     params: ParamsOf<M>,
-    opts: { timeoutMs: number },
+    opts: { timeoutMs: number; lateMs?: number },
   ): Promise<{ result: ResultOf<M>; binary?: Buffer }> {
     const asked = (METHODS[method].params as z.ZodType<object>).safeParse(params);
     if (!asked.success)
       throw new DeviceError('INVALID_ARGUMENT', `${method}: ${z.prettifyError(asked.error)}`);
+    const lateMs = opts.lateMs ?? 0;
     const raw = await this.callRaw(
       method,
-      { ...asked.data, _deadlineMs: opts.timeoutMs },
+      { ...asked.data, _deadlineMs: opts.timeoutMs + lateMs },
       opts.timeoutMs,
+      lateMs,
     );
     const parsed = (METHODS[method].result as z.ZodType).safeParse(raw.result);
     if (!parsed.success)
@@ -106,7 +115,7 @@ export class RpcClient {
     return { result: parsed.data as ResultOf<M>, ...(raw.binary && { binary: raw.binary }) };
   }
 
-  private callRaw(method: string, params: object, timeoutMs: number) {
+  private callRaw(method: string, params: object, timeoutMs: number, lateMs = 0) {
     if (this.closedWith) return Promise.reject(this.closedWith);
     const signal = callSignal();
     if (signal?.aborted) return Promise.reject(cancelled(method));
@@ -122,13 +131,22 @@ export class RpcClient {
           );
         reject(why);
       };
-      const timer = setTimeout(() => {
-        const e = new DeviceError('TIMEOUT', `${method} did not answer within ${timeoutMs} ms`);
+      const timedOut = (ms: number) => {
+        const e = new DeviceError('TIMEOUT', `${method} did not answer within ${ms} ms`);
         unanswered.add(e);
         giveUp(e);
-      }, timeoutMs + DEADLINE_SLACK_MS);
+      };
+      // past its time, an agent still alive is still at it, as a loaded device's work runs long: it gets its late time
+      const late = async () => {
+        const alive = lateMs > 0 && (await this.alive());
+        const p = this.pending.get(id);
+        if (!p) return;
+        if (alive) p.timer = setTimeout(() => timedOut(timeoutMs + lateMs), lateMs);
+        else timedOut(timeoutMs);
+      };
+      const timer = setTimeout(() => void late(), timeoutMs + DEADLINE_SLACK_MS);
       const abort = () => {
-        clearTimeout(timer);
+        clearTimeout(this.pending.get(id)?.timer);
         giveUp(cancelled(method));
       };
       const off = () => signal?.removeEventListener('abort', abort);
@@ -147,6 +165,14 @@ export class RpcClient {
       });
       this.stream.write(encodeJson({ jsonrpc: '2.0', id, method, params }));
     });
+  }
+
+  /** Whether the agent answers at all: an error is an answer, a ping it does not answer in time or a closed stream none. */
+  private alive() {
+    return this.callRaw('ping', { _deadlineMs: PING_MS }, PING_MS).then(
+      () => true,
+      (e: unknown) => !noAnswer(e) && !this.closed,
+    );
   }
 
   close() {

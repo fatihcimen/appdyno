@@ -73,6 +73,56 @@ describe('rpc client', () => {
     5_000,
   );
 
+  describe('past its time', () => {
+    const after = (ms: number, reply: { result: unknown }) =>
+      new Promise<typeof reply>((r) => setTimeout(() => r(reply), ms));
+    const never = () => new Promise<never>(() => undefined);
+    const pong = () => ({ result: { uptimeMs: 1, atMs: 1 } });
+
+    it(
+      'waits its late time for an agent that answers a ping, which is told the whole deadline',
+      fakeTimed(async () => {
+        const { rpc, seen } = fakeAgent({
+          'tree.get': () => after(2_500, { result: wireTree([]) }),
+          ping: pong,
+        });
+        const { result } = await rpc.call('tree.get', {}, { timeoutMs: 50, lateMs: 5_000 });
+        expect(result.nodes).toHaveLength(1);
+        expect(seen.map((s) => s.method)).toEqual(['tree.get', 'ping']);
+        expect(seen[0]?.params._deadlineMs).toBe(5_050);
+      }),
+    );
+
+    it(
+      'gives up at its own time on an agent that answers no ping',
+      fakeTimed(async () => {
+        const { rpc } = fakeAgent({ 'tree.get': never, ping: never });
+        const t = Date.now();
+        await expect(
+          rpc.call('tree.get', {}, { timeoutMs: 50, lateMs: 60_000 }),
+        ).rejects.toMatchObject({
+          code: 'TIMEOUT',
+          message: 'tree.get did not answer within 50 ms',
+        });
+        expect(Date.now() - t).toBeLessThan(10_000);
+      }),
+    );
+
+    it(
+      'gives up at the end of its late time too, and asks the agent to cancel',
+      fakeTimed(async () => {
+        const { rpc, seen } = fakeAgent({ 'tree.get': never, ping: pong });
+        await expect(
+          rpc.call('tree.get', {}, { timeoutMs: 50, lateMs: 2_000 }),
+        ).rejects.toMatchObject({
+          code: 'TIMEOUT',
+          message: 'tree.get did not answer within 2050 ms',
+        });
+        expect(seen.at(-1)).toEqual({ method: 'cancel', params: { id: 1 } });
+      }),
+    );
+  });
+
   it(
     'leaves nothing on the signal of a call that timed out: a cancel later sends no second word',
     fakeTimed(async () => {
