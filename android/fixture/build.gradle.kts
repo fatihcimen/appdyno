@@ -52,4 +52,6 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
+    // a bottom sheet as Material's views build it: the window and the ids an app's sheet has
+    implementation("com.google.android.material:material:1.14.0")
 }

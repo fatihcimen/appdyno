@@ -80,4 +80,6 @@
     <item name="process_start" type="id" />
     <item name="pick_photos" type="id" />
     <item name="picked" type="id" />
+    <item name="next_button" type="id" />
+    <item name="begin_button" type="id" />
 </resources>

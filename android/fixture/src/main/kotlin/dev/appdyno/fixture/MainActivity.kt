@@ -52,6 +52,8 @@ private val LINKED = mapOf(
     "photos" to PhotosActivity::class.java,
     "fold" to FoldActivity::class.java,
     "fold_kept" to FoldKeptActivity::class.java,
+    "sheet" to SheetActivity::class.java,
+    "moves_on" to MovesOnActivity::class.java,
 )
 
 /** The home screen; `appdyno-fixture://open/<screen>` opens a screen directly. */

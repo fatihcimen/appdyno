@@ -69,5 +69,8 @@
         <activity android:name=".GesturesActivity" />
         <activity android:name=".A11yActivity" />
         <activity android:name=".CodeActivity" android:windowSoftInputMode="stateVisible" />
+        <activity android:name=".SheetActivity" />
+        <activity android:name=".MovesOnActivity" />
+        <activity android:name=".OnwardActivity" />
     </application>
 </manifest>
