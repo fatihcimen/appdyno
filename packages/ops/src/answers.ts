@@ -37,7 +37,7 @@ const MAYBE_MOVING = 'the screen may still be changing';
 /** `earlier`: the diff shown, from the last answer, has a change the screen had before the action. */
 const noChange = (ms: number, watchedMs?: number, earlier = false) =>
   `no change seen in ${ms} ms${watchedMs ? `, and no system alert in ${(watchedMs / 1000).toFixed(1)} s` : ''}${earlier ? ' after the action: the screen changed before it' : ''}; if a slow reaction is expected, use check_element with timeoutMs`;
-const differs = (d: ScreenDiff) => d.added.length + d.removed.length + d.changed.length > 0;
+export const differs = (d: ScreenDiff) => d.added.length + d.removed.length + d.changed.length > 0;
 
 /** What is known to keep a screen busy: the agent's own reasons, the wait its settle took, a spinner on the screen. */
 export function busyReasons(r: ActResult | undefined, screen: Screen): string[] {

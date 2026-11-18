@@ -87,6 +87,11 @@ describe('system alerts', () => {
   it('says of a link the system asks about first that nothing opened yet, and how to answer', async () => {
     const d = new WithDialog();
     const { call } = await connect(d);
+    // a link that leaves the screen as it was is not said opened: it may never have reached the app
+    const same = await call('open_link', { url: 'app://screen' });
+    expect(same.done).toBe('sent app://screen');
+    expect(same.text).toMatch(/^sent app:\/\/screen\nno change seen in \d+ ms/);
+    Object.assign(d, { openUrl: () => Promise.resolve(void (d.screen = 'form')) });
     expect((await call('open_link', { url: 'app://screen' })).done).toBe('opened app://screen');
     d.add = dialog('android', 3);
     expect((await call('open_link', { url: 'app://screen' })).done).toBe(
@@ -99,11 +104,19 @@ describe('system alerts', () => {
 
   it('says that it answered the "Open in …?" a link to the selected app asked on the way', async () => {
     const d = new FakeDevice();
+    const answered = `answering the system's "Open in …?" for appdyno fixture on the way`;
+    // an answer whose screen never came is no link opened
     Object.assign(d, { openUrl: () => Promise.resolve({ answered: 'appdyno fixture' }) });
     const { call } = await connect(d);
+    expect((await call('open_link', { url: 'app://screen' })).done).toBe(
+      `sent app://screen, ${answered}`,
+    );
+    Object.assign(d, {
+      openUrl: () => Promise.resolve(((d.screen = 'form'), { answered: 'appdyno fixture' })),
+    });
     for (const read of ['diff', 'none'])
       expect((await call('open_link', { url: 'app://screen', read })).done).toBe(
-        `opened app://screen, answering the system's "Open in …?" for appdyno fixture on the way`,
+        `opened app://screen, ${answered}`,
       );
   });
 

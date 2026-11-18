@@ -65,7 +65,9 @@ describe('steps across screens', () => {
       '1. opened app://x',
       '2. brought dev.app to the front, on the screen it was on',
     ]);
-    expect(r.text).toMatch(/\n3\. opened app:\/\/y\nforeground: dev\.app\n3 elements: ref role/);
+    expect(r.text).toMatch(
+      /\n3\. sent app:\/\/y\nno change seen in \d+ ms; .*\nforeground: dev\.app\n3 elements: ref role/,
+    );
   });
 
   it('says no change was seen of no last step that only looked, or found what it scrolled to', async () => {

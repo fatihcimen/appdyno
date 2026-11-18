@@ -1,4 +1,5 @@
 import {
+  diffScreens,
   fold,
   INSTALLED_APPS,
   must,
@@ -9,7 +10,7 @@ import {
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
-import type { Answers, ReadMode } from './answers.js';
+import { type Answers, differs, type ReadMode } from './answers.js';
 import { systemAsks } from './noticed.js';
 import type { ServerContext } from './context.js';
 import { approveLink, approvePower } from './approval.js';
@@ -113,6 +114,21 @@ const APPS_SWIPES = 20;
 /** How long a link's screen has to hold still: an app it starts, as an action's settle allows 3 s. */
 const LINK_SETTLE_MS = 5_000;
 
+/**
+ * What a link did, by the screen it left: iOS asks before a scheme first opens an app, and nothing opens until then.
+ * `answered`: the app whose "Open in …?" the device answered on the way. `before`: the screen before a link held to
+ * the app, where one that changed nothing on it is not said opened, answered or not, and the answer says no change was
+ * seen.
+ */
+const linkSaid =
+  (s: Session, href: string, answered?: string, notIn?: string, before?: Screen) =>
+  (screen: Screen | undefined) => {
+    const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
+    if (asks) return `sent ${href}, and ${systemAsks(asks)}`;
+    const same = before && screen && !differs(diffScreens(before.list, screen.list));
+    return `${same ? 'sent' : 'opened'} ${href}${notIn ? ` in another app: ${notIn} does not open it` : ''}${answered ? `, answering the system's "Open in …?" for ${answered} on the way` : ''}`;
+  };
+
 export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, { one }: Steps) {
   const policy = ctx.policy;
 
@@ -141,18 +157,6 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
       );
     throw e;
   };
-
-  /**
-   * What a link did, by the screen it left: iOS asks before a scheme first opens an app, and nothing opens until then.
-   * `answered`: the app whose "Open in …?" the device answered on the way.
-   */
-  const linkSaid =
-    (s: Session, href: string, answered?: string, notIn?: string) =>
-    (screen: Screen | undefined) => {
-      const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
-      if (asks) return `sent ${href}, and ${systemAsks(asks)}`;
-      return `opened ${href}${notIn ? ` in another app: ${notIn} does not open it` : ''}${answered ? `, answering the system's "Open in …?" for ${answered} on the way` : ''}`;
-    };
 
   /**
    * A link sent held to `app`; with no allowlist, a web link the app does not open goes to whatever does, a browser,
@@ -261,8 +265,12 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
         if (CALL_LINK.test(href))
           await approvePower(policy, s, `the link ${href}, which places a call`);
         // a web link that no app holds goes to a browser, which the device puts in front a moment after it took the
-        // link: the screen the link left is no answer yet, nor is that screen changed by itself, as by a keyboard going
-        const from = /^https?:/i.test(href) ? await s.current().catch(() => undefined) : undefined;
+        // link: the screen the link left is no answer yet, nor is that screen changed by itself, as by a keyboard going.
+        // A link held to an app is told by its screen too: one that changed nothing may not have reached it
+        const from =
+          /^https?:/i.test(href) || (app && read !== 'none')
+            ? await s.current().catch(() => undefined)
+            : undefined;
         const {
           result: { result, notIn },
           was,
@@ -276,10 +284,11 @@ export function appOps(ctx: ServerContext, { changing, afterChange }: Answers, {
             'neither a web page nor another app came on the screen in 3 s: it may still be the one the link was sent from',
         };
         // a link may start its app, which goes on drawing for seconds after it is in front: 3 s left it moving, at load
+        const held = app && !notIn ? from : undefined;
         return afterChange(
           s,
-          was,
-          linkSaid(s, href, answered, notIn),
+          held ? { ...was, base: held.list } : was,
+          linkSaid(s, href, answered, notIn, held),
           read,
           undefined,
           from !== undefined && (!app || notIn) ? arrived : undefined,
