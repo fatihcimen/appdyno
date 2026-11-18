@@ -58,6 +58,8 @@ struct FixtureApp: App {
         "list_heavy": { _ in AnyView(CostListScreen(drawMs: 40)) },
         "list_stall": { _ in AnyView(CostListScreen(stallMs: 1000)) },
         "dialog": { _ in AnyView(DialogScreen()) },
+        "sheet": { _ in AnyView(SheetScreen()) },
+        "moves_on": { _ in AnyView(MovesOnScreen()) },
         "keychain": { _ in AnyView(KeychainScreen()) },
         "crash": { _ in AnyView(CrashScreen()) },
         "biometric": { _ in AnyView(BiometricScreen()) },
