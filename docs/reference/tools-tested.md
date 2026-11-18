@@ -40,7 +40,7 @@ Three cases failed in the iOS 27.2 sweep and passed run again alone at host load
 
 Still failing on iOS 26.5, as in 1.3.0: the CPU profile and the trace query of `ios-perf.test.ts`, in each of their runs. Xcode 26.5's `xctrace` started no recording, and an `xctrace record` with a 2 s limit kept running until it was ended.
 
-Open, and older than 1.3.1: the web view block of `evidence.test.ts` run alone, with no runner up, failed its setup on iOS 27.2, on 1.3.1 and on 1.3.0 alike, in 2 runs of 2 each. Its wait of 5 s for the page's words read only the native Back button: the read helper hands a page to the runner once it sees the page's content, and while no runner is up a read answers with the helper's own tree. The page's words were read once a runner was up, 8.7 s after a cold start. In a whole run the file's earlier blocks have a runner up, and the block passes.
+Found in this pass, older than 1.3.1, and fixed in 1.3.1: the web view block of `evidence.test.ts` run alone, with no runner up, failed its setup on iOS 27.2, on 1.3.1 and on 1.3.0 alike, in 2 runs of 2 each. Its wait of 5 s for the page's words read only the native Back button: the read helper hands a page to the runner once it sees the page's content, and while no runner is up a read answers with the helper's own tree. The page's words were read once a runner was up, 8.7 s after a cold start. In a whole run the file's earlier blocks have a runner up, and the block passes. In 1.3.1 a web view on the screen sends the read to the runner, which the call waits for: the block alone passed 8 of 8 in each of 2 runs on new simulators.
 
 Each suite's count is its last whole run. Passed, failed and skipped:
 
