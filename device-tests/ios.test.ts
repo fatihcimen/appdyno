@@ -127,7 +127,10 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     // the runner's own: the digest of the sources it was built from, or a checkout's build
     expect(helloOf(d).agentVersion).toMatch(/^(checkout|[0-9a-f]{16})$/);
     expect(d.hello?.screen).toEqual(size);
-    expect((await d.waitChange(undefined, 0))?.sig).toBeTruthy();
+    // the runner waits on the device only where the helper cannot read, as when the runner works alone
+    const waited = await d.waitChange(undefined, 0);
+    if (NO_DIRECT) expect(waited?.sig).toBeTruthy();
+    else expect(waited).toBeUndefined();
     // the idle shim's replacements were each called at start with a BOOL in every slot (a crash otherwise)
     expect(d.hello?.idleShimChecked).toBe(true);
   });

@@ -5,7 +5,14 @@ import { join } from 'node:path';
 import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '@appdyno/testing/calls.js';
-import { opCaller, SUITE_POLICY, type Answer, type Call, SIM_FIXTURE } from './helpers.js';
+import {
+  NO_DIRECT,
+  opCaller,
+  SUITE_POLICY,
+  type Answer,
+  type Call,
+  SIM_FIXTURE,
+} from './helpers.js';
 import {
   Adb,
   AndroidDevice,
@@ -53,6 +60,8 @@ function shared(
     delayed: { start?: string; shows: string };
     /** A step that goes back a screen. */
     back: Record<string, unknown>;
+    /** Whether the device waits for a change itself: a simulator does only where its read helper cannot read. */
+    waits: boolean;
     /** A phone's runner cannot reach the clipboard: iOS would ask the user. */
   },
 ) {
@@ -110,6 +119,11 @@ function shared(
     await open('home');
     const { device } = await get().ctx.session();
     const first = await device.waitChange(undefined, 0);
+    if (!names.waits) {
+      // answered at once with nothing, so the session reads the screen again, by the helper
+      expect(first).toBeUndefined();
+      return;
+    }
     expect(first?.tree).toBeDefined();
     assert(first);
     // a clock may tick once: of two waits on a still screen one answers with nothing
@@ -281,6 +295,7 @@ describe.skipIf(!android)('driving on Android', () => {
     row: (n) => `Product ${n}`,
     delayed: { start: 'Load', shows: 'Result 1' },
     back: { tool: 'press_key', key: 'back' },
+    waits: true,
   });
 
   it('counts two fingers in a plan', async () => {
@@ -523,6 +538,8 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
     back: { tool: 'tap_screen', selector: { text: 'Back' } },
+    // by the runner alone, as on a hosted Mac, the read helper reads nothing
+    waits: !!NO_DIRECT,
   });
 
   it('pinches with two fingers in a plan, as the app sees it', async () => {
@@ -684,6 +701,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
     back: { tool: 'tap_screen', selector: { text: 'Back' } },
+    waits: true,
   });
 
   it('lists apps and their state, launches with an environment, uninstalls and installs', async () => {
