@@ -269,7 +269,7 @@ export function withoutCopies(t: Tree, hidden: Set<number>): Tree {
 /**
  * The helper's tree in the runner's shape: nodes breadth first, flags as XCUI gives them, so refs and
  * diffs do not depend on who read. Refused when it would not say the same as the runner: content of
- * another process on screen (but for a widget on the home screen, which is `partial`), or an alert. `copies`: a control found twice at different places, and only XCUI
+ * another process on screen, as a web view's page is from the moment the view shows (but for a widget on the home screen, which is `partial`), or an alert. `copies`: a control found twice at different places, and only XCUI
  * can tell which one a tap reaches (`learnCopies`).
  */
 export function toTree(
@@ -286,7 +286,8 @@ export function toTree(
   // what each node adds to the queue is walked too
   for (const [r, parent] of queue) {
     const n = toNode(r, parent, screen);
-    if (r.r && (n.f & F.visible) !== 0) {
+    // a web view's page is another process's, which joins its tree seconds after the view shows (2 to 3 s, iOS 27.2)
+    if ((r.r || n.c === 'WebView') && (n.f & F.visible) !== 0) {
       // what fills the screen is what it shows, as Spotlight does; a widget beside the icons is no reason for a runner
       const [, , w = 0, h = 0] = r.f ?? [];
       if (bundle !== HOME_SCREEN_APP || w * h >= (screen.w * screen.h) / 2)

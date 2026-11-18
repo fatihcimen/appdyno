@@ -72,6 +72,17 @@ describe('another process on the home screen', () => {
   it('leaves to the runner what another process shows in an app, as a web view does', () => {
     expect(toTree(app(widget), 'dev.app', SCREEN, 5)).toEqual({ refused: 'remote-content' });
   });
+
+  it("leaves a web view to the runner before its page's process is in its tree", () => {
+    // as the helper read the fixture's web view for 2 to 3 s after it showed, iOS 27.2: a scroll view and its bars only
+    const bar = { a: 0, l: 'Vertical scroll bar, 1 page', v: '0%', f: [369, 116, 30, 696] };
+    const scroll = { a: 58, e: 'WKScrollView', f: [0, 116, 402, 724], k: [bar] };
+    const web = { a: 58, e: 'WKWebView', f: [0, 116, 402, 724], k: [scroll] };
+    expect(toTree(app(web), 'dev.app', SCREEN, 5)).toEqual({ refused: 'remote-content' });
+    // one of no size, kept for its scripts, shows nothing
+    const unseen = { a: 58, e: 'WKWebView', f: [0, 0, 0, 0] };
+    expect('tree' in toTree(app(unseen), 'dev.app', SCREEN, 5)).toBe(true);
+  });
 });
 
 describe('the helper read in the runner shape', () => {
