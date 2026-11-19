@@ -6,14 +6,20 @@ import {
   TRANSITION_MS,
   type ActOptions,
 } from '@appdyno/core';
-import type { ActParams, ActResult, Tree } from '@appdyno/protocol';
+import {
+  KEY_USAGES,
+  NODE_FLAGS as F,
+  type ActParams,
+  type ActResult,
+  type Tree,
+} from '@appdyno/protocol';
 import { copies, refuseWhereSynced } from './sim-clipboard.js';
 import type { HelperReads } from './sim-read.js';
 import { typeByKeys } from './sim-keys.js';
 import type { DirectSim } from './simdirect.js';
 import { Cycling, OWN_MS } from './simcycling.js';
 import { type Capture, settleAfter } from './simsettle.js';
-import { firstPoint } from './simtouch.js';
+import { firstPoint, hidKey } from './simtouch.js';
 import { onKeyboard } from './simtree.js';
 
 type Node = Tree['nodes'][number];
@@ -52,6 +58,12 @@ export class HelperActs {
   private settledAt = 0;
 
   constructor(private readonly p: ActsPort) {}
+
+  /** Whether a field has the focus in the layout last answered. */
+  private intoField() {
+    const nodes = [...this.recent.values()].pop() ?? [];
+    return nodes.some((n) => (n.f & F.focused) !== 0 && (n.f & F.editable) !== 0);
+  }
 
   remember(t: Tree) {
     this.recent.delete(t.hash);
@@ -103,6 +115,13 @@ export class HelperActs {
     // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
     throwIfCancelled('the action');
     if (copies(action)) await refuseWhereSynced('copy');
+    // a keyboard's key into a field goes by the runner, which reads it back from the field (`verified`)
+    if (
+      action.kind === 'key' &&
+      hidKey(action.key)?.page === KEY_USAGES.enter.page &&
+      this.intoField()
+    )
+      return this.p.byRunner(action, opts);
     if (helperInput && !direct.screenKnown) await reads.read(true);
     const touch = action.kind !== 'key';
     const at = touch ? firstPoint(action) : undefined;

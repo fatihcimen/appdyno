@@ -190,14 +190,18 @@ async function pressKey(
   const dark = NOTHING_TO_READ.has(key);
   const quiet = { settle: false, read: 'none' } as const;
   const count = st.count ?? 1;
+  let unseen = 0;
   for (let i = 1; i < count; i++) {
-    await s.device.key(key, quiet, modifiers);
+    if ((await s.device.key(key, quiet, modifiers)).verified === false) unseen++;
     // a call refused meanwhile, as its app died, presses no more
     throwIfCancelled('press_key');
   }
+  const r = await s.device.key(key, dark ? quiet : opts, modifiers);
+  if (r.verified === false) unseen++;
+  const lost = count > 1 ? `${unseen} of them` : 'it';
   return {
-    r: await s.device.key(key, dark ? quiet : opts, modifiers),
-    done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read)' : ''}`,
+    r,
+    done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read)' : ''}${unseen ? `, but the field read back does not show ${lost}` : ''}`,
   };
 }
 

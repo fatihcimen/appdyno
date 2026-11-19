@@ -19,9 +19,16 @@ extension Device {
         IdleShim.waitForAnimations(of: app(at: x, y), within: Device.animationWaitS)
     }
 
-    /// Does the action; for a touch, the milliseconds it first waited for the app's animations, after which a caller
-    /// told TIMEOUT or CANCELLED gets no touch.
-    func perform(_ action: Action, job: Job) throws -> Int? {
+    /// Does the action; what its answer adds: for a touch the milliseconds it first waited for the app's animations,
+    /// after which a caller told TIMEOUT or CANCELLED gets no touch, and for a key whether its field shows it (`key`).
+    func perform(_ action: Action, job: Job) throws -> [String: Any] {
+        if case let .key(name, modifiers) = action {
+            return try key(name, modifiers, job: job).map { ["verified": $0] } ?? [:]
+        }
+        return try touch(action, job: job).map { ["animationWaitMs": $0] } ?? [:]
+    }
+
+    private func touch(_ action: Action, job: Job) throws -> Int? {
         let touch = "the touch"
         switch action {
         case let .tap(x, y):
@@ -49,8 +56,7 @@ extension Device {
             return waited
         case let .gesture(pointers):
             return try perform(gesture: pointers, job: job)
-        case let .key(name, modifiers):
-            try key(name, modifiers)
+        case .key:
             return nil
         }
     }
@@ -116,9 +122,9 @@ extension Device {
         "command": .command, "control": .control, "option": .option, "shift": .shift
     ]
 
-    /// A key by XCTest's keyboard. On a simulator no hardware key has reached, its first key to an app that just
-    /// started comes without its modifiers, and its next ones keep them (live: command+a selected nothing, shift+arrow
-    /// moved the cursor alone): a key no app takes goes first, once for each process.
+    /// A key by XCTest's keyboard. Its first key to an app that just started comes without its modifiers, and its next
+    /// ones keep them (live: command+a selected nothing, shift+arrow moved the cursor alone): a key no app takes goes
+    /// first, once for each process. On a hosted Mac the key after it still came so, which `pressSeen` reads back.
     func typeKey(_ key: String, _ flags: XCUIElement.KeyModifierFlags, in app: XCUIApplication) {
         let pid = app.responds(to: NSSelectorFromString("processID")) ? app.value(forKey: "processID") as? Int : nil
         if !flags.isEmpty, pid == nil || pid != keyedPid {
@@ -129,11 +135,17 @@ extension Device {
         keyedPid = pid
     }
 
-    private func key(_ name: String, _ modifiers: [String]) throws {
-        let flags = modifiers.reduce(into: XCUIElement.KeyModifierFlags()) { $0.formUnion(Device.held[$1] ?? []) }
+    /**
+     * A key of the keyboard, read back from the field with the focus where what it does can be (`pressSeen`): true once
+     * the field shows it, false where it shows nothing of it or shows it otherwise, nil where that cannot be read. A
+     * plain letter or digit into a field goes as typed text, which the keyboard does not capitalize: its shift stays
+     * on for a while after text typed into an empty field, and a hardware key then came as a capital ("acX" of x). A
+     * button of the device's own is pressed as it is.
+     */
+    private func key(_ name: String, _ modifiers: [String], job: Job) throws -> Bool? {
         // XCTest's delete does nothing with a modifier held, and typed as text it deletes one character whatever is
         // held (live: option+delete left the word, or took a letter of it)
-        if name == "delete", !flags.isEmpty {
+        if name == "delete", !modifiers.isEmpty {
             throw AgentError(
                 "UNSUPPORTED",
                 "XCTest sends no delete with \(modifiers.joined(separator: "+")) held",
@@ -141,23 +153,42 @@ extension Device {
                     + "the line), then press delete"
             )
         }
+        guard Device.keyboard[name] != nil || name.count == 1 else {
+            try press(name)
+            return nil
+        }
+        let app = front().0
+        let pressed = try pressSeen(name, Set(modifiers), waitS: Device.echoWaitS, PressProbe(
+            send: { key, held in try self.send(key, held, in: app) }, read: { self.keyState(app) },
+            clock: { Date().timeIntervalSince1970 }, pause: { Thread.sleep(forTimeInterval: $0) },
+            over: { job.over }))
+        if pressed.seen == false || pressed.sent > 1 {
+            NSLog("appdyno runner: %@ went %d times, and its field %@", (modifiers + [name]).joined(separator: "+"),
+                  pressed.sent, pressed.seen == true ? "shows it" : "does not show it")
+        }
+        return pressed.seen
+    }
+
+    /// One key: a plain letter or digit as typed text where a field has the focus, Enter, delete and tab by XCTest's
+    /// synthesizer, any other by its keyboard.
+    private func send(_ name: String, _ modifiers: Set<String>, in app: XCUIApplication) throws {
+        let flags = modifiers.reduce(into: XCUIElement.KeyModifierFlags()) { $0.formUnion(Device.held[$1] ?? []) }
+        let typed = flags.isEmpty && name.count == 1 && focusedField(app) != nil
+        if typed, try EventShim.type(name, orientation: Device.keysOrientation()) { return }
         if !flags.isEmpty || name.count == 1
             || ["escape", "space", "arrowUp", "arrowDown", "arrowLeft", "arrowRight"].contains(name) {
-            typeKey(Device.keyboard[name]?.rawValue ?? name, flags, in: front().0)
+            typeKey(Device.keyboard[name]?.rawValue ?? name, flags, in: app)
             return
         }
-        switch name {
-        case "enter":
+        if name == "enter" {
             // synthesized: XCUI's typing refuses when no element reports the focus
-            if try !EventShim.type("\n", orientation: Device.keysOrientation()) { try typeFocused("\n", front().0) }
-        case "delete", "tab":
-            let app = front().0
-            // nothing takes either with no field focused and no keyboard up (a hidden code field has the keyboard)
-            guard focusedField(app) != nil || app.keyboards.firstMatch.exists else { throw Device.noFocus }
-            let text = name == "tab" ? "\t" : XCUIKeyboardKey.delete.rawValue
-            if try !EventShim.type(text, orientation: Device.keysOrientation()) { try typeFocused(text, app) }
-        default: try press(name)
+            if try !EventShim.type("\n", orientation: Device.keysOrientation()) { try typeFocused("\n", app) }
+            return
         }
+        // nothing takes delete or tab with no field focused and no keyboard up (a hidden code field has the keyboard)
+        guard focusedField(app) != nil || app.keyboards.firstMatch.exists else { throw Device.noFocus }
+        let text = name == "tab" ? "\t" : XCUIKeyboardKey.delete.rawValue
+        if try !EventShim.type(text, orientation: Device.keysOrientation()) { try typeFocused(text, app) }
     }
 
     private static let noFocus = AgentError("NO_FOCUS", "no field has the focus and no keyboard is up",

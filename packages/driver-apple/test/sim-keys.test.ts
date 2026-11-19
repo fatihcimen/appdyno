@@ -1,6 +1,7 @@
 import { inCall } from '@appdyno/core';
 import { NODE_FLAGS as F, type ActParams, type Tree } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
+import { HelperActs } from '../src/sim-act.js';
 import { holdsText, typeByKeys, typesByKeys } from '../src/sim-keys.js';
 import { fakeTimed } from '@appdyno/testing/fake-time.js';
 
@@ -290,5 +291,48 @@ describe("typing by a simulator's keys", () => {
   it('leaves to the runner a point with no field, or no field with the focus', async () => {
     expect(await typeByKeys('a', { at: { x: 300, y: 600 } }, field().keyboard)).toBeUndefined();
     expect(await typeByKeys('a', {}, field().keyboard)).toBeUndefined();
+  });
+});
+
+describe('a key pressed on a simulator whose helper takes the keys', () => {
+  /** The helper's acts with the form as the layout last read: the keys it sent, and those that went by the runner. */
+  const acts = (focused: boolean) => {
+    const sent: ActParams[] = [];
+    const byRunner: ActParams[] = [];
+    const direct = { screenKnown: true, touchesEnded: 0, send: (a: ActParams) => sent.push(a) > 0 };
+    const a = new HelperActs({
+      direct: direct as never,
+      reads: {} as never,
+      helperInput: () => true,
+      read: () => Promise.reject(new Error('no read')),
+      byRunner: (action) => {
+        byRunner.push(action);
+        return Promise.resolve({ verified: true });
+      },
+      width: () => 400,
+    });
+    a.remember(form('ab', focused));
+    return { a, sent, byRunner };
+  };
+  const quiet = { settle: false, read: 'none' } as const;
+
+  it('goes by the runner into a field, which reads it back, and by the helper where none has the focus', async () => {
+    const into = acts(true);
+    const selectAll: ActParams = { kind: 'key', key: 'a', modifiers: ['command'] };
+    expect(await into.a.act(selectAll, quiet)).toEqual({ verified: true });
+    await into.a.act({ kind: 'key', key: 'delete' }, quiet);
+    expect(into.byRunner).toHaveLength(2);
+    expect(into.sent).toEqual([]);
+    const none = acts(false);
+    await none.a.act({ kind: 'key', key: 'arrowLeft' }, quiet);
+    expect(none.sent).toEqual([{ kind: 'key', key: 'arrowLeft' }]);
+    expect(none.byRunner).toEqual([]);
+  });
+
+  it('presses a button by the helper, with a field in focus too', async () => {
+    const into = acts(true);
+    await into.a.act({ kind: 'key', key: 'home' }, quiet);
+    expect(into.sent).toEqual([{ kind: 'key', key: 'home' }]);
+    expect(into.byRunner).toEqual([]);
   });
 });

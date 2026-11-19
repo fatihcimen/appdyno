@@ -90,6 +90,11 @@ export const ActResult = z.object({
   tree: Tree.optional(),
   /** The process of the app `pidOf` named once the action is over, 0 for none; absent where the agent cannot tell. */
   pid: z.number().int().min(0).optional(),
+  /**
+   * iOS: a key of the keyboard into the field with the focus, read back: true once the field showed it, false where it
+   * showed nothing of it when pressed again, or showed it otherwise; absent where what it does cannot be read.
+   */
+  verified: z.boolean().optional(),
 });
 export type ActResult = z.infer<typeof ActResult>;
 

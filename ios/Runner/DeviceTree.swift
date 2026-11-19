@@ -263,6 +263,33 @@ extension Device {
                      attributes: attributes, parameters: parameters)
     }()
 
+    /// XCTest's name for an element's selected text, which a snapshot does not carry.
+    private static let selectedTextRange: AnyObject? = {
+        // RTLD_DEFAULT
+        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "XC_kAXXCAttributeSelectedTextRange"),
+              let name = symbol.load(as: UnsafeRawPointer?.self)
+        else { return nil }
+        return Unmanaged<AnyObject>.fromOpaque(name).takeUnretainedValue()
+    }()
+
+    private typealias Attributes = @convention(c) (AnyObject, Selector, AnyObject, NSArray,
+                                                   AutoreleasingUnsafeMutablePointer<NSError?>?) -> AnyObject?
+    private static let selAttributes = NSSelectorFromString("attributesForElement:attributes:error:")
+
+    /// The selection of a text element in UTF-16 offsets, the cursor where it is empty, by private XCTest API (it reads
+    /// "{2, 0}"); nil where this XCTest cannot tell.
+    static func selection(of snap: XCUIElementSnapshot) -> Range<Int>? {
+        guard let name = selectedTextRange, let client = ask(XCUIDevice.shared, "accessibilityInterface"),
+              let element = ask(snap as AnyObject, "accessibilityElement"),
+              let method = class_getInstanceMethod(object_getClass(client), selAttributes)
+        else { return nil }
+        var error: NSError?
+        let got = unsafeBitCast(method_getImplementation(method), to: Attributes.self)(
+            client, selAttributes, element, [name] as NSArray, &error)
+        guard let said = (got as? NSDictionary)?[name] as? String else { return nil }
+        return Range(NSRangeFromString(said))
+    }
+
     static func of(_ app: XCUIApplication) -> XCUIElementSnapshot? {
         guard let p = parts, let process = ask(app, "currentProcess"),
               let element = ask(process, "accessibilityElement")

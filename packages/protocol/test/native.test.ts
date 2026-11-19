@@ -129,13 +129,11 @@ describe('what is written three times', () => {
   it('the iOS runner has every key but those a phone has no way to press', () => {
     const device = read('ios/Runner/DeviceActions.swift');
     const keyboard = quoted(inside(device, /keyboard: \[String: XCUIKeyboardKey\] = \[/, ']'));
-    // the typed keys, then the device's own buttons
-    const cases = [/func key\(/, /func press\(/].flatMap((func) =>
-      read$(
-        inside(inside(device, func, '\n    }\n'), /switch name \{/, 'default:'),
-        /case (.+):/g,
-      ).flatMap((c) => quoted(c)),
-    );
+    // the keyboard's keys, then the device's own buttons
+    const cases = read$(
+      inside(inside(device, /func press\(/, '\n    }\n'), /switch name \{/, 'default:'),
+      /case (.+):/g,
+    ).flatMap((c) => quoted(c));
     expect([...new Set([...keyboard, ...cases])].sort()).toEqual(
       KEYS.filter((k) => k !== 'back' && k !== 'appSwitch').sort(),
     );

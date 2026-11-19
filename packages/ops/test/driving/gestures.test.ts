@@ -91,6 +91,26 @@ describe('gestures, keys, clipboard', () => {
     );
   });
 
+  it('says a key the field read back does not show, of one press and of several', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    // as an iOS runner reads each key back: seen, not seen even pressed again, or not to be read
+    const seen: (boolean | undefined)[] = [true, false, undefined, true, false, true];
+    const act = d.act.bind(d);
+    d.act = async (a, o) => {
+      const verified = a.kind === 'key' ? seen.shift() : undefined;
+      return { ...(await act(a, o)), ...(verified !== undefined && { verified }) };
+    };
+    expect((await call('press_key', { key: 'd' })).text).toMatch(/^pressed d\n/);
+    expect((await call('press_key', { key: 'd' })).text).toMatch(
+      /^pressed d, but the field read back does not show it\n/,
+    );
+    expect((await call('press_key', { key: 'escape' })).text).toMatch(/^pressed escape\n/);
+    expect((await call('press_key', { key: 'delete', count: 3 })).text).toMatch(
+      /^pressed delete 3 times, but the field read back does not show 1 of them\n/,
+    );
+  });
+
   it('presses count times with one settle, the last', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
