@@ -228,7 +228,7 @@ Reddedilen bir çağrının `code` değeri bunlardan biridir ve `hint` sonra ne 
 
 ## Hedefler
 
-Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce yeni bir okumada çözülür.
+Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce yeni bir okumada çözülür. Cihazın, o okumayla dokunuş arasında öne başka bir pencere geldiği için reddettiği bir selector, uygulamanın yeniden açtığı bir diyalog gibi, öndeki ekranda bir kez daha aranır ve orada eşleşiyorsa ona dokunulur; bir ref ya da bir nokta `STALE` ile reddedilir, çünkü gösterdiği şey önceki ekrandaydı.
 
 ### Metin nasıl eşleşir
 

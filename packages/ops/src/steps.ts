@@ -366,7 +366,13 @@ export function stepsFor(
     through(s, st, async () => {
       if (!LOOKS_ONLY.has(st.action) && !(st.action === 'press_key' && NEEDS_NO_LOOK.has(st.key)))
         await s.beforeTouch();
-      return call(kit, s, st, opts, patient);
+      // a selector names what is there at the touch: one the device refused before it went, as another window came in
+      // front since the read it was found on, is looked for again on the screen in front, once
+      return call(kit, s, st, opts, patient).catch((e: unknown) => {
+        const inFront = e instanceof DeviceError && e.code === 'STALE' && !e.sent;
+        if (!inFront || !('selector' in st && st.selector) || ('ref' in st && st.ref)) throw e;
+        return call(kit, s, st, opts, patient);
+      });
     });
 
   /**

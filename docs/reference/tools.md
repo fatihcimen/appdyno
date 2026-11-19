@@ -228,7 +228,7 @@ A refused call's `code` is one of these, and its `hint` says what to do next. `T
 
 ## Targets
 
-A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read just before the action.
+A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read just before the action. A selector the device refuses because another window came in front between that read and the touch, as a dialog the app opened again, is looked for once more on the screen in front, and touched there where it matches; a ref or a point is refused `STALE`, as what it named was on the screen before.
 
 ### How text matches
 

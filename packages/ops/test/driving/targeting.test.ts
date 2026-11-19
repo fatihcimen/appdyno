@@ -236,6 +236,84 @@ describe('targeting', () => {
       expect(d.permissionUp).toBe(false);
     });
 
+    /** An app that opens its own dialog again, a window of its own package, once more after a read: a second error. */
+    class Reopened extends FakeDevice {
+      dialog = 1;
+      /** The dialogs that open again once the next touch is on its way, before it is compared. */
+      reopens = 1;
+      private readonly seen = new Map<string, number>();
+      override current(): Tree {
+        const t = super.current();
+        if (this.dialog === 0) return t;
+        const b: [number, number, number, number] = [0, 800, 1080, 1600];
+        t.windows.push({ type: 1, pkg: 'dev.app', layer: 2, b, active: true, focused: true });
+        t.nodes.push(
+          { p: -1, w: 1, c: 'android.widget.FrameLayout', b, f: 17 },
+          {
+            p: t.nodes.length,
+            w: 1,
+            c: 'android.widget.Button',
+            t: 'Tekrar dene',
+            b: [100, 1000, 980, 1100],
+            f: 19,
+          },
+        );
+        t.hash = `${t.hash}+dialog${this.dialog}`;
+        return t;
+      }
+      override async tree() {
+        const t = await super.tree();
+        this.seen.set(t.hash, this.dialog);
+        return t;
+      }
+      override async act(action: ActParams, opts: ActOptions = {}) {
+        const touch = action.kind !== 'key';
+        if (touch && this.reopens > 0 && this.dialog > 0) {
+          this.reopens--;
+          this.dialog++;
+        }
+        const then = opts.before === undefined ? undefined : this.seen.get(opts.before);
+        if (touch && then !== undefined && then !== this.dialog)
+          throw new DeviceError(
+            'STALE',
+            'the screen changed since it was read: another window is in front',
+          );
+        const r = await super.act(action, opts);
+        if (action.kind === 'tap' && action.y >= 1000 && action.y <= 1100) this.dialog = 0;
+        return r;
+      }
+    }
+    const OK = { text: 'Tekrar dene' };
+
+    it('a selector acts on the window in front at the touch, where it matches there too', async () => {
+      const d = new Reopened();
+      const { call } = await connect(d);
+      await call('read_screen');
+      const r = await call('run_steps', {
+        steps: [
+          { tool: 'tap_screen', selector: OK },
+          { tool: 'press_key', key: 'back' },
+          { tool: 'read_screen' },
+        ],
+      });
+      expect(r.error ? r.text : '').toBe('');
+      expect(d.dialog).toBe(0);
+      const one = new Reopened();
+      const single = await connect(one);
+      await single.call('read_screen');
+      expect((await single.call('tap_screen', { selector: OK })).error).toBe(false);
+      expect(one.dialog).toBe(0);
+    });
+
+    it('a ref of the dialog read before it opened again is still refused', async () => {
+      const d = new Reopened();
+      const { call } = await connect(d);
+      const ok = must(/@\w+(?= "Tekrar dene")/.exec((await call('read_screen')).text), 'a ref')[0];
+      const r = await call('tap_screen', { ref: ok });
+      expect([r.data.code, r.data.dispatched]).toEqual(['STALE', false]);
+      expect(d.dialog).toBe(2);
+    });
+
     it('a ref or a point read before it is still refused, and no touch is sent', async () => {
       for (const aim of [{ ref: true }, { x: 540, y: 350 }]) {
         const d = new Windowed();
