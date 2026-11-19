@@ -1,11 +1,23 @@
 import { DeviceError } from '@appdyno/protocol';
 import { reportProgress, sleep } from './call.js';
-import { isThisProcess, Owner, ownerIn, thisOwner } from './owner.js';
-import { deviceState, deviceStateFile } from './state.js';
+import { ago } from './clock.js';
+import { isAlive, isThisProcess, Owner, thisOwner } from './owner.js';
+import { z } from 'zod';
+import { deviceState } from './state.js';
 
-const claims = deviceState('claims', Owner);
+/**
+ * A process's hold on a device. `lastCall`: when it last made a call on it, kept at most once a minute, so that a person
+ * tells a holder in use from one whose client was left open for days. A holder before 1.3.3 kept none.
+ */
+const Claim = Owner.extend({ lastCall: z.string().optional() });
+type Claim = z.infer<typeof Claim>;
 
-/** What holds a device while it puts back what a server that has gone left there: a hold a new session waits out. */
+const claims = deviceState('claims', Claim);
+
+/** How often a holder's calls are written down: a refusal says how long ago in minutes at the finest. */
+const CALLS_KEPT_MS = 60_000;
+
+/** What puts back what a server that has gone left on a device: a hold a new session waits out. */
 export const PUT_BACK_TOOL = 'appdyno put-back';
 
 /** How long a session waits for that put-back: twice the 20 s a server's own end may take to put things back. */
@@ -18,7 +30,14 @@ const SHARE_BY_SERVER = 'use_device with share: true, --share on the command lin
 export const SHARE_BY_LIBRARY = 'share: true in the options';
 
 /** The live process that holds the device, if any: a dead owner's claim is no claim. */
-export const holder = (serial: string) => ownerIn(deviceStateFile('claims', serial));
+export function holder(serial: string): Claim | undefined {
+  const h = claims.read(serial);
+  return h && isAlive(h) ? h : undefined;
+}
+
+/** Who holds a device, as a refusal says it: since when, and its last call where it keeps one. */
+export const heldText = (name: string, h: Claim, now = Date.now()) =>
+  `${name} is held by pid ${h.pid} (${h.tool}) since ${h.since}${h.lastCall ? `, its last call ${ago(h.lastCall, now)}` : ''}`;
 
 /**
  * This process takes the device for its session, or is refused with who holds it. A put-back's hold is waited out, up
@@ -44,13 +63,30 @@ export async function claim(
     if (h && h.pid !== process.pid)
       throw new DeviceError(
         'DEVICE_CLAIMED',
-        `${serial} is held by pid ${h.pid} (${h.tool}) since ${h.since}`,
+        heldText(serial, h),
         `use another device${share ? `, or share this one: ${share}` : ''}`,
       );
-    return thisOwner(tool);
+    const mine = thisOwner(tool);
+    called.set(serial, Date.now());
+    return { ...mine, lastCall: mine.since };
   });
 }
 
+/** When this process last wrote a call down, by device. */
+const called = new Map<string, number>();
+
+/** This process made a call on a device it holds: written down, at most once a minute. */
+export function calledOn(serial: string, now = Date.now()) {
+  if (now - (called.get(serial) ?? 0) < CALLS_KEPT_MS) return;
+  called.set(serial, now);
+  // a process that shares the device writes nothing on its holder's claim
+  if (!isThisProcess(claims.read(serial))) return;
+  claims.update(serial, (h) =>
+    h && isThisProcess(h) ? { ...h, lastCall: new Date(now).toISOString() } : h,
+  );
+}
+
 export function release(serial: string) {
+  called.delete(serial);
   claims.update(serial, (now) => (isThisProcess(now) ? undefined : now));
 }

@@ -5,7 +5,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { approve, approveBuild } from './approval.js';
-import { holder } from './claims.js';
+import { heldText, holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkVirtual, namedVirtual, RanAs, ranAsFile, virtuals } from './device-names.js';
 import { byPerson, checkApp, checkCreate, noApp, type Policy } from './policy.js';
@@ -274,11 +274,7 @@ async function shutDownVirtual(ctx: ServerContext, device: string | undefined, m
         'start the server with ANDROID_HOME and ANDROID_AVD_HOME naming the SDK and AVD folder it runs from',
       );
     const h = holder(d.serial ?? d.id);
-    if (h && h.pid !== process.pid)
-      throw new ToolError(
-        `${d.id} is held by pid ${h.pid} (${h.tool}) since ${h.since}`,
-        'DEVICE_CLAIMED',
-      );
+    if (h && h.pid !== process.pid) throw new ToolError(heldText(d.id, h), 'DEVICE_CLAIMED');
   }
   updateState(ranAsFile(), RanAs, (was = {}) => ({
     ...was,

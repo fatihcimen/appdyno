@@ -1,4 +1,5 @@
 import {
+  ago,
   kindOf,
   must,
   osName,
@@ -52,7 +53,14 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
             kind: kindOf(d),
             allowed,
             selected: d.serial === ctx.currentSerial,
-            ...(h && { heldBy: { pid: h.pid, tool: h.tool, since: h.since } }),
+            ...(h && {
+              heldBy: {
+                pid: h.pid,
+                tool: h.tool,
+                since: h.since,
+                ...(h.lastCall && { lastCall: h.lastCall }),
+              },
+            }),
             ...(blocked && { blocked }),
           };
         };
@@ -66,7 +74,7 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
           devices
             .map(
               (d) =>
-                `${d.serial} ${d.state} ${d.model ?? ''} (${d.kind})${d.allowed ? '' : ' (not allowed on this server)'}${d.selected ? ' ← selected' : ''}${d.heldBy ? ` (held by pid ${d.heldBy.pid}, ${d.heldBy.tool}, since ${d.heldBy.since})` : ''}${d.blocked ? `: ${d.blocked.title}. ${d.blocked.fix}` : ''}`,
+                `${d.serial} ${d.state} ${d.model ?? ''} (${d.kind})${d.allowed ? '' : ' (not allowed on this server)'}${d.selected ? ' ← selected' : ''}${d.heldBy ? ` (held by pid ${d.heldBy.pid}, ${d.heldBy.tool}, since ${d.heldBy.since}${d.heldBy.lastCall ? `, its last call ${ago(d.heldBy.lastCall, Date.now())}` : ''})` : ''}${d.blocked ? `: ${d.blocked.title}. ${d.blocked.fix}` : ''}`,
             )
             .join('\n'),
           { devices },

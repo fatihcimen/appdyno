@@ -751,6 +751,8 @@ On a simulator, with an app given or selected, `locale` holds that app in a lang
 
 A process that drives a device holds it: a file in the state folder with its pid and start time. A dead owner's claim is free. A second process is refused `DEVICE_CLAIMED`, with the owner's pid and name, unless it asks to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
 
+The refusal and `list_devices` say when the holder last made a call on the device, which it writes down at most once a minute, so that a server whose client was left open for days shows as one: `held by pid 41022 (appdyno mcp) since 2026-11-14T09:30:00Z, its last call 4 days ago`. A holder before 1.3.3 kept none, and none is said. A live holder keeps the device however long it waits, as a person may read a screen for an hour: stop it, or share. A server whose client has gone ends by itself, as its stdin closes.
+
 `list_devices` shows who holds what. There is no daemon. The process that puts back what an ended server left holds the device as `appdyno put-back` while it does, and a session that starts meanwhile waits for it, up to 40 s, where it is refused at once by any other holder.
 
 With no device selected and more than one this server may drive, a call that needs one is refused, naming each by serial, kind and model, and `use_device` picks one, by its serial or UDID, a simulator's or an AVD's name, or its model, the allow list matched against each; a device it may not drive is refused with the ones it may, by name. `list_devices` gives each device's `kind`: `phone`, `simulator` or `emulator`; an emulator has no `link`, as no cable joins it.

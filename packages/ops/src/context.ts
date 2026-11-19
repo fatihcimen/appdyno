@@ -14,7 +14,7 @@ import {
 } from '@appdyno/core';
 import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { z } from 'zod';
-import { claim, holder, release } from './claims.js';
+import { calledOn, claim, holder, release } from './claims.js';
 import { endSession, leftHere, sweep, type Taken } from './leftovers.js';
 import { anotherDevice, letGo } from './replaced.js';
 import { inputGuard } from './apps-guard.js';
@@ -310,6 +310,7 @@ export class ServerContext {
    */
   private async openOn(serial: string): Promise<{ s?: Session; app?: string }> {
     const s = this.sessions.get(serial);
+    if (s && this.options.claims) calledOn(serial);
     const was = this.identities.get(serial);
     const now = s && (await anotherDevice(s, was));
     if (!s || !now || was === undefined) return { s };

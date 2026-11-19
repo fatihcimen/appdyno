@@ -1,3 +1,4 @@
+import { ago } from '@appdyno/core';
 import {
   compareMetric,
   latestRuns,
@@ -24,10 +25,6 @@ export type PastMeasure = {
 
 const RUNS_READ = 30;
 const SHOWN = 20;
-const SECOND = 1_000;
-const MINUTE = 60 * SECOND;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
 
 /** The number a run is for, by its scenario: the rest of its records say why, on the dashboard. */
 const MAINS = [
@@ -44,17 +41,6 @@ const MAINS = [
     value: (v: number) => `${Math.round(v)}% jank`,
   },
 ];
-
-const counted = (n: number, what: string) => `${n} ${what}${n === 1 ? '' : 's'} ago`;
-
-/** How long ago, as a person says it. */
-export const ago = (at: string, now: number) => {
-  const gone = now - Date.parse(at);
-  if (gone < MINUTE) return counted(Math.max(1, Math.round(gone / SECOND)), 'second');
-  if (gone < HOUR) return counted(Math.round(gone / MINUTE), 'minute');
-  if (gone < DAY) return counted(Math.round(gone / HOUR), 'hour');
-  return counted(Math.round(gone / DAY), 'day');
-};
 
 const signed = (c: Comparison) => {
   const by = Math.round(c.shift ?? 0);

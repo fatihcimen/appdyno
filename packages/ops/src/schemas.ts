@@ -127,7 +127,15 @@ export const DevicesOut = z.object({
       kind: z.enum(['phone', 'simulator', 'emulator']),
       allowed: z.boolean(),
       selected: z.boolean(),
-      heldBy: z.object({ pid: z.number(), tool: z.string(), since: z.string() }).optional(),
+      heldBy: z
+        .object({
+          pid: z.number(),
+          tool: z.string(),
+          since: z.string(),
+          /** Its last call on the device, kept at most once a minute: none from a holder before 1.3.3. */
+          lastCall: z.string().optional(),
+        })
+        .optional(),
       /** What a person must do before it can be driven. */
       blocked: z.object({ need: z.string(), title: z.string(), fix: z.string() }).optional(),
     }),
