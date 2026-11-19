@@ -793,4 +793,4 @@ Turn on developer mode. A phone needs a development signing identity and a provi
 
 The phone is reached over USB. Only a window goes by the network.
 
-A phone's clipboard goes by Xcode's `devicectl`, with no runner and nothing asked on the phone, and a simulator's is read from the Mac. Text goes in as keys on iOS: a paste brings up iOS's "Allow Paste" alert.
+A phone's clipboard goes by Xcode's `devicectl`, with no runner and nothing asked on the phone, and a simulator's is read from the Mac. Text goes in as keys on iOS: a paste brings up iOS's "Allow Paste" alert. While Simulator.app runs with Edit › Automatically Sync Pasteboard on, as it is by default, it copies what a simulator's clipboard takes onto the Mac's, so a write to a simulator's clipboard, Command-C or Command-X, and letters with no key from a window are refused `UNSUPPORTED` and the Mac's clipboard is left alone: turn that menu item off to write it, as Simulator.app reads the setting only at its launch and from that menu.

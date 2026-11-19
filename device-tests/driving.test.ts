@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { macSyncsPasteboard } from '../packages/driver-apple/src/sim-clipboard.js';
 import { checkedOps } from '@appdyno/testing/calls.js';
 import {
   NO_DIRECT,
@@ -62,6 +63,8 @@ function shared(
     back: Record<string, unknown>;
     /** Whether the device waits for a change itself: a simulator does only where its read helper cannot read. */
     waits: boolean;
+    /** Whether its clipboard reaches this Mac's, a person's, as a simulator's does while Simulator.app syncs. */
+    synced?: () => Promise<boolean>;
     /** A phone's runner cannot reach the clipboard: iOS would ask the user. */
   },
 ) {
@@ -222,6 +225,8 @@ function shared(
   });
 
   it('reads the clipboard it set, then types without asking the user about it', async (ctx) => {
+    // while Simulator.app syncs, the simulator's clipboard may hold the Mac's text, and a write would replace it
+    if (await names.synced?.()) return ctx.skip();
     await open('form');
     // on a phone it is a person's
     const held = await call('set_device', { name: 'clipboard' });
@@ -540,6 +545,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     back: { tool: 'tap_screen', selector: { text: 'Back' } },
     // by the runner alone, as on a hosted Mac, the read helper reads nothing
     waits: !!NO_DIRECT,
+    synced: macSyncsPasteboard,
   });
 
   it('pinches with two fingers in a plan, as the app sees it', async () => {

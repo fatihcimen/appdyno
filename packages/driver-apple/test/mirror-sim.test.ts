@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodePng, encodePng, must } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { Simctl } from '../src/simctl.js';
 import { HelperProcess } from '../src/simhelper.js';
 import { onSurface, SimulatorMirror, turnsOf } from '../src/mirror-sim.js';
@@ -126,6 +127,18 @@ describe('a simulator mirror', () => {
     expect(paste).toHaveBeenCalledWith(UDID, 'şğ');
     expect(calls[1]).toEqual({ op: 'keyState', page: 7, usage: 0xe3, state: 1 });
     expect(calls[2]).toEqual({ op: 'keyState', page: 7, usage: 0x19, state: 1 });
+  });
+
+  it('tells the window why a paste was refused, and presses no command V', async () => {
+    const { mirror, calls, paste } = setup();
+    const told: Record<string, unknown>[] = [];
+    await mirror.open(undefined, undefined, (m) => told.push(m));
+    const why = "Simulator's pasteboard sync would put this text on your Mac's clipboard";
+    paste.mockRejectedValueOnce(new DeviceError('UNSUPPORTED', why));
+    await expect(mirror.input({ kind: 'text', s: 'ş' })).rejects.toThrow(why);
+    expect(told).toContainEqual({ op: 'note', text: why });
+    expect(calls.filter((c) => c.op === 'keyState')).toEqual([]);
+    await mirror.close();
   });
 
   it('passes a key as it came, up or down; a button by its name', async () => {

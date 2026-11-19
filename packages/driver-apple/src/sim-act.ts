@@ -7,6 +7,7 @@ import {
   type ActOptions,
 } from '@appdyno/core';
 import type { ActParams, ActResult, Tree } from '@appdyno/protocol';
+import { copies, refuseWhereSynced } from './sim-clipboard.js';
 import type { HelperReads } from './sim-read.js';
 import { typeByKeys } from './sim-keys.js';
 import type { DirectSim } from './simdirect.js';
@@ -101,6 +102,7 @@ export class HelperActs {
     const helperInput = this.p.helperInput();
     // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
     throwIfCancelled('the action');
+    if (copies(action)) await refuseWhereSynced('what it copies');
     if (helperInput && !direct.screenKnown) await reads.read(true);
     const touch = action.kind !== 'key';
     const at = touch ? firstPoint(action) : undefined;

@@ -81,6 +81,7 @@ export class SimulatorMirror implements Mirror {
   private turnsTimer: NodeJS.Timeout | undefined;
   /** A foldable's other display, while it is the one shown: a person's touches go to it. */
   private readonly shown: ShownDisplay;
+  private say: (text: string) => void = () => undefined;
 
   constructor(
     private readonly udid: string,
@@ -144,6 +145,7 @@ export class SimulatorMirror implements Mirror {
       // up before a person's first touch, which would otherwise wait over a second for it
       void this.helper().catch(() => undefined);
       this.followTurns(tell);
+      this.say = (text) => tell({ op: 'note', text });
       const developerDir = xcodeEnv().DEVELOPER_DIR;
       resolve({
         kind: 'surface',
@@ -201,7 +203,11 @@ export class SimulatorMirror implements Mirror {
       for (const k of keys) await this.press(k.usage, k.shift ? SHIFT : undefined);
       return;
     }
-    await this.paste(this.udid, text);
+    await this.paste(this.udid, text).catch((e: unknown) => {
+      // a person typing in the window is told why letters with no key did not go in
+      if (e instanceof DeviceError && e.code === 'UNSUPPORTED') this.say(e.message);
+      throw e;
+    });
     await this.press(V, COMMAND);
   }
 

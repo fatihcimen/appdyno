@@ -793,4 +793,4 @@ Geliştirici modunu açın. Bir telefon, bir geliştirme imzalama kimliğine ve 
 
 Telefona USB üzerinden ulaşılır. Ağ üzerinden yalnızca bir pencere gider.
 
-Bir telefonun panosu, runner olmadan ve telefonda hiçbir şey sorulmadan Xcode'un `devicectl`'i üzerinden gider, bir simulator'ınki de Mac'ten okunur. iOS'ta metin tuş vuruşlarıyla girilir: bir yapıştırma iOS'un "Allow Paste" uyarısını açar.
+Bir telefonun panosu, runner olmadan ve telefonda hiçbir şey sorulmadan Xcode'un `devicectl`'i üzerinden gider, bir simulator'ınki de Mac'ten okunur. iOS'ta metin tuş vuruşlarıyla girilir: bir yapıştırma iOS'un "Allow Paste" uyarısını açar. Simulator.app, Edit › Automatically Sync Pasteboard açıkken (varsayılan olarak açıktır) çalıştıkça bir simulator'ın panosuna gireni Mac'inkine kopyalar; bu yüzden bir simulator'ın panosuna yazmak, Command-C ya da Command-X ve bir pencereden gelen, tuşu olmayan harfler `UNSUPPORTED` ile reddedilir ve Mac'in panosuna dokunulmaz: yazmak için o menü öğesini kapatın, çünkü Simulator.app bu ayarı yalnızca açılışında ve o menüden okur.

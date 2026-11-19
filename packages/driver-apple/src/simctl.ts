@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sleep, run, callSignal, cancelled, must, type LaunchOptions } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { refuseWhereSynced } from './sim-clipboard.js';
 import { heldLaunch } from './sim-held.js';
 import { xcodeNotReady } from './xcode-said.js';
 
@@ -354,10 +355,12 @@ export class Simctl {
   install(udid: string, appPath: string) {
     return this.exec(['install', assertUdid(udid), appPath], 300_000);
   }
-  /** Puts `text` on the simulator's clipboard, from the Mac. */
-  pbcopy(udid: string, text: string) {
+  /** Puts `text` on the simulator's clipboard, from the Mac: refused where Simulator.app would put it on the Mac's. */
+  async pbcopy(udid: string, text: string) {
+    const id = assertUdid(udid);
+    await refuseWhereSynced();
     return new Promise<void>((resolve, reject) => {
-      const p = spawn(...xcodeTool('simctl', ['pbcopy', assertUdid(udid)], this.env), {
+      const p = spawn(...xcodeTool('simctl', ['pbcopy', id], this.env), {
         env: this.env,
         stdio: ['pipe', 'ignore', 'ignore'],
       });

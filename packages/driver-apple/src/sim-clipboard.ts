@@ -1,13 +1,57 @@
-import { DeviceError } from '@appdyno/protocol';
+import { run } from '@appdyno/core';
+import { DeviceError, type ActParams } from '@appdyno/protocol';
 import type { Simctl } from './simctl.js';
 
 /** A simulator's pasteboard, read from the Mac. */
 export const pasteOnMac = (simctl: Simctl, udid: string) => simctl.exec(['pbpaste', udid]);
 
+/** Simulator.app as Xcode runs it, in the Mac's process list: another process named Simulator is not it. */
+const SIMULATOR_APP = /\/Simulator\.app\/Contents\/MacOS\/Simulator\s*$/m;
+/** A switch `defaults` reads as off: Simulator takes anything else, and no value at all, as on. */
+const OFF = /^(0|no|false)$/i;
+
+/**
+ * Whether Simulator.app puts what a simulator's pasteboard takes on this Mac's: while it runs with its Edit › Automatically
+ * Sync Pasteboard on, as it is by default. It reads that setting at its launch and from the menu alone, and each of
+ * them writes it back, so what `defaults` reads is what runs: a value written behind it waits for its next launch.
+ */
+export const syncsToMac = (processes: string, setting: string | undefined) =>
+  SIMULATOR_APP.test(processes) && !OFF.test(setting?.trim() ?? '');
+
+/** `syncsToMac` on this Mac now. */
+export async function macSyncsPasteboard() {
+  const [processes, setting] = await Promise.all([
+    run('ps', ['-axo', 'comm=']).then((r) => r.stdout),
+    run('defaults', ['read', 'com.apple.iphonesimulator', 'PasteboardAutomaticSync']).then(
+      (r) => r.stdout,
+      () => undefined,
+    ),
+  ]);
+  return syncsToMac(processes, setting);
+}
+
+/**
+ * Refuses a write to a simulator's pasteboard that would replace the Mac's clipboard, a person's: `what` the write puts
+ * there. Turning the sync off here would not stop it: Simulator.app takes the setting only at its launch or from its menu.
+ */
+export async function refuseWhereSynced(what = 'this text') {
+  if (await macSyncsPasteboard())
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `Simulator's pasteboard sync would put ${what} on your Mac's clipboard: turn off Edit › Automatically Sync Pasteboard in Simulator to write a simulator's clipboard`,
+      'type the text into its field instead, which takes no clipboard',
+    );
+}
+
+/** Whether a key copies or cuts, and so writes the pasteboard: Command-C and Command-X. */
+export const copies = (a: ActParams) =>
+  a.kind === 'key' && (a.key === 'c' || a.key === 'x') && !!a.modifiers?.includes('command');
+
 /**
  * From the Mac: at times the runner's own pasteboard call held it up for its 15 s. Where the Mac's call writes
  * nothing, as `simctl pbcopy` on a new iOS 26.5 simulator with Xcode 27.1, only the runner's is left, and a stall
- * of that is refused as what it is: it was restarted for it, and a second wait saw the same at load 138.
+ * of that is refused as what it is: it was restarted for it, and a second wait saw the same at load 138. The Mac's
+ * call goes first, as it refuses where Simulator.app would sync the text to the Mac, which the runner's would be too.
  */
 export async function setSimClipboard(
   simctl: Simctl,

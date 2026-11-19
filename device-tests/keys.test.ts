@@ -2,6 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { macSyncsPasteboard } from '../packages/driver-apple/src/sim-clipboard.js';
 import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
@@ -19,7 +20,8 @@ const ok = <A extends Answer>(r: A) => {
   return r;
 };
 
-function keysOf(get: () => Call) {
+/** `synced`: whether a copy there would reach this Mac's clipboard, a person's, as a simulator's does while Simulator.app syncs. */
+function keysOf(get: () => Call, synced = () => Promise.resolve(false)) {
   const call: Call = (n, a) => get()(n, a);
   const form = async () => {
     await call('manage_app', { action: 'stop' });
@@ -53,7 +55,8 @@ function keysOf(get: () => Call) {
     ok(await reads('5'));
   });
 
-  it('copies and pastes by shortcuts, and types a letter and a digit as keys', async () => {
+  it('copies and pastes by shortcuts, and types a letter and a digit as keys', async (ctx) => {
+    if (await synced()) return ctx.skip();
     await form();
     ok(await call('type_text', { selector: { id: FIELD }, text: 'ab' }));
     ok(await call('press_key', { key: 'command+a' }));
@@ -155,7 +158,7 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
     o = opsOn(simulatorProvider(), SIMULATOR, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
-  keysOf(() => o.call);
+  keysOf(() => o.call, macSyncsPasteboard);
   it('types again into a field that let go of the focus with its first text, and the runner lives on', async () => {
     await o.call('manage_app', { action: 'stop' });
     ok(await o.call('launch_app'));
