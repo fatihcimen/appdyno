@@ -260,6 +260,8 @@ The on-screen keyboard is one element, `@keyboard keyboard`, on iOS as on Androi
 
 `type_text` with no target on iOS, where no field holds the focus and no keyboard is up, is refused with `NO_FOCUS` before a key is sent: iOS takes keys with nothing focused, and the first can focus a field the rest then land in. The iOS runner refuses `press_key` `delete` and `tab` so too, where XCTest's own typing ended it.
 
+iOS's keyboard may rewrite text after it is typed: autocorrection as the field loses the focus ("Grace Hopper" became "Good" on iOS 27.2), a period for two spaces, curled quotes and a dash for two hyphens. On a simulator, a session's first `type_text` turns those off, put back as any condition is; on an iPhone nothing can be set, and an `assert` after the step catches it.
+
 ### What a read leaves out
 
 On iOS what lies under the status bar, above a navigation bar at the top of the screen, and what of that bar's own screen has scrolled under the bar, are left out as what is past the screen's edge is, since a touch on either bar scrolls a list to its top; the bar's own buttons stay, and so does a sheet over that screen.

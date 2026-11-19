@@ -25,6 +25,7 @@ import {
   viewNamed,
 } from './step-schemas.js';
 import { scrollingFor } from './scroll.js';
+import { typingAsIs } from './settings.js';
 import { checksFor, selectorOf } from './checks.js';
 import { pastKeyboard } from './keyboard.js';
 import { aim, missed, NO_MATCH_HINT, pick, wordsOf, type Aim, type Aimed } from './targets.js';
@@ -120,6 +121,8 @@ async function typeText(
 ): Promise<Done> {
   // a simulator types a US keyboard's text by its helper's keys, anything else by its runner, which it may wait
   // for: a typing by keys that the runner's start ended meanwhile is no wait, and takes no 3 s
+  // a simulator's keyboard would rewrite the text once its field loses the focus
+  const asIs = await typingAsIs(s);
   const waited = s.device.agentUp ? undefined : Date.now();
   const r = await s.device
     .typeText(st.text, {
@@ -149,7 +152,7 @@ async function typeText(
   // never the text itself (it may be a phone number or a code)
   return {
     r,
-    done: `typed (${Array.from(st.text).length} characters${st.submit && r.submitted !== false ? ', submitted' : ''}${r.verified === false ? ', the field read back holds other text' : r.verified === undefined ? ', not read back' : ''}${r.submitted === false ? ', so it was not submitted' : ''}${started})`,
+    done: `typed (${Array.from(st.text).length} characters${st.submit && r.submitted !== false ? ', submitted' : ''}${r.verified === false ? ', the field read back holds other text' : r.verified === undefined ? ', not read back' : ''}${r.submitted === false ? ', so it was not submitted' : ''}${started})${asIs ? `; ${asIs}` : ''}`,
   };
 }
 

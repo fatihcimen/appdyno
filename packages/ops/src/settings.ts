@@ -157,6 +157,38 @@ export async function turning(s: Session, turn: (kept: boolean) => Promise<void>
   });
 }
 
+/** The sessions whose typing went with the keyboard's corrections off, or on a device that has none to set. */
+const typesAsIs = new WeakSet<Session>();
+
+/**
+ * A simulator's keyboard rewrites text after it is typed, once its field loses the focus: its corrections go off before a
+ * session first types, written down first and put back as any condition. What the answer says, the first time; a device
+ * with none to set (an iPhone, Android) is left as it is.
+ */
+export async function typingAsIs(s: Session) {
+  if (typesAsIs.has(s)) return undefined;
+  const said = await s.conditions.run(async () => {
+    const held = await writeDown(s, s.device.settings, 'autocorrect').catch((e: unknown) => {
+      if (e instanceof DeviceError && e.code === 'UNSUPPORTED') return undefined;
+      throw e;
+    });
+    if (!held || held.now === 'off') {
+      if (held?.first) forget(s, 'autocorrect');
+      return undefined;
+    }
+    try {
+      await s.device.settings.set('autocorrect', 'off');
+    } catch (e) {
+      if (held.first && (await readsAsItWas(s, 'autocorrect'))) forget(s, 'autocorrect');
+      throw e;
+    }
+    return `the keyboard's autocorrection and smart punctuation are off: ${back(s)}`;
+  });
+  // what failed is tried again at the next typing
+  typesAsIs.add(s);
+  return said;
+}
+
 /** A fixed location is written down as a condition, so that it ends as one does: it has nothing to read, and was the real one. */
 const LOCATION = 'location';
 const REAL_PLACE = 'the real one';

@@ -9,6 +9,28 @@ import { appLanguage, heldSize, holdAppLanguage, on, textSize } from './manage.j
 
 const TRANSPARENCY = ['com.apple.Accessibility', 'EnhancedBackgroundContrastEnabled'];
 
+const KEYBOARD = 'com.apple.keyboard.preferences';
+const PREDICTIVE = 'com.apple.keyboard.predictive';
+/**
+ * What a simulator's keyboard does to text after it is typed, as iOS 26.5 and 27.2 name it, each seen doing it:
+ * autocorrection replaces a phrase as its field loses the focus, from what prediction offers; two spaces make a period;
+ * smart punctuation curls quotes and makes two hyphens a dash. Autocorrection and the period come twice, the second for a
+ * hardware keyboard, which Simulator connects as a person chooses.
+ */
+const CORRECTIONS = [
+  [KEYBOARD, 'KeyboardAutocorrection'],
+  [KEYBOARD, 'HWKeyboardAutocorrection'],
+  [PREDICTIVE, 'KeyboardPrediction'],
+  [KEYBOARD, 'KeyboardPeriodShortcut'],
+  [KEYBOARD, 'HWKeyboardPeriodShortcut'],
+  [KEYBOARD, 'SmartTyping'],
+] as const;
+/** What tells the keyboard of a change, which then holds for the text it is typing: smart punctuation waits for its next field. */
+const KEYBOARD_TOLD = [
+  'AppleKeyboardsPreferencesChangedNotification',
+  'AppleKeyboardsPredictiveChangedNotification',
+];
+
 export class SimulatorSettings implements DeviceSettings {
   constructor(
     private readonly simctl: Simctl,
@@ -95,6 +117,8 @@ export class SimulatorSettings implements DeviceSettings {
       }
       case 'fold':
         return this.fold.get();
+      case 'autocorrect':
+        return this.corrections();
       case 'thermal':
         throw new DeviceError(
           'UNSUPPORTED',
@@ -161,6 +185,8 @@ export class SimulatorSettings implements DeviceSettings {
         throw new DeviceError('UNSUPPORTED', await this.followsMac());
       case 'fold':
         return this.fold.set(value);
+      case 'autocorrect':
+        return this.correct(value);
       case 'orientation': {
         const turns = ORIENTATIONS.indexOf(value as (typeof ORIENTATIONS)[number]);
         if (!this.turn || turns < 0)
@@ -171,6 +197,43 @@ export class SimulatorSettings implements DeviceSettings {
       default:
         await this.get(name);
     }
+  }
+
+  /** The corrections as they are set: `default` where none is, `off`, or each by its key, `-` for one not set. */
+  private async corrections() {
+    const read = await Promise.all(
+      CORRECTIONS.map(([domain, key]) =>
+        this.spawn('defaults', 'read', domain, key).then(
+          (v) => v.trim(),
+          () => '-',
+        ),
+      ),
+    );
+    if (read.every((v) => v === '-')) return 'default';
+    if (read.every((v) => v === '0')) return 'off';
+    return CORRECTIONS.map(([, key], i) => `${key}=${read[i] ?? '-'}`).join(' ');
+  }
+
+  /** `off`, `default`, or each as `corrections` reads it: one not set is deleted, so that it is the system's again. */
+  private async correct(value: string) {
+    const said = new Map(value.split(' ').map((w) => w.split('=') as [string, string]));
+    const values = CORRECTIONS.map(([, key]) =>
+      value === 'off' ? '0' : value === 'default' ? '-' : said.get(key),
+    );
+    if (values.some((v) => v !== '-' && v !== '0' && v !== '1'))
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `autocorrect: off, default, or as get reads it, not ${value}`,
+      );
+    await Promise.all(
+      CORRECTIONS.map(([domain, key], i) =>
+        values[i] === '-'
+          ? this.spawn('defaults', 'delete', domain, key).catch(() => undefined)
+          : this.spawn('defaults', 'write', domain, key, '-bool', values[i] === '1' ? 'YES' : 'NO'),
+      ),
+    );
+    await Promise.all(KEYBOARD_TOLD.map((told) => this.spawn('notifyutil', '-p', told)));
+    return undefined;
   }
 
   async cannotSet(name: SettingName) {

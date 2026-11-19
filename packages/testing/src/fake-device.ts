@@ -49,7 +49,11 @@ export class FakeDevice extends DeviceActions implements Device {
   recorder = notGiven('recorder') as ScreenRecorder;
   mirror = notGiven('mirror') as Mirror;
   settings: DeviceSettings = {
-    get: () => Promise.resolve('none'),
+    // as Android's: a keyboard's corrections are a simulator's alone to set
+    get: (name) =>
+      name === 'autocorrect'
+        ? Promise.reject(new DeviceError('UNSUPPORTED', 'no keyboard corrections to set'))
+        : Promise.resolve('none'),
     set: () => Promise.resolve(undefined),
   };
   events = notGiven('events') as DeviceEvents;

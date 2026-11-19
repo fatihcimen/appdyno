@@ -20,9 +20,10 @@ export const SETTINGS = [
 
 /**
  * What the tool changes only on its way to something asked, written down and put back as the rest: an emulator's PIN,
- * which a fingerprint needs, and the rotation lock a turn of the screen sets.
+ * which a fingerprint needs, the rotation lock a turn of the screen sets, and a simulator keyboard's corrections, which
+ * rewrite text typed there after it is typed.
  */
-export const HELD = ['screen_lock', 'orientation'] as const;
+export const HELD = ['screen_lock', 'orientation', 'autocorrect'] as const;
 
 export type SettingName = (typeof SETTINGS)[number] | (typeof HELD)[number];
 

@@ -260,6 +260,8 @@ Ekran klavyesi, Android'de olduğu gibi iOS'ta da tek bir öğedir, `@keyboard k
 
 iOS'ta hedefsiz bir `type_text`, hiçbir alan odakta değilken ve klavye açık değilken, bir tuş gönderilmeden `NO_FOCUS` ile reddedilir: iOS odakta hiçbir şey yokken de tuş alır ve ilk tuş, kalanların içine düştüğü bir alanı odaklayabilir. iOS runner'ı `press_key` `delete` ve `tab`'ı da böyle reddeder; XCTest'in kendi yazması orada onu sonlandırıyordu.
 
+iOS'un klavyesi bir metni yazıldıktan sonra değiştirebilir: alan odağı bırakırken otomatik düzeltme ("Grace Hopper", iOS 27.2'de "Good" oldu), iki boşluk için bir nokta, kıvrık tırnaklar ve iki tire için bir uzun tire. Bir simulator'da bir oturumun ilk `type_text` çağrısı bunları kapatır; her koşul gibi geri alınır. Bir iPhone'da hiçbiri ayarlanamaz; adımdan sonraki bir `assert` bunu yakalar.
+
 ### Bir okumanın dışarıda bıraktıkları
 
 iOS'ta ekranın üstündeki bir gezinme çubuğunun yukarısında, durum çubuğunun altında kalan ve o çubuğun kendi ekranından çubuğun altına kaymış olan, ekranın kenarının ötesindeki gibi dışarıda bırakılır, çünkü iki çubuktan birine bir dokunuş bir listeyi başına kaydırır; çubuğun kendi düğmeleri kalır, o ekranın üstündeki bir sayfa da.

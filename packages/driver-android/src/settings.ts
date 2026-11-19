@@ -203,6 +203,8 @@ export class AndroidSettings implements DeviceSettings {
       case 'screen_lock':
         // which emulator had none: a serial is reused, and another's lock is not this tool's to clear
         return (await this.unlocked()) ? `none on ${await this.avd()}` : 'pin';
+      case 'autocorrect':
+        throw new DeviceError('UNSUPPORTED', "an Android keyboard's corrections are not set here");
       case 'orientation': {
         const out = await this.sh(ROTATION_KEYS.map((k) => `settings get system ${k}`).join('; '));
         const [lock = '', turn = ''] = out.split('\n').map((l) => l.trim());
