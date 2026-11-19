@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { calledOn } from '../../src/claims.js';
-import { claim, holder, PUT_BACK_TOOL } from '../../src/index.js';
+import { claim, holder, PUT_BACK_TOOL, release } from '../../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './shared.js';
 
@@ -71,13 +71,19 @@ describe('device claims', () => {
     const { call, ctx } = await connect(d, { defaults: { claims: { share: false } } });
     expect((await call('use_device', { device: d.serial })).error).toBe(false);
     const taken = must(holder(d.serial), 'the claim');
-    expect(taken.lastCall).toBe(taken.since);
+    expect(Date.parse(must(taken.lastCall, 'its last call'))).toBeGreaterThanOrEqual(
+      Date.parse(taken.since),
+    );
     const later = Date.parse(taken.since) + 61_000;
     calledOn(d.serial, later);
     expect(holder(d.serial)?.lastCall).toBe(new Date(later).toISOString());
     calledOn(d.serial, later + 30_000);
     expect(holder(d.serial)?.lastCall).toBe(new Date(later).toISOString());
     ctx.close();
+    // a holder that never says it made a call, as a program that calls the library, keeps none to be read as its last
+    await claim('emulator-5583', 'appdyno device');
+    expect(must(holder('emulator-5583'), 'the claim').lastCall).toBeUndefined();
+    release('emulator-5583');
   });
 
   it('waits out the hold of what puts back a server that has gone, and then takes the device', async () => {

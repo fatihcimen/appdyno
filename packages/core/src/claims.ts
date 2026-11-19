@@ -17,6 +17,9 @@ const claims = deviceState('claims', Claim);
 /** How often a holder's calls are written down: a refusal says how long ago in minutes at the finest. */
 const CALLS_KEPT_MS = 60_000;
 
+/** When this process last wrote a call down, by device: a claim taken anew has none. */
+const called = new Map<string, number>();
+
 /** What puts back what a server that has gone left on a device: a hold a new session waits out. */
 export const PUT_BACK_TOOL = 'appdyno put-back';
 
@@ -66,16 +69,15 @@ export async function claim(
         heldText(serial, h),
         `use another device${share ? `, or share this one: ${share}` : ''}`,
       );
-    const mine = thisOwner(tool);
-    called.set(serial, Date.now());
-    return { ...mine, lastCall: mine.since };
+    called.delete(serial);
+    return thisOwner(tool);
   });
 }
 
-/** When this process last wrote a call down, by device. */
-const called = new Map<string, number>();
-
-/** This process made a call on a device it holds: written down, at most once a minute. */
+/**
+ * This process made a call on a device it holds: written down, at most once a minute. A holder that never says so, as a
+ * program that calls the library, keeps no last call, as a holder before 1.3.3 kept none.
+ */
 export function calledOn(serial: string, now = Date.now()) {
   if (now - (called.get(serial) ?? 0) < CALLS_KEPT_MS) return;
   called.set(serial, now);

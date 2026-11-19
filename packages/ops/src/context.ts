@@ -277,7 +277,10 @@ export class ServerContext {
     const saved = this.saved?.serial === serial ? this.saved : undefined;
     const holds = this.options.claims && !share && !this.options.claims.share;
     const tool = this.options.tool ?? 'appdyno';
-    if (holds) await claim(serial, tool, this.options.claims?.how);
+    if (holds) {
+      await claim(serial, tool, this.options.claims?.how);
+      calledOn(serial);
+    }
     const owner = this.options.storage?.remember ? undefined : thisOwner(tool);
     const s = new Session(
       // a replay, a test run and a survey ask for a session outside any op
