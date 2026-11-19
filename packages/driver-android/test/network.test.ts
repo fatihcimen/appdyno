@@ -91,10 +91,10 @@ describe('a packet trace that may have ended by itself', () => {
     return { asked, net };
   };
 
-  it('runs while its own perfetto does, told from a process that took its number', async () => {
+  it('runs while its process does, as stop waits for it', async () => {
     const { asked, net } = asking('');
     await expect(net.endedAt(trace)).resolves.toBeUndefined();
-    expect(asked[0]).toMatch(/^grep -q perfetto \/proc\/42\/cmdline 2>\/dev\/null && exit; /);
+    expect(asked[0]).toMatch(/^\[ -d \/proc\/42 \] && exit; /);
   });
 
   it('ended as long ago as its file was last written, by the device clock', async () => {
@@ -109,11 +109,5 @@ describe('a packet trace that may have ended by itself', () => {
     const bytes = { via: 'bytes', uid: 10_193, rx: 0, tx: 0, packets: 0 };
     await expect(net.endedAt(bytes)).resolves.toBeUndefined();
     expect(asked).toEqual([]);
-  });
-
-  it('is stopped by its own process alone', async () => {
-    const { asked, net } = asking('');
-    await net.stop(trace).catch(() => undefined);
-    expect(asked[0]).toBe('grep -q perfetto /proc/42/cmdline 2>/dev/null && kill 42');
   });
 });

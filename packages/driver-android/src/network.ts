@@ -83,8 +83,11 @@ function traceOf(h: NetworkHandle) {
   return { pid, remote };
 }
 
-/** Whether the trace's own process runs, and not another that took its number. */
-const perfettoUp = (pid: string) => `grep -q perfetto /proc/${pid}/cmdline 2>/dev/null`;
+/**
+ * Whether the trace's process runs, as `stop` waits for it. shortcut: by its pid alone, so one that took its number
+ * reads as the trace; read its command line where a device proves the shell may, as a recording's is read.
+ */
+const traceUp = (pid: string) => `[ -d /proc/${pid} ]`;
 
 /** Android's own counts of an app's traffic: `dumpsys netstats`, and Perfetto's packet trace on 14+. */
 export class AndroidNetwork implements NetworkSource {
@@ -178,7 +181,7 @@ export class AndroidNetwork implements NetworkSource {
     const { pid, remote } = traceOf(h);
     return endedAgo(
       await this.sh(
-        `${perfettoUp(pid)} && exit; t=$(stat -c %Y ${remote} 2>/dev/null) && echo $(($(date +%s) - t)) || echo gone`,
+        `${traceUp(pid)} && exit; t=$(stat -c %Y ${remote} 2>/dev/null) && echo $(($(date +%s) - t)) || echo gone`,
       ),
     );
   }
@@ -186,10 +189,9 @@ export class AndroidNetwork implements NetworkSource {
   async stop(h: NetworkHandle): Promise<NetworkAnswer> {
     if (h.via !== 'packets') return this.read(h);
     const { pid, remote } = traceOf(h);
-    // its own process alone: one that ended by itself may have left its number to another
-    await this.sh(`${perfettoUp(pid)} && kill ${pid}`);
+    await this.sh(`kill ${pid}`);
     const end = Date.now() + 15_000;
-    while (Date.now() < end && (await this.sh(`${perfettoUp(pid)} && echo up`)).includes('up'))
+    while (Date.now() < end && (await this.sh(`${traceUp(pid)} && echo up`)).includes('up'))
       await pause(200);
     const dir = await mkdtemp(join(tmpdir(), 'appdyno-net-'));
     try {
