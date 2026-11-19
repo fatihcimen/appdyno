@@ -138,11 +138,12 @@ extension Device {
     }
 
     /**
-     * A key of the keyboard, read back from the field with the focus where what it does can be (`pressSeen`): true once
-     * the field shows it, false where it shows nothing of it or shows it otherwise, nil where that cannot be read. A
-     * plain letter or digit into a field goes as typed text, which the keyboard does not capitalize: its shift stays
-     * on for a while after text typed into an empty field, and a hardware key then came as a capital ("acX" of x). With
-     * it, whether no field had the keyboard focus as it went. A button of the device's own is pressed as it is.
+     * A key of the keyboard, read back on a simulator (`readsKeys`) from the field with the focus where what it does
+     * can be (`pressSeen`): true once the field shows it, false where it shows nothing of it or shows it otherwise, nil
+     * where that cannot be read. A plain letter or digit into a field goes as typed text, which the keyboard does not
+     * capitalize: its shift stays on for a while after text typed into an empty field, and a hardware key then came as
+     * a capital ("acX" of x). With it, whether no field had the keyboard focus as it went. A button of the device's own
+     * is pressed as it is.
      */
     private func key(_ name: String, _ modifiers: [String], job: Job) throws -> (seen: Bool?, unfocused: Bool) {
         // XCTest's delete does nothing with a modifier held, and typed as text it deletes one character whatever is
@@ -160,6 +161,10 @@ extension Device {
             return (nil, false)
         }
         let app = front().0
+        guard Device.readsKeys else {
+            try send(name, Set(modifiers), in: app)
+            return (nil, false)
+        }
         // the first read is the one before the key
         var focused: Bool?
         let pressed = try pressSeen(name, Set(modifiers), waitS: Device.echoWaitS, PressProbe(
@@ -178,11 +183,19 @@ extension Device {
         return (pressed.seen, focused == false)
     }
 
-    /// One key: a plain letter or digit as typed text where a field has the focus, Enter, delete and tab by XCTest's
-    /// synthesizer, any other by its keyboard.
+    /// Whether keys are read back (`key`): on a simulator. shortcut: a phone's go as before, unread, as no run on a
+    /// phone has proven the read-back there; read them back once one has.
+    #if targetEnvironment(simulator)
+    static let readsKeys = true
+    #else
+    static let readsKeys = false
+    #endif
+
+    /// One key: a plain letter or digit as typed text where keys are read back and a field has the focus, Enter, delete
+    /// and tab by XCTest's synthesizer, any other by its keyboard.
     private func send(_ name: String, _ modifiers: Set<String>, in app: XCUIApplication) throws {
         let flags = modifiers.reduce(into: XCUIElement.KeyModifierFlags()) { $0.formUnion(Device.held[$1] ?? []) }
-        let typed = flags.isEmpty && name.count == 1 && focusedField(app) != nil
+        let typed = Device.readsKeys && flags.isEmpty && name.count == 1 && focusedField(app) != nil
         if typed, try EventShim.type(name, orientation: Device.keysOrientation()) { return }
         if !flags.isEmpty || name.count == 1
             || ["escape", "space", "arrowUp", "arrowDown", "arrowLeft", "arrowRight"].contains(name) {
