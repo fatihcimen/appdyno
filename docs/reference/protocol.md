@@ -487,7 +487,7 @@ process reconnects in one round trip. A different build on the device is stopped
 only when its command line is the agent's) and replaced, unless another live process of this Mac uses it. The hosts
 of a device share one agent, as a device has one UI automation connection to give, and two builds replacing each other's
 agent would take the device from each other for as long as both run, which is what an update leaves: a hub open
-beside a client that has already moved on. So the agent stays, and the newer host uses it and is told, until its last host
+beside a client that has already moved on. So the agent stays, and the newer host uses it and is told, in the answer of the call that met it, with that agent's version and the pid that uses it, as its hello's `agentVersion` is that build's, until its last host
 has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. An agent that starts ends every other agent of ours that listens with no host connected and has run 60 s, the time a host gives a new agent to answer, as a host from another state folder leaves one; where the shell cannot read the table of sockets, it ends none. A host
 that cannot speak that agent's protocol is refused with the pid of the one that uses it. An iOS runner keeps to the same
 rule, and one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its

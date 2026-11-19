@@ -487,7 +487,7 @@ süreci tek bir gidiş-dönüşte yeniden bağlanır. Cihazdaki farklı bir buil
 yalnızca komut satırı ajanınkiyse) ve değiştirilir; ancak bu Mac'in başka bir canlı süreci onu kullanıyorsa değiştirilmez. Bir cihazın
 host'ları tek bir ajanı paylaşır, çünkü bir cihazın verebileceği tek bir UI automation bağlantısı vardır ve birbirinin ajanını değiştiren
 iki build, ikisi çalıştığı sürece cihazı birbirinden alırdı; bir güncellemenin bıraktığı da budur: zaten yeni sürüme geçmiş bir istemcinin
-yanında açık bir hub. Bu yüzden ajan kalır, daha yeni host da onu kullanır ve bu kendisine söylenir; bu, ajanın son host'u
+yanında açık bir hub. Bu yüzden ajan kalır, daha yeni host da onu kullanır ve bu kendisine, onunla karşılaşan çağrının yanıtında, o ajanın sürümü ve onu kullanan pid ile söylenir, çünkü hello'sundaki `agentVersion` o build'inkidir; bu, ajanın son host'u
 gidene kadar sürer; durum klasöründeki `agent-hosts/<serial>.json` onları listeler ve bir sürecin bitişi onu listeden çıkarır. Başlayan bir ajan, bağlı hiçbir host olmadan dinleyen ve 60 s çalışmış, yani bir host'un yeni bir ajana yanıt için verdiği süreyi doldurmuş diğer her ajanımızı sonlandırır, çünkü başka bir durum klasöründen gelen bir host geride bir tane bırakır; shell soket tablosunu okuyamadığında hiçbirini sonlandırmaz. O ajanın
 protokolünü konuşamayan bir host, onu kullananın pid'iyle reddedilir. Bir iOS runner'ı da aynı
 kurala uyar ve onu bir seferde tek bir host, durum klasöründeki `ios-<udid>.starting` ile başlatır: bir cihaz tek bir runner'a hizmet eder ve

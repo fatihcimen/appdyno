@@ -1,7 +1,7 @@
 import { channel } from 'node:diagnostics_channel';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
-import { reportProgress } from './call.js';
+import { noteInAnswer, reportProgress } from './call.js';
 import { TIMEOUTS } from './device.js';
 import { heldElsewhere, isThisProcess, Owner, thisOwner } from './owner.js';
 import type { RpcClient } from './rpc.js';
@@ -110,9 +110,10 @@ export async function sharedAgent<State extends { sha256: string }>(
         );
       return undefined;
     });
+  // said in the answer: its hello names that build's version, which read as this one's
   if (agent && otherBuild)
-    reportProgress(
-      `using the agent pid ${must(others[0], 'its host').pid} uses, of another build: this one's starts when that has gone`,
+    noteInAnswer(
+      `the agent on ${serial} is ${agent.hello.agentVersion}, of another build than this one's, which pid ${must(others[0], 'its host').pid} uses: this one's starts once that process has gone`,
     );
   return agent && { ...agent, started: false };
 }

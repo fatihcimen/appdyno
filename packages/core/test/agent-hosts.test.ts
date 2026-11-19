@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { noting } from '../src/call.js';
 import { must } from '../src/must.js';
 import { agentEnded, agentMet, sharedAgent } from '../src/agent-hosts.js';
 import { startOf, thisOwner, type Owner } from '../src/owner.js';
@@ -53,11 +54,16 @@ describe('an agent found on a device', () => {
   });
 
   it('stays under a live host of another build, which would take the device back', async () => {
-    anotherHost();
-    const found = await sharedAgent(SERIAL, { sha256: OTHER_BUILD }, THIS_BUILD, () =>
-      Promise.resolve(agent),
+    const pid = must(anotherHost().pid, 'its pid');
+    const old = { ...agent, hello: { model: 'Pixel', agentVersion: '1.0.0' } as never };
+    const { value: found, notes } = await noting(() =>
+      sharedAgent(SERIAL, { sha256: OTHER_BUILD }, THIS_BUILD, () => Promise.resolve(old)),
     );
     expect(found).toMatchObject({ started: false });
+    // the answer says whose agent it is, as its version read as this server's
+    expect(notes).toEqual([
+      `the agent on ${SERIAL} is 1.0.0, of another build than this one's, which pid ${pid} uses: this one's starts once that process has gone`,
+    ]);
   });
 
   it('goes once that host has gone', async () => {
