@@ -17,6 +17,12 @@ export type ScreenRecorder = {
   /** `light`: what will run for hours, kept only in case: fewer bits, for what it costs the device and the disk. */
   start(file: string, opts: { maxSeconds: number; light?: boolean }): Promise<RecordingHandle>;
   stop(handle: RecordingHandle): Promise<RecordingFiles>;
+  /**
+   * When the recording ended by itself, at its limit or as its process went, on this Mac's clock by what it last wrote:
+   * none while it runs, 0 where nothing it left dates it. `stop` still keeps what it made. A recorder without this ends
+   * only as the time it was given comes.
+   */
+  endedAt?(handle: RecordingHandle): Promise<number | undefined>;
 };
 
 /** One thing on a screen as the system's accessibility service tells it: its words and id, and no place. */

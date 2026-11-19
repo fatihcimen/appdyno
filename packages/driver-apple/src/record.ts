@@ -1,5 +1,13 @@
 import { spawn } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -111,6 +119,15 @@ class ToolRecorder implements ScreenRecorder {
       stdout: '',
     }));
     return stdout.includes(this.mark);
+  }
+
+  /** Ended as its process went, at its limit or not, when the movie or else its log was last written. */
+  async endedAt(h: RecordingHandle): Promise<number | undefined> {
+    if (await this.alive(Number(h.pid))) return undefined;
+    const written = [String(h.file), logOf(h)].map(
+      (f) => statSync(f, { throwIfNoEntry: false })?.mtimeMs ?? 0,
+    );
+    return Math.max(...written);
   }
 
   async stop(h: RecordingHandle): Promise<RecordingFiles> {

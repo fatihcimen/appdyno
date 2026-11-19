@@ -8,9 +8,8 @@ import {
   type LiveSample,
 } from '@appdyno/core';
 import type { ServerContext } from '../context.js';
-import { endRecording, filming } from '../record.js';
+import { endRecording, filming, noRecordingRuns } from '../record.js';
 import type { Session } from '../session.js';
-import { ToolError } from '../tool.js';
 import { placeVideo, recordFrames, writePage, type TimelineDone } from './sources.js';
 
 /** One segment of a recording keeps its frames' own times: past it they are lost in the join. */
@@ -33,12 +32,7 @@ export async function startTimeline(
 ): Promise<string> {
   const { device } = s;
   const { serial, recorder, measure } = device;
-  const running = filming.read(serial);
-  if (running)
-    throw new ToolError(
-      `a recording has run on ${serial} since ${running.since}: stop it first, as a timeline makes its own`,
-      'INVALID_ARGUMENT',
-    );
+  const ended = await noRecordingRuns(s, ', and a timeline makes its own');
   const first: ClockReading = await measureClock(() => device.wallClock());
   if (measure.framesByProbe) await measure.attachProbe(app);
   const frames = await recordFrames(device, app, MAX_SECONDS);
@@ -55,7 +49,13 @@ export async function startTimeline(
   let noVideo: string | undefined;
   await recorder.start(file, { maxSeconds: MAX_SECONDS }).then(
     (handle) =>
-      filming.write(serial, { handle, since: new Date().toISOString(), file, owner: s.owner }),
+      filming.write(serial, {
+        handle,
+        since: new Date().toISOString(),
+        file,
+        owner: s.owner,
+        by: 'timeline',
+      }),
     (e: unknown) => (noVideo = e instanceof Error ? e.message : String(e)),
   );
   const startedAt = Date.now();
@@ -109,5 +109,6 @@ export async function startTimeline(
       return (finished ??= finishing(reason));
     },
   });
-  return `timeline of ${app} on one clock, at most ${MAX_SECONDS} s, in ${dir}: its device reads ${first.offsetMs} ms from this Mac, ±${first.boundMs} ms. stop writes it`;
+  const t = `timeline of ${app} on one clock, at most ${MAX_SECONDS} s, in ${dir}: its device reads ${first.offsetMs} ms from this Mac, ±${first.boundMs} ms. stop writes it`;
+  return ended ? `${t}\n${ended}` : t;
 }

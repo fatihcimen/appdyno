@@ -10,6 +10,8 @@ What an agent can leave behind to show what happened, and how it looks inside an
 outlives the process that started it, so `appdyno record-session video start` and `appdyno record-session video stop` work as two commands. A session's
 end stops a recording it left running.
 
+A `start` while a recording runs is refused `DEVICE_CLAIMED`, and its hint says how that one ends. One that has ended by itself, at its `maxSeconds` or as its recorder went, holds nothing: the next `start` keeps its file as `stop` would, and its answer says when it ended and where the file is. So does a timeline's or the flight recorder's start; theirs is refused while they run.
+
 `stop` reads the file, and a file that does not play is a refusal saying why (a recorder killed before it ended leaves no
 index). The answer gives how long the file plays, its frames and size.
 

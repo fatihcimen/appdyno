@@ -16,7 +16,7 @@ import {
 } from '@appdyno/core';
 import type { ServerContext } from '../context.js';
 import { pruneWhenDue } from '../perf/shared.js';
-import { filming } from '../record.js';
+import { filming, noRecordingRuns } from '../record.js';
 import type { Session } from '../session.js';
 import { ToolError } from '../tool.js';
 import { stallsIn } from './gather.js';
@@ -58,6 +58,8 @@ export const dropFlightFolder = (serial: string) =>
 export type RunningFlight = {
   seconds: number;
   saved: string[];
+  /** What its start finished: a recording that had ended on its own. */
+  ended?: string;
   /** Keeps what it holds now, as a stall would. */
   save(): Promise<string | undefined>;
   /** Ends every source and leaves nothing of what was held. */
@@ -114,7 +116,13 @@ async function videoRing(s: Session, folder: string, segmentSeconds: number, off
   if (!recorder.oneAtATime) {
     ring = new VideoRing(recorder, folder, segmentSeconds, offsetMs);
     ring.onHandle = (handle, file) =>
-      filming.write(serial, { handle, since: new Date().toISOString(), file, owner: s.owner });
+      filming.write(serial, {
+        handle,
+        since: new Date().toISOString(),
+        file,
+        owner: s.owner,
+        by: 'flight',
+      });
     await ring.rotate().catch((e: unknown) => {
       noVideo = e instanceof Error ? e.message : String(e);
       ring = undefined;
@@ -162,16 +170,12 @@ async function pageOf(
   });
 }
 
-/** No recording of the device's own runs, and the app runs. */
-async function mayFly(device: Device, app: string) {
-  const running = filming.read(device.serial);
-  if (running)
-    throw new ToolError(
-      `a recording has run on ${device.serial} since ${running.since}: stop it first, as the flight recorder makes its own`,
-      'INVALID_ARGUMENT',
-    );
-  if (!(await device.appRunning(app)))
+/** No recording of the device's own runs, and the app runs; what was finished of one that had ended on its own. */
+async function mayFly(s: Session, app: string) {
+  const ended = await noRecordingRuns(s, ', and the flight recorder makes its own');
+  if (!(await s.device.appRunning(app)))
     throw new ToolError(`${app} is not running: launch it first`, 'APP_NOT_RUNNING');
+  return ended;
 }
 
 /** The ring's folder, with nothing in it. */
@@ -214,7 +218,7 @@ export async function startFlight(
 ): Promise<RunningFlight> {
   const { device } = s;
   const { serial, measure } = device;
-  await mayFly(device, app);
+  const ended = await mayFly(s, app);
   const folder = flightFolder(serial);
   const clear = () => emptied(folder);
   clear();
@@ -369,6 +373,7 @@ export async function startFlight(
   return {
     seconds,
     saved,
+    ...(ended && { ended }),
     save: () => alone(() => keep('a person asked')).then((page) => page ?? undefined),
     stop: async () => {
       over = true;

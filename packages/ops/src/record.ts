@@ -25,8 +25,53 @@ const MAX_S = 3_600;
 /** The device's recording: it outlives the process, so that a command line can start and stop one. */
 export const filming = deviceState(
   'video',
-  z.object({ handle: Handle, since: z.string(), file: z.string(), owner: Owner.optional() }),
+  z.object({
+    handle: Handle,
+    since: z.string(),
+    file: z.string(),
+    owner: Owner.optional(),
+    /** When one `record` started is past its time: it has ended then, whatever its process says, as on a Mac that slept. */
+    until: z.string().optional(),
+    /** A timeline's or the flight recorder's, which end it themselves. */
+    by: z.enum(['timeline', 'flight']).optional(),
+  }),
 );
+type Filming = NonNullable<ReturnType<typeof filming.read>>;
+
+/** When a recording ended by itself, as its recorder says or as its time came; none while it runs. */
+async function endedAt(s: Session, r: Filming) {
+  const ended = await s.device.recorder.endedAt?.(r.handle);
+  if (ended !== undefined) return ended;
+  const until = Date.parse(r.until ?? '');
+  return until <= Date.now() ? until : undefined;
+}
+
+/**
+ * Refuses while a recording runs on the device, saying how it ends. One `record` started that has ended by itself, at
+ * its time or as its process went, is finished as `stop` would, and said in the line this gives; a timeline's or the
+ * flight recorder's is theirs to end. `also`: what the refusal adds.
+ */
+export async function noRecordingRuns(s: Session, also = ''): Promise<string | undefined> {
+  const serial = s.device.serial;
+  const r = filming.read(serial);
+  if (!r) return undefined;
+  const at = r.by ? undefined : await endedAt(s, r);
+  if (at === undefined)
+    throw new ToolError(
+      `a recording has run on ${serial} since ${r.since} (to ${r.file})${also}`,
+      'DEVICE_CLAIMED',
+      `record_session with kind ${r.by ?? 'video'} and action stop ends it`,
+    );
+  const kept = await endRecording(s).then(
+    (end) => end?.data.files.join(', ') ?? r.file,
+    (e: unknown) => {
+      // a device gone, or a recorder that would not end, still holds it
+      if (filming.read(serial)) throw e;
+      return `it could not be kept: ${e instanceof Error ? e.message : String(e)}`;
+    },
+  );
+  return `the last recording on ${serial} ended on its own${at ? ` at ${new Date(at).toISOString()}` : ''}: ${kept}`;
+}
 
 /** Ends the device's recording and checks what came of it; a file that does not play is a refusal. */
 export async function endRecording(s: Session) {
@@ -83,12 +128,7 @@ export function recordOps(ctx: ServerContext) {
           if (!end) throw new ToolError(`no recording runs on ${s.device.serial}`, 'NOT_FOUND');
           return reply(end.text, end.data);
         }
-        const now = filming.read(s.device.serial);
-        if (now)
-          throw new ToolError(
-            `a recording has run on ${s.device.serial} since ${now.since} (to ${now.file}): stop it first`,
-            'INVALID_ARGUMENT',
-          );
+        const ended = await noRecordingRuns(s);
         const since = new Date().toISOString();
         const to = resolve(
           (file ? inside(ctx.policy, file) : undefined) ??
@@ -116,9 +156,15 @@ export function recordOps(ctx: ServerContext) {
           throw new ToolError(`cannot write ${to}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
         }
         const handle = await recorder.start(to, { maxSeconds });
-        filming.write(s.device.serial, { handle, since, file: to, owner: s.owner });
+        const until = new Date(Date.now() + maxSeconds * 1_000).toISOString();
+        filming.write(s.device.serial, { handle, since, file: to, owner: s.owner, until });
         const t = `recording to ${to}, at most ${maxSeconds} s${picturesHideNothing(ctx.policy, 'video')}`;
-        return reply(t, { done: t, files: [to], since });
+        return reply(ended ? `${t}\n${ended}` : t, {
+          done: t,
+          files: [to],
+          since,
+          ...(ended && { note: ended }),
+        });
       },
     }),
   ];

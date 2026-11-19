@@ -180,7 +180,9 @@ for (const { platform, serial, provider } of targets)
           file: file('two.mp4'),
         });
         expect(again.error).toBe(true);
-        expect(again.text).toMatch(/stop it first/);
+        expect(again.text).toMatch(
+          /^DEVICE_CLAIMED: a recording has run on .*\nhint: record_session with kind video and action stop ends it/,
+        );
         await stir(h.ok);
         const stopped = await h.ok('record_session', { kind: 'video', action: 'stop' });
         expect(stopped.data.files).toEqual([to]);
@@ -216,6 +218,32 @@ for (const { platform, serial, provider } of targets)
         expect(stopped.data.files).toEqual([to]);
         assertPlayable(to, 0.05);
         expect(Number(stopped.data.durationMs)).toBeLessThan(3_500);
+      }, 120_000);
+
+      it('gives way, once ended at its limit, to the next, its video kept', async (ctx) => {
+        if (noRecorder) return ctx.skip();
+        const first = file(platform === 'ios' ? 'first.mov' : 'first.mp4');
+        const next = file(platform === 'ios' ? 'next.mov' : 'next.mp4');
+        await h.ok('record_session', {
+          kind: 'video',
+          action: 'start',
+          file: first,
+          maxSeconds: 5,
+        });
+        await stir(h.ok, 1);
+        // past the limit, whatever the stirring took, and no stop asked
+        await new Promise((r) => setTimeout(r, 8_000));
+        const started = await h.ok('record_session', {
+          kind: 'video',
+          action: 'start',
+          file: next,
+        });
+        expect(started.text).toMatch(new RegExp(`ended on its own at \\S+: ${first}$`, 'm'));
+        assertPlayable(first, 0.05);
+        await stir(h.ok, 1);
+        const stopped = await h.ok('record_session', { kind: 'video', action: 'stop' });
+        expect(stopped.data.files).toEqual([next]);
+        assertPlayable(next, 0.05);
       }, 120_000);
 
       it('says a recording failed when its file cannot be written', async () => {

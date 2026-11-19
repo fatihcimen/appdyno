@@ -43,6 +43,52 @@ describe('a recording that starts', () => {
   });
 });
 
+describe('a recording that may have ended by itself', () => {
+  const DIR = '/data/local/tmp/appdyno/video-0123abcd';
+  const asking = (answer: string) => {
+    const asked: string[] = [];
+    const r = new AndroidRecorder(
+      {
+        exec: (_serial: string, command: string) => {
+          asked.push(command);
+          return Promise.resolve(answer);
+        },
+      } as unknown as Adb,
+      'R58M',
+    );
+    return { asked, endedAt: (dir = DIR) => r.endedAt({ dir, file: 'out.mp4' }) };
+  };
+
+  it('runs while the device says nothing, as its screenrecord is up', async () => {
+    const { asked, endedAt } = asking('');
+    await expect(endedAt()).resolves.toBeUndefined();
+    // looked at twice a second apart before it is called ended, as between segments none runs for a moment
+    expect(asked[0]).toMatch(/^cd \/data\/local\/tmp\/appdyno\/video-0123abcd 2>/);
+    expect(asked[0]).toContain('sleep 1;');
+    expect(asked[0]).toContain('[ -e done ] || touch done');
+  });
+
+  it('ended as long ago as the device says its last write was, by its own clock', async () => {
+    const before = Date.now();
+    await expect(asking('42\n').endedAt()).resolves.toBeLessThanOrEqual(before - 42_000 + 50);
+    await expect(asking('42\n').endedAt()).resolves.toBeGreaterThan(before - 43_000);
+  });
+
+  it('ended at no time it can say when its folder is gone', async () => {
+    await expect(asking('gone\n').endedAt()).resolves.toBe(0);
+  });
+
+  it('runs, as far as it can tell, where the device says something else', async () => {
+    await expect(asking('sh: stat: not found\n').endedAt()).resolves.toBeUndefined();
+  });
+
+  it('sends the device no folder but the form its start names', async () => {
+    const { asked, endedAt } = asking('');
+    await expect(endedAt(`${DIR}; reboot #`)).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    expect(asked).toEqual([]);
+  });
+});
+
 describe('a recording that stops', () => {
   it('sends the device no folder but the form its start names, as a state file may hold any', async () => {
     const asked: string[] = [];

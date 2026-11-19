@@ -10,6 +10,8 @@ Bir ajanın ne olduğunu göstermek için geride bırakabildikleri ve bunun bir 
 onu başlatan süreçten uzun yaşar; bu yüzden `appdyno record-session video start` ve `appdyno record-session video stop` iki ayrı komut olarak çalışır. Bir oturumun
 sonu, oturumun çalışır bıraktığı bir kaydı durdurur.
 
+Bir kayıt çalışırken gelen bir `start` `DEVICE_CLAIMED` ile reddedilir ve ipucu o kaydın nasıl bittiğini söyler. Kendiliğinden, `maxSeconds`'ında ya da kaydedicisi gidince biten bir kayıt hiçbir şeyi tutmaz: sonraki `start` onun dosyasını `stop`'un yapacağı gibi saklar ve yanıtı kaydın ne zaman bittiğini ve dosyanın nerede olduğunu söyler. Bir timeline'ın ya da flight recorder'ın başlangıcı da aynısını yapar; onlarınki ise onlar çalıştıkça reddedilir.
+
 `stop` dosyayı okur; oynatılamayan bir dosya nedenini söyleyen bir rettir (bitmeden öldürülen bir kaydedici hiç
 index bırakmaz). Yanıt dosyanın ne kadar oynadığını, karelerini ve boyutunu verir.
 

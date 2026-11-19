@@ -38,6 +38,14 @@ const move = (from: string, to: string) =>
 
 const segmentSeconds = () => Number(process.env.APPDYNO_RECORD_SEGMENT_S ?? SEGMENT_S);
 
+/** A handle's folder, which goes into the device's shell from a state file: only the form `start` writes. */
+function folderOf(h: RecordingHandle) {
+  const dir = String(h.dir);
+  if (!VIDEO_DIR.test(dir))
+    throw new DeviceError('INVALID_ARGUMENT', `not a recording's folder: ${dir}`);
+  return dir;
+}
+
 /**
  * `screenrecord` runs on the device, one segment after another, in a shell that needs no host: a command
  * line's `stop` is another process. A file ends properly only on the first SIGINT its process gets: the
@@ -99,11 +107,29 @@ export class AndroidRecorder implements ScreenRecorder {
     }
   }
 
+  /**
+   * Ended: its loop wrote `done`, at its limit or as screenrecord failed; or its folder is gone; or no screenrecord runs
+   * at two reads a second apart, as between two segments none may for a moment. Its age is the device's own, from what
+   * the recording last wrote, so the device's clock need not be this Mac's.
+   */
+  async endedAt(h: RecordingHandle): Promise<number | undefined> {
+    const dir = folderOf(h);
+    const live = 'grep -q screenrecord /proc/$(cat pid 2>/dev/null)/cmdline 2>/dev/null';
+    const out = await this.sh(
+      `cd ${dir} 2>/dev/null || { echo gone; exit; }; ` +
+        `if [ ! -e done ]; then ${live} && exit; sleep 1; [ ! -e done ] && ${live} && exit; fi; ` +
+        'last=$(stat -c %Y done seg*.mp4 log 2>/dev/null | sort -n | tail -1); ' +
+        // a loop its device ended, as by a restart, wrote none: `stop` would wait a minute for it
+        '[ -e done ] || touch done; [ -n "$last" ] && echo $(($(date +%s) - last)) || echo gone',
+    );
+    const said = out.trim();
+    if (said === 'gone') return 0;
+    return /^\d+$/.test(said) ? Date.now() - Number(said) * 1_000 : undefined;
+  }
+
   async stop(h: RecordingHandle): Promise<RecordingFiles> {
-    const { dir, file } = h as { dir: string; file: string };
-    // it goes into the device's shell, from a state file: only the form `start` writes
-    if (!VIDEO_DIR.test(dir))
-      throw new DeviceError('INVALID_ARGUMENT', `not a recording's folder: ${dir}`);
+    const dir = folderOf(h);
+    const file = String(h.file);
     // one signal per process; a second only if it is still there 20 s on, as a signal that came before
     // it had its handler is lost
     const out = await this.sh(
