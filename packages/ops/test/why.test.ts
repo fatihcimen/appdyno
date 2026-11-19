@@ -122,9 +122,9 @@ const SCENARIO = 'journey-checkout';
 const STEP = '02_tap_text_Form';
 const STEPS = ['01_launch', STEP, '03_assert_text_Bilgiler'];
 
-const flowFile = () => {
+const flowFile = (more = '') => {
   const file = join(fresh(), 'checkout.flow');
-  writeFileSync(file, 'launch\ntap text="Form"\nassert text="Bilgiler"\n');
+  writeFileSync(file, `launch\ntap text="Form"\nassert text="Bilgiler"\n${more}`);
   return file;
 };
 
@@ -155,18 +155,23 @@ const five = (ms: number) => [0, 1, 2, 3, 4].map((i) => ms + i);
 
 /**
  * A journey with a baseline of three runs and a newest run 700 ms slower in one step, as a measured flow keeps them: what
- * is tested here is what happens after the gate calls it, and a test that replayed all that took 14 s.
+ * is tested here is what happens after the gate calls it, and a test that replayed all that took 14 s. `then` is a step
+ * after the three, slower in place of the tap.
  */
-async function regressed(t: Phone, o: { reference?: boolean } = {}) {
-  const file = flowFile();
+async function regressed(
+  t: Phone,
+  o: { reference?: boolean; then?: { line: string; step: string } } = {},
+) {
+  const file = flowFile(o.then?.line);
   const { txt } = await store(t.measurements, 'journey', { file }, '');
+  const slow = o.then?.step ?? STEP;
   const run = (n: number, formMs: number) =>
     kept(t, n, txt, [
       { kind: 'journey.total_ms', unit: 'ms', samples: five(400 + formMs) },
-      ...STEPS.map((step): Metric => ({
+      ...[...STEPS, ...(o.then ? [o.then.step] : [])].map((step): Metric => ({
         kind: `journey.${step}.ms`,
         unit: 'ms',
-        samples: five(step === STEP ? formMs : 200),
+        samples: five(step === slow ? formMs : 200),
       })),
     ]);
   const key = {
@@ -318,6 +323,17 @@ describe('the gate, asked why', () => {
     writeFileSync(file, 'launch\nassert text="Bilgiler"\n');
     expect(finding((await why(t)).data).cannot.join()).toContain('has changed');
     expect(t.looks).toEqual([]);
+  });
+
+  it('finds a step whose line holds a listed secret by the line its run kept, the secret hidden', async () => {
+    const t = phone({}, { ...DEFAULT_POLICY, secrets: ['fake-pass-77'] });
+    await regressed(t, {
+      then: { line: 'type "fake-pass-77" id=name\n', step: '04_type_id_name' },
+    });
+    const f = finding((await why(t)).data);
+    expect(f.place).toBe('04_type_id_name');
+    expect(f.cannot.join()).not.toContain('has changed');
+    expect(t.looks).toContain('profile');
   });
 
   it('reads a phone’s names from the dSYM it is given, and says so where a device takes none', async () => {
