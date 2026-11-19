@@ -36,7 +36,7 @@ function serving(handOff?: (devices: string[]) => string[]) {
   return { values, set, persist, ctx, close, exit, stdin, log, call: callerOf(ctx), device };
 }
 
-const signals = ['SIGTERM', 'SIGINT'] as const;
+const signals = ['SIGTERM', 'SIGINT', 'SIGHUP'] as const;
 
 /** A signal that nothing here should still be waiting for. */
 const drain = () => signals.forEach((s) => process.emit(s));

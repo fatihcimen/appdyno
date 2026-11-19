@@ -30,7 +30,7 @@ export async function putBack(ctx: Ending, log: (line: object) => void, handedOf
 }
 
 /**
- * The client closing stdin, a kill and ctrl-C end the session the same way, once. A second signal of a kind
+ * The client closing stdin, a kill, a hangup and ctrl-C end the session the same way, once. A second signal of a kind
  * finds no listener left, so a server stuck on a device can still be stopped by hand. With no stdin to watch,
  * as a server over HTTP has no client that started it, only the signals. `handOff` starts what puts back the rest once
  * this process has gone, and says for which devices: a client may kill its server half a second after its first word,
@@ -54,6 +54,8 @@ export function endWithClient(
   stdin?.once('close', end);
   process.once('SIGTERM', end);
   process.once('SIGINT', end);
+  // the terminal it ran in closing: left to itself, it ended the server before anything went back
+  process.once('SIGHUP', end);
 }
 
 /** What makes `appdyno mcp` the process that puts back what a server left on a device, once that server has gone. */
