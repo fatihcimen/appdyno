@@ -76,6 +76,8 @@ certificate is ever installed: to see HTTPS through a proxy, install its certifi
 
 The probe does more than list. A `read` of all its requests is folded: the failed ones first, each host once, a path asked several times in one line, pictures counted; `contains`, `method` or `status` gives each request its own line, `after` what is new since an id, and `id` one request whole with what the session measured of it. A request that has started and not ended stands after the list as `in flight`. `save` writes the capture as HAR 1.2, cleaned as an answer is. `mock` sets rules that answer, fail, delay or send elsewhere the requests they take, and `throttle` slows the app's requests; both end with the capture. `check` waits for a request that fits, as a flow's `request` step does. While the probe is in, the app's own check of a server's certificate (pinning) is not asked, so a server the app would refuse is let through.
 
+One capture runs on a device at a time: a `start` while one runs is refused `DEVICE_CLAIMED`, and `stop` ends it. A packet trace ends by itself after 10 minutes, and keeps what it saw for `stop`: a `start` after that reads it as `stop` would, says what it saw in its answer, and begins the new one.
+
 ## Web views
 
 `inspect_app`: `web_pages`, `web_elements` (the DOM at tap coordinates, to read where the accessibility tree does not), `web_click` (a CSS

@@ -115,6 +115,8 @@ export type NetworkSource = {
   /** `bare`: the requests alone, with nothing asked of the device for a note. */
   read(handle: NetworkHandle, bare?: boolean): Promise<NetworkAnswer>;
   stop(handle: NetworkHandle): Promise<NetworkAnswer>;
+  /** When the capture ended by itself, at a limit of its own, on this Mac's clock, 0 at no time it can say; none while it runs. */
+  endedAt?(handle: NetworkHandle): Promise<number | undefined>;
   /** What the capture does from now on, whole; only a way that is in the app takes it. */
   control?(handle: NetworkHandle, control: NetworkControl): void;
   /** One request's headers and bodies, where the capture keeps them. */

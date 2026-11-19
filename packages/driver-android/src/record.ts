@@ -12,7 +12,7 @@ import {
   type ScreenRecorder,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { shq, type Adb } from './adb.js';
+import { endedAgo, shq, type Adb } from './adb.js';
 import { REMOTE_DIR } from './agent.js';
 
 /** What `screenrecord` takes at most in one run. */
@@ -122,9 +122,7 @@ export class AndroidRecorder implements ScreenRecorder {
         // a loop its device ended, as by a restart, wrote none: `stop` would wait a minute for it
         '[ -e done ] || touch done; [ -n "$last" ] && echo $(($(date +%s) - last)) || echo gone',
     );
-    const said = out.trim();
-    if (said === 'gone') return 0;
-    return /^\d+$/.test(said) ? Date.now() - Number(said) * 1_000 : undefined;
+    return endedAgo(out);
   }
 
   async stop(h: RecordingHandle): Promise<RecordingFiles> {

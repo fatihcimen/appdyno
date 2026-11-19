@@ -1,10 +1,18 @@
 import { existsSync } from 'node:fs';
 import { connect } from 'node:net';
-import { must, reportProgress, type NetworkPath } from '@appdyno/core';
+import { must, reportProgress, type NetworkAnswer, type NetworkPath } from '@appdyno/core';
 import { STATUS } from '@appdyno/flows';
 import type { ServerContext } from './context.js';
 import { detailLines, line, networkAnswers } from './network-answer.js';
-import { captures, endCapture, readCapture, setKept, startOwn, VIA } from './network-capture.js';
+import {
+  captures,
+  endCapture,
+  readCapture,
+  setKept,
+  startOwn,
+  VIA,
+  type Capture,
+} from './network-capture.js';
 import { diffLines, shapeLines, valueLine } from './network-body.js';
 import { awaitRequest } from './network-check.js';
 import { harEntries } from './network-har.js';
@@ -13,7 +21,15 @@ import { networkSetting, STRICT_ON } from './network-set.js';
 import { checkApp } from './policy.js';
 import type { Session } from './session.js';
 import { setCondition } from './settings.js';
-import { beyond, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
+import {
+  beyond,
+  defineOp,
+  DESTRUCTIVE,
+  reply,
+  textOf,
+  ToolError,
+  type ToolResult,
+} from './tool.js';
 
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
@@ -34,6 +50,31 @@ const listening = (hostPort: string) =>
     c.once('error', () => done(false));
     c.once('timeout', () => done(false));
   });
+
+/**
+ * Refuses while a capture runs on the device, saying how it ends. One that has ended by itself, a packet trace at its
+ * duration, is read and ended as `stop` would, and what `show` makes of what it saw is said in the lines this gives.
+ */
+async function endedOnItsOwn(
+  s: Session,
+  now: Capture,
+  show: (end: NetworkAnswer) => Promise<ToolResult>,
+) {
+  const serial = s.device.serial;
+  const at = now.handle && (await s.device.network?.endedAt?.(now.handle));
+  if (at === undefined)
+    throw new ToolError(
+      `${now.via} has been capturing on ${serial} since ${new Date(now.since).toISOString()}`,
+      'DEVICE_CLAIMED',
+      'capture_network stop ends it',
+    );
+  const saw = await endCapture(s).then(
+    async (end) => textOf((await show(end ?? { entries: [] })).blocks),
+    (e: unknown) => `it could not be read: ${e instanceof Error ? e.message : String(e)}`,
+  );
+  const when = at ? ` at ${new Date(at).toISOString()}` : '';
+  return `the last capture on ${serial}, by ${now.via}, ended on its own${when}:\n${saw}`;
+}
 
 export function networkOps(ctx: ServerContext) {
   const answers = networkAnswers(ctx);
@@ -107,12 +148,11 @@ export function networkOps(ctx: ServerContext) {
           }
           if (strict !== undefined && via !== 'probe')
             throw new ToolError(`strict goes by the probe, not by ${via}`, 'INVALID_ARGUMENT');
-          if (now)
-            throw new ToolError(
-              `${now.via} has been capturing on ${serial} since ${new Date(now.since).toISOString()}: stop it first`,
-              'INVALID_ARGUMENT',
-            );
           if (target) checkApp(ctx.policy, target);
+          const { save: _, ...rest } = asked;
+          const ended =
+            now && (await endedOnItsOwn(s, now, (end) => answer(s, now, end, rest, now.via)));
+          const told = (t: string) => reply(ended ? `${t}\n${ended}` : t, { done: t });
           if (via === 'proxy') {
             const was = await s.device.settings.get('proxy');
             const want = proxy ?? was;
@@ -131,13 +171,15 @@ export function networkOps(ctx: ServerContext) {
               );
             if (was !== want) await setCondition(s, 'proxy', want);
             captures.write(serial, { via, since: Date.now(), proxy: want, owner: s.owner });
-            const t = `traffic goes through ${want}${was === want ? ' (it already did)' : `, ${was} before`}. ${SEES_PROXY}`;
-            return reply(t, { done: t });
+            return told(
+              `traffic goes through ${want}${was === want ? ' (it already did)' : `, ${was} before`}. ${SEES_PROXY}`,
+            );
           }
           const { sees } = await startOwn(s, via, target, bodies === true);
           if (strict !== undefined) await setKept(s, target, { strict });
-          const t = `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${sees ? `; it sees ${sees}` : ''}${strict ? `; ${STRICT_ON}` : ''}`;
-          return reply(t, { done: t });
+          return told(
+            `capturing by ${via}${via === 'probe' ? `: ${target ?? 'the app'} was restarted with it` : ''}${sees ? `; it sees ${sees}` : ''}${strict ? `; ${STRICT_ON}` : ''}`,
+          );
         }
         if (action === 'stop') {
           if (!now) throw new ToolError(`no capture runs on ${serial}`, 'NOT_FOUND');

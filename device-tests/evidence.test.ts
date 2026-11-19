@@ -433,7 +433,7 @@ describe.skipIf(!android)('network on Android', () => {
       await h.ok('capture_network', { action: 'start', via: 'proxy', proxy });
       expect(await proxySetting()).toBe(proxy);
       expect((await h.call('capture_network', { action: 'start', via: 'bytes' })).text).toMatch(
-        /stop it first/,
+        /^DEVICE_CLAIMED: proxy has been capturing .*\nhint: capture_network stop ends it/,
       );
       await fetchIn(h.ok, 'http://proxied.test/hello?token=abc123');
       const har = join(dir, 'proxy.har');

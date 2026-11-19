@@ -1,11 +1,12 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { must } from '@appdyno/core';
+import { must, type NetworkSource } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { harEntries } from '../src/network-har.js';
 import { DEFAULT_POLICY, redactLog } from '../src/policy.js';
+import { textOf } from '../src/tool.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { checkedOps } from '@appdyno/testing/calls.js';
 
@@ -131,5 +132,64 @@ describe('a proxy export', () => {
       message: expect.stringMatching(/^start needs via: this device has proxy/) as unknown,
       hint: 'capture_network paths says what each sees, and what it costs',
     });
+  });
+});
+
+describe('a packet trace that has ended by itself', () => {
+  /** A device whose trace runs until `ended` says when it ended, and holds one row. */
+  const traced = (ended: () => number | undefined) => {
+    process.env.APPDYNO_STATE_DIR = mkdtempSync(join(tmpdir(), 'appdyno-state-'));
+    const device = new FakeDevice();
+    const way = { starts: 0, stops: 0 };
+    const network: NetworkSource = {
+      paths: () => Promise.resolve([{ via: 'packets', sees: 'packets by port' }]),
+      start: () => Promise.resolve({ via: 'packets', n: ++way.starts }),
+      read: () => Promise.resolve({ entries: [] }),
+      stop: () => {
+        way.stops++;
+        return Promise.resolve({
+          entries: [{ direction: 'Received', host: 'TCP port 443', packets: 3, bytes: 900 }],
+        });
+      },
+      endedAt: () => Promise.resolve(ended()),
+    };
+    Object.assign(device, { network });
+    const ctx = new ServerContext(
+      DEFAULT_POLICY,
+      [
+        {
+          list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
+          handles: () => true,
+          open: () => device,
+        },
+      ],
+      { app: 'dev.app' },
+    );
+    const op = must(checkedOps(ctx).capture_network, 'capture_network');
+    const start = () => op.handler(op.input.parse({ action: 'start', via: 'packets' }));
+    return { device, way, start };
+  };
+
+  it('is read and ended by the next start, which says what it saw', async () => {
+    const { device, way, start } = traced(() => Date.parse('2026-11-18T22:35:23.000Z'));
+    await start();
+    const text = textOf((await start()).blocks);
+    expect(text).toMatch(/^capturing by packets/);
+    expect(text).toContain(
+      `\nthe last capture on ${device.serial}, by packets, ended on its own at 2026-11-18T22:35:23.000Z:\n`,
+    );
+    expect(text).toContain('TCP port 443');
+    expect(way).toEqual({ starts: 2, stops: 1 });
+  });
+
+  it('refuses while it runs, saying how it ends', async () => {
+    const { way, start } = traced(() => undefined);
+    await start();
+    await expect(start()).rejects.toMatchObject({
+      code: 'DEVICE_CLAIMED',
+      message: expect.stringMatching(/^packets has been capturing on .* since /) as unknown,
+      hint: 'capture_network stop ends it',
+    });
+    expect(way).toEqual({ starts: 1, stops: 0 });
   });
 });

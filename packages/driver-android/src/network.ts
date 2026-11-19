@@ -14,7 +14,7 @@ import {
   type NetworkVia,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg, shq, type Adb } from './adb.js';
+import { assertPkg, endedAgo, shq, type Adb } from './adb.js';
 import { traceProcessor } from './tools.js';
 
 /** `android.network_packets` has no data before Android 14. */
@@ -73,6 +73,18 @@ export const registersPackets = (query: string) =>
 
 const NOT_REGISTERED =
   'this build does not register android.network_packets, so a trace would hold no packet: use bytes. A `user` build registers it only behind a flag (`device_config put tethering enable_network_tracing 1` and a reboot, not tried here, and this tool never sets it)';
+
+/** A handle's trace, whose pid and file go into the device's shell from a state file: only the forms `start` writes. */
+function traceOf(h: NetworkHandle) {
+  const pid = String(h.pid);
+  const remote = String(h.remote);
+  if (!/^\d+$/.test(pid) || !PACKET_TRACE.test(remote))
+    throw new DeviceError('INVALID_ARGUMENT', `not a packet trace of this tool: ${pid} ${remote}`);
+  return { pid, remote };
+}
+
+/** Whether the trace's own process runs, and not another that took its number. */
+const perfettoUp = (pid: string) => `grep -q perfetto /proc/${pid}/cmdline 2>/dev/null`;
 
 /** Android's own counts of an app's traffic: `dumpsys netstats`, and Perfetto's packet trace on 14+. */
 export class AndroidNetwork implements NetworkSource {
@@ -157,19 +169,27 @@ export class AndroidNetwork implements NetworkSource {
     };
   }
 
+  /**
+   * A packet trace ends by itself at its duration, when its own process goes, at its file's last write; the device's
+   * counts and the probe run until they are stopped.
+   */
+  async endedAt(h: NetworkHandle): Promise<number | undefined> {
+    if (h.via !== 'packets') return undefined;
+    const { pid, remote } = traceOf(h);
+    return endedAgo(
+      await this.sh(
+        `${perfettoUp(pid)} && exit; t=$(stat -c %Y ${remote} 2>/dev/null) && echo $(($(date +%s) - t)) || echo gone`,
+      ),
+    );
+  }
+
   async stop(h: NetworkHandle): Promise<NetworkAnswer> {
     if (h.via !== 'packets') return this.read(h);
-    const pid = String(h.pid);
-    const remote = String(h.remote);
-    // both go into the device's shell, from a state file: only the forms `start` writes
-    if (!/^\d+$/.test(pid) || !PACKET_TRACE.test(remote))
-      throw new DeviceError(
-        'INVALID_ARGUMENT',
-        `not a packet trace of this tool: ${pid} ${remote}`,
-      );
-    await this.sh(`kill ${pid}`);
+    const { pid, remote } = traceOf(h);
+    // its own process alone: one that ended by itself may have left its number to another
+    await this.sh(`${perfettoUp(pid)} && kill ${pid}`);
     const end = Date.now() + 15_000;
-    while (Date.now() < end && (await this.sh(`[ -d /proc/${pid} ] && echo up`)).includes('up'))
+    while (Date.now() < end && (await this.sh(`${perfettoUp(pid)} && echo up`)).includes('up'))
       await pause(200);
     const dir = await mkdtemp(join(tmpdir(), 'appdyno-net-'));
     try {

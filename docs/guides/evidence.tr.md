@@ -76,6 +76,8 @@ sertifika asla kurulmaz: HTTPS'i bir proxy üzerinden görmek için onun sertifi
 
 Probe listelemekten fazlasını yapar. Bütün isteklerinin bir `read` çağrısı katlanmış gelir: önce başarısız olanlar, her host bir kez, birkaç kez istenen bir yol tek satırda, görseller sayılmış olarak; `contains`, `method` ya da `status` her isteğe kendi satırını verir, `after` bir kimlikten sonra yeni olanı, `id` ise oturumun ölçtükleriyle birlikte tek bir isteğin tamamını. Başlamış ve bitmemiş bir istek listenin ardından `in flight` olarak durur. `save` yakalamayı, bir yanıt gibi temizlenmiş olarak HAR 1.2 biçiminde yazar. `mock`, eşleştikleri istekleri yanıtlayan, başarısız kılan, geciktiren ya da başka yere gönderen kurallar koyar; `throttle` ise uygulamanın isteklerini yavaşlatır; ikisi de yakalamayla birlikte biter. `check`, bir flow'un `request` adımı gibi, uyan bir isteği bekler. Probe içindeyken uygulamanın bir sunucunun sertifikasına ilişkin kendi denetimi (pinning) sorulmaz, bu yüzden uygulamanın reddedeceği bir sunucu geçirilir.
 
+Bir cihazda aynı anda bir yakalama çalışır: biri çalışırken gelen bir `start` `DEVICE_CLAIMED` ile reddedilir ve onu `stop` bitirir. Bir paket trace'i 10 dakika sonra kendiliğinden biter ve gördüklerini `stop` için saklar: ondan sonra gelen bir `start` onu `stop`'un yapacağı gibi okur, gördüklerini yanıtında söyler ve yenisini başlatır.
+
 ## Web görünümleri
 
 `inspect_app`: `web_pages`, `web_elements` (erişilebilirlik ağacının okuyamadığı yeri okumak için dokunma koordinatlarındaki DOM), `web_click` (bir CSS

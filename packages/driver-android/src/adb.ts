@@ -67,6 +67,16 @@ export const amStartError = (out: string) =>
 
 export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
+/**
+ * When something ended, on this Mac's clock, by how many seconds ago the device's shell said it did, by its own clock:
+ * `gone`, at no time it can say; nothing or anything else, it has not ended as far as can be told.
+ */
+export function endedAgo(said: string) {
+  const s = said.trim();
+  if (s === 'gone') return 0;
+  return /^\d+$/.test(s) ? Date.now() - Number(s) * 1_000 : undefined;
+}
+
 /** Printed after a command whose answer decides something, as its end: a cut-off answer lacks it. */
 const END = ':appdyno-end:';
 

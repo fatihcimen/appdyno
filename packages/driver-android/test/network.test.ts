@@ -69,3 +69,51 @@ describe('a packet capture that stops', () => {
     expect(asked).toEqual([]);
   });
 });
+
+describe('a packet trace that may have ended by itself', () => {
+  const trace = {
+    via: 'packets',
+    uid: 10_193,
+    pid: '42',
+    remote: '/data/misc/perfetto-traces/appdyno-0123abcd.pftrace',
+  };
+  const asking = (answer: string) => {
+    const asked: string[] = [];
+    const net = new AndroidNetwork(
+      {
+        exec: (_serial: string, command: string) => {
+          asked.push(command);
+          return Promise.resolve(answer);
+        },
+      } as unknown as Adb,
+      'R58M',
+    );
+    return { asked, net };
+  };
+
+  it('runs while its own perfetto does, told from a process that took its number', async () => {
+    const { asked, net } = asking('');
+    await expect(net.endedAt(trace)).resolves.toBeUndefined();
+    expect(asked[0]).toMatch(/^grep -q perfetto \/proc\/42\/cmdline 2>\/dev\/null && exit; /);
+  });
+
+  it('ended as long ago as its file was last written, by the device clock', async () => {
+    const before = Date.now();
+    const at = await asking('30\n').net.endedAt(trace);
+    expect(at).toBeGreaterThan(before - 31_000);
+    expect(at).toBeLessThanOrEqual(Date.now() - 30_000);
+  });
+
+  it('is not asked of a way that runs until it is stopped', async () => {
+    const { asked, net } = asking('30\n');
+    const bytes = { via: 'bytes', uid: 10_193, rx: 0, tx: 0, packets: 0 };
+    await expect(net.endedAt(bytes)).resolves.toBeUndefined();
+    expect(asked).toEqual([]);
+  });
+
+  it('is stopped by its own process alone', async () => {
+    const { asked, net } = asking('');
+    await net.stop(trace).catch(() => undefined);
+    expect(asked[0]).toBe('grep -q perfetto /proc/42/cmdline 2>/dev/null && kill 42');
+  });
+});
