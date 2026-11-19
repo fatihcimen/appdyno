@@ -13,7 +13,7 @@ import {
   type ActResult,
   type Tree,
 } from '@appdyno/protocol';
-import { copies, refuseWhereSynced } from './sim-clipboard.js';
+import { pasteboardKey, refuseWhereSynced } from './sim-clipboard.js';
 import type { HelperReads } from './sim-read.js';
 import { typeByKeys } from './sim-keys.js';
 import type { DirectSim } from './simdirect.js';
@@ -114,7 +114,9 @@ export class HelperActs {
     const helperInput = this.p.helperInput();
     // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
     throwIfCancelled('the action');
-    if (copies(action)) await refuseWhereSynced('copy');
+    // before a key goes by either, the runner too: a copy would reach the Mac's clipboard, a paste bring it into a field
+    const asks = pasteboardKey(action);
+    if (asks) await refuseWhereSynced(asks);
     // a keyboard's key into a field goes by the runner, which reads it back from the field (`verified`); with none
     // focused the helper's goes, and says so
     const typing = action.kind === 'key' && hidKey(action.key)?.page === KEY_USAGES.enter.page;

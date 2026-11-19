@@ -36,6 +36,10 @@ const SYNCED = {
     "puts your Mac's clipboard on this simulator's, and a read would hand it out",
     'read the text where the app shows it instead',
   ],
+  paste: [
+    "puts your Mac's clipboard on this simulator's, and a paste would put it in the field",
+    TYPE_IT,
+  ],
 } as const;
 
 /**
@@ -53,9 +57,11 @@ export async function refuseWhereSynced(asked: keyof typeof SYNCED) {
   );
 }
 
-/** Whether a key copies or cuts, and so writes the pasteboard: Command-C and Command-X. */
-export const copies = (a: ActParams) =>
-  a.kind === 'key' && (a.key === 'c' || a.key === 'x') && !!a.modifiers?.includes('command');
+/** What a key asks of the pasteboard: Command-C and Command-X write it, Command-V puts what it holds in the field. */
+export function pasteboardKey(a: ActParams): 'copy' | 'paste' | undefined {
+  if (a.kind !== 'key' || !a.modifiers?.includes('command')) return undefined;
+  return a.key === 'c' || a.key === 'x' ? 'copy' : a.key === 'v' ? 'paste' : undefined;
+}
 
 /**
  * From the Mac: at times the runner's own pasteboard call held it up for its 15 s. Where the Mac's call writes

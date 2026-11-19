@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { run } from '@appdyno/core';
-import { copies, syncsToMac } from '../src/sim-clipboard.js';
+import { NODE_FLAGS as F } from '@appdyno/protocol';
+import { pasteboardKey, syncsToMac } from '../src/sim-clipboard.js';
 import { HelperActs, type ActsPort } from '../src/sim-act.js';
 import { Simctl } from '../src/simctl.js';
 
@@ -86,24 +87,46 @@ describe("Simulator.app's pasteboard sync", () => {
     expect(ran('pbpaste')).toBe(true);
   });
 
-  it('refuses Command-C and Command-X before a key goes, and names no other key a copy', async () => {
+  it('refuses Command-C, Command-X and Command-V into a field before a key goes, by the runner or the helper', async () => {
     mac(SIMULATOR, '1');
     const send = vi.fn();
+    const byRunner = vi.fn();
     const acts = new HelperActs({
       direct: { send, screenKnown: true },
       helperInput: () => true,
+      byRunner,
     } as unknown as ActsPort);
-    for (const key of ['c', 'x'])
+    // a field with the keyboard focus, whose keys go by the runner, to be read back
+    acts.remember({
+      windows: [],
+      nodes: [
+        {
+          p: -1,
+          w: 0,
+          c: 'TextField',
+          b: [0, 100, 200, 140],
+          f: F.visible | F.editable | F.focused,
+        },
+      ],
+      truncated: false,
+      elapsedMs: 1,
+      hash: 'form',
+    });
+    const said = {
+      c: 'would put what it copies on',
+      x: 'would put what it copies on',
+      v: 'a paste would put it',
+    };
+    for (const [key, words] of Object.entries(said))
       await expect(
         acts.act({ kind: 'key', key, modifiers: ['command'] }, {}),
-      ).rejects.toMatchObject({
-        ...REFUSED,
-        message: expect.stringContaining('would put what it copies on') as unknown,
-      });
+      ).rejects.toMatchObject({ ...REFUSED, message: expect.stringContaining(words) as unknown });
     expect(send).not.toHaveBeenCalled();
-    expect(copies({ kind: 'key', key: 'v', modifiers: ['command'] })).toBe(false);
-    expect(copies({ kind: 'key', key: 'c', modifiers: ['shift'] })).toBe(false);
-    expect(copies({ kind: 'key', key: 'c' })).toBe(false);
-    expect(copies({ kind: 'tap', x: 1, y: 1 })).toBe(false);
+    expect(byRunner).not.toHaveBeenCalled();
+    expect(pasteboardKey({ kind: 'key', key: 'v', modifiers: ['command'] })).toBe('paste');
+    expect(pasteboardKey({ kind: 'key', key: 'c', modifiers: ['shift'] })).toBeUndefined();
+    expect(pasteboardKey({ kind: 'key', key: 'c' })).toBeUndefined();
+    expect(pasteboardKey({ kind: 'key', key: 'a', modifiers: ['command'] })).toBeUndefined();
+    expect(pasteboardKey({ kind: 'tap', x: 1, y: 1 })).toBeUndefined();
   });
 });
