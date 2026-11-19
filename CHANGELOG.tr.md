@@ -4,6 +4,14 @@
 
 ## Yayımlanmamış
 
+## 1.3.5
+
+appdyno 1.3.5, Simulator.app bir simulator'ın panosunu eşitlerken Mac'in panosuna dokunmaz.
+
+### Düzeltilenler
+
+- **iOS: appdyno'nun yazdığı bir simulator panosu Mac'inkinin yerine geçiyordu.** Simulator.app, Edit › Automatically Sync Pasteboard açıkken (varsayılan olarak açıktır) çalıştıkça bir simulator'ın panosuna gireni Mac'in panosuna koyar ve kişinin orada kopyaladığı kaybolurdu. Bu eşitleme sürerken bir simulator'ın panosuna yazmak artık, eşitlemenin nasıl kapatılacağı söylenerek `UNSUPPORTED` ile reddedilir: `set_device` `clipboard`, bir flow'un `clipboard` adımı, `press_key` Command-C ve Command-X ve bir pencerede yazılan ya da yapıştırılan, tuşu olmayan harfler; pencere bunun nedenini söyler. Simulator.app bu ayarı yalnızca açılışında ve o menüden okur, bu yüzden appdyno onu bir oturum için Simulator.app'i yeniden başlatmadan kapatamaz ve onu yeniden başlatmaz. Simulator.app çalışmıyorsa ya da eşitleme kapalıysa bir yazma eskisi gibi gider; bir simulator'ın panosunu okumak olduğu gibidir.
+
 ## 1.3.4
 
 appdyno 1.3.4 kendiliğinden biten bir kaydın yerini bir sonrakine bırakmasını sağlar, bir simulator'da yazılan metni yazıldığı gibi tutar, bir telefonun duran görüntüsünü sonsuza dek değil bir süre yeniden dener ve Yeniden Dene'yi işe yarar kılar, bir Xiaomi'nin USB üzerinden kurulumları reddetmesine yol açan anahtarın adını verir ve cihaz penceresine Appdyno adını verir.

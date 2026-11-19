@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+## 1.3.5
+
+appdyno 1.3.5 leaves the Mac's clipboard alone while Simulator.app syncs a simulator's.
+
+### Fixed
+
+- **iOS: a simulator's clipboard that appdyno wrote replaced the Mac's.** While Simulator.app runs with Edit › Automatically Sync Pasteboard on, as it is by default, what a simulator's pasteboard takes goes onto the Mac's clipboard, and what the person had copied there was lost. While that sync runs, a write to a simulator's clipboard is now refused `UNSUPPORTED`, with how to turn the sync off: `set_device` `clipboard`, a flow's `clipboard` step, `press_key` Command-C and Command-X, and letters with no key typed or pasted in a window, which says why. Simulator.app reads the setting only at its launch and from that menu, so appdyno cannot turn it off for a session without restarting Simulator.app, and does not restart it. With Simulator.app not running, or the sync off, a write goes as before; reading a simulator's clipboard is as it was.
+
 ## 1.3.4
 
 appdyno 1.3.4 lets a recording that has ended by itself give way to the next, keeps text typed on a simulator as typed, tries a phone's stopped picture again for a while, no longer for ever, and makes its Try Again work, names the switch a Xiaomi refuses installs over USB by, and names the device window Appdyno.
