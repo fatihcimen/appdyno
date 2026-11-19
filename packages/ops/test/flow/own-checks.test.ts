@@ -2,6 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Device } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf, flowHelpers, SECRET } from './harness.js';
@@ -96,6 +97,21 @@ describe('the steps a replay judges', () => {
     device.getClipboard = () => Promise.resolve(held);
     setTimeout(() => (held = 'copied'), 1_000);
     await run(context(), 'clipboard equals=copied');
+  });
+
+  it("refuses a check and a read of the clipboard with the device's refusal to read it", async () => {
+    const why = "Simulator's pasteboard sync puts your Mac's clipboard on this simulator's";
+    device.getClipboard = () => Promise.reject(new DeviceError('UNSUPPORTED', why));
+    const asked = [
+      () => run(context(), 'clipboard equals=x timeoutMs=300'),
+      () => callerOf(context())('set_device', { name: 'clipboard' }),
+    ];
+    for (const ask of asked) {
+      const e = await refusal(ask());
+      expect(e.code).toBe('UNSUPPORTED');
+      expect(e.message).toContain(why);
+      expect(e.message).not.toContain('the clipboard holds');
+    }
   });
 
   it('fails an audit over its threshold, 0 unless given, and one that was cut short', async () => {

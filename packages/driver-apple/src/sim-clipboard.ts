@@ -2,16 +2,13 @@ import { run } from '@appdyno/core';
 import { DeviceError, type ActParams } from '@appdyno/protocol';
 import type { Simctl } from './simctl.js';
 
-/** A simulator's pasteboard, read from the Mac. */
-export const pasteOnMac = (simctl: Simctl, udid: string) => simctl.exec(['pbpaste', udid]);
-
 /** Simulator.app as Xcode runs it, in the Mac's process list: another process named Simulator is not it. */
 const SIMULATOR_APP = /\/Simulator\.app\/Contents\/MacOS\/Simulator\s*$/m;
 /** A switch `defaults` reads as off: Simulator takes anything else, and no value at all, as on. */
 const OFF = /^(0|no|false)$/i;
 
 /**
- * Whether Simulator.app puts what a simulator's pasteboard takes on this Mac's: while it runs with its Edit › Automatically
+ * Whether Simulator.app syncs a simulator's pasteboard with this Mac's, each way: while it runs with its Edit › Automatically
  * Sync Pasteboard on, as it is by default. It reads that setting at its launch and from the menu alone, and each of
  * them writes it back, so what `defaults` reads is what runs: a value written behind it waits for its next launch.
  */
@@ -30,17 +27,30 @@ export async function macSyncsPasteboard() {
   return syncsToMac(processes, setting);
 }
 
+const TYPE_IT = 'type the text into its field instead, which takes no clipboard';
+/** What a refusal says while the sync runs, by what was asked, with what to do instead. */
+const SYNCED = {
+  write: ["would put this text on your Mac's clipboard", TYPE_IT],
+  copy: ["would put what it copies on your Mac's clipboard", TYPE_IT],
+  read: [
+    "puts your Mac's clipboard on this simulator's, and a read would hand it out",
+    'read the text where the app shows it instead',
+  ],
+} as const;
+
 /**
- * Refuses a write to a simulator's pasteboard that would replace the Mac's clipboard, a person's: `what` the write puts
- * there. Turning the sync off here would not stop it: Simulator.app takes the setting only at its launch or from its menu.
+ * Refuses a use of a simulator's pasteboard that would reach the Mac's clipboard, a person's: a write would replace it,
+ * and a read hand out what Simulator.app put there from it, a password as much as anything. Turning the sync off here
+ * would not stop it: Simulator.app takes the setting only at its launch or from its menu.
  */
-export async function refuseWhereSynced(what = 'this text') {
-  if (await macSyncsPasteboard())
-    throw new DeviceError(
-      'UNSUPPORTED',
-      `Simulator's pasteboard sync would put ${what} on your Mac's clipboard: turn off Edit › Automatically Sync Pasteboard in Simulator to write a simulator's clipboard`,
-      'type the text into its field instead, which takes no clipboard',
-    );
+export async function refuseWhereSynced(asked: keyof typeof SYNCED) {
+  if (!(await macSyncsPasteboard())) return;
+  const [what, hint] = SYNCED[asked];
+  throw new DeviceError(
+    'UNSUPPORTED',
+    `Simulator's pasteboard sync ${what}: turn off Edit › Automatically Sync Pasteboard in Simulator to use a simulator's clipboard`,
+    hint,
+  );
 }
 
 /** Whether a key copies or cuts, and so writes the pasteboard: Command-C and Command-X. */
@@ -60,7 +70,7 @@ export async function setSimClipboard(
   byRunner: (text: string) => Promise<void>,
 ) {
   await simctl.pbcopy(udid, text);
-  if ((await pasteOnMac(simctl, udid)) === text) return;
+  if ((await simctl.pbpaste(udid)) === text) return;
   await byRunner(text).catch((e: unknown) => {
     if (!(e instanceof DeviceError && e.code === 'TIMEOUT')) throw e;
     throw new DeviceError(

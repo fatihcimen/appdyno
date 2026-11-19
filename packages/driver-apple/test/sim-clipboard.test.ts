@@ -36,7 +36,13 @@ const REFUSED = {
 };
 
 describe("Simulator.app's pasteboard sync", () => {
-  beforeEach(() => void vi.mocked(spawn).mockReset());
+  beforeEach(() => {
+    vi.mocked(spawn).mockReset();
+    vi.mocked(run).mockReset();
+  });
+  /** Whether simctl was run for `command`, not only `ps` and `defaults`. */
+  const ran = (command: string) =>
+    vi.mocked(run).mock.calls.some(([, args]) => (args as string[] | undefined)?.includes(command));
 
   it('is live while Simulator.app runs with it on, or with nothing written', () => {
     expect(syncsToMac(`${OTHERS}\n${SIMULATOR}\n`, '1\n')).toBe(true);
@@ -63,6 +69,21 @@ describe("Simulator.app's pasteboard sync", () => {
       throw new Error('spawned');
     });
     await expect(new Simctl().pbcopy(UDID, 'pano')).rejects.toThrow('spawned');
+  });
+
+  it("refuses to read a simulator's clipboard, which holds the Mac's, before simctl runs", async () => {
+    mac(SIMULATOR, '1');
+    await expect(new Simctl().pbpaste(UDID)).rejects.toMatchObject({
+      ...REFUSED,
+      message: expect.stringMatching(
+        /^Simulator's pasteboard sync puts your Mac's clipboard on this simulator's, and a read would hand it out/,
+      ) as unknown,
+      hint: expect.stringContaining('where the app shows it') as unknown,
+    });
+    expect(ran('pbpaste')).toBe(false);
+    mac(SIMULATOR, '0');
+    await new Simctl().pbpaste(UDID);
+    expect(ran('pbpaste')).toBe(true);
   });
 
   it('refuses Command-C and Command-X before a key goes, and names no other key a copy', async () => {

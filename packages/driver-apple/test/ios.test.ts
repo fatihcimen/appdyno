@@ -26,10 +26,12 @@ describe('simulator inputs', () => {
 });
 
 describe("a simulator's clipboard", () => {
-  const device = (pasted: string) =>
+  /** What the Mac reads of the simulator's clipboard, or its refusal to read it. */
+  const device = (pasted: string | DeviceError) =>
     new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951', {
       pbcopy: () => Promise.resolve(undefined),
-      exec: () => Promise.resolve(pasted),
+      pbpaste: () =>
+        typeof pasted === 'string' ? Promise.resolve(pasted) : Promise.reject(pasted),
     } as unknown as Simctl);
   const runner = () => vi.spyOn(RpcDevice.prototype, 'setClipboard');
   afterEach(() => void vi.restoreAllMocks());
@@ -55,6 +57,20 @@ describe("a simulator's clipboard", () => {
       retryable: true,
     });
     expect(set).toHaveBeenCalledOnce();
+  });
+
+  it('reads by the runner where the Mac reads nothing, and nothing by it where the Mac refuses', async () => {
+    vi.spyOn(RpcDevice.prototype, 'agentUp', 'get').mockReturnValue(true);
+    const get = vi.spyOn(RpcDevice.prototype, 'getClipboard').mockResolvedValue('by the runner');
+    await expect(device('pano').getClipboard()).resolves.toBe('pano');
+    await expect(device('').getClipboard()).resolves.toBe('by the runner');
+    expect(get).toHaveBeenCalledOnce();
+    const synced = new DeviceError(
+      'UNSUPPORTED',
+      "Simulator's pasteboard sync puts your Mac's clipboard on this simulator's",
+    );
+    await expect(device(synced).getClipboard()).rejects.toBe(synced);
+    expect(get).toHaveBeenCalledOnce();
   });
 
   it('leaves any other failure of the runner as it was', async () => {

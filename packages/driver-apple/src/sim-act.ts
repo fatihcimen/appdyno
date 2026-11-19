@@ -102,7 +102,7 @@ export class HelperActs {
     const helperInput = this.p.helperInput();
     // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
     throwIfCancelled('the action');
-    if (copies(action)) await refuseWhereSynced('what it copies');
+    if (copies(action)) await refuseWhereSynced('copy');
     if (helperInput && !direct.screenKnown) await reads.read(true);
     const touch = action.kind !== 'key';
     const at = touch ? firstPoint(action) : undefined;

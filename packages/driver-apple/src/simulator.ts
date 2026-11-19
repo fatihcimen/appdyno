@@ -38,7 +38,7 @@ import { type Capture, nodesBusy } from './simsettle.js';
 import { HelperActs } from './sim-act.js';
 import { afterHelper, HelperReads } from './sim-read.js';
 import { helperSeesFront, looksOf, openerOf, ownScheme, untilOpened } from './sim-open.js';
-import { pasteOnMac, setSimClipboard } from './sim-clipboard.js';
+import { setSimClipboard } from './sim-clipboard.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
 import { IosDevice } from './device.js';
@@ -332,11 +332,10 @@ export class IosSimulatorDevice extends IosDevice {
     return setSimClipboard(this.simctl, this.serial, text, (t) => super.setClipboard(t));
   }
 
-  /** From the Mac: the runner may read only what it wrote itself, or a system prompt holds it up. */
+  /** From the Mac, refused where the Mac's own is synced there; the runner reads only its own, or a prompt holds it up. */
   override async getClipboard() {
     return (
-      (await pasteOnMac(this.simctl, this.serial)) ||
-      (this.runnerUp ? super.getClipboard() : undefined)
+      (await this.simctl.pbpaste(this.serial)) || (this.runnerUp ? super.getClipboard() : undefined)
     );
   }
 

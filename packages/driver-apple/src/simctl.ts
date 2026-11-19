@@ -355,10 +355,17 @@ export class Simctl {
   install(udid: string, appPath: string) {
     return this.exec(['install', assertUdid(udid), appPath], 300_000);
   }
+  /** The simulator's clipboard, read from the Mac: refused where Simulator.app puts the Mac's own there. */
+  async pbpaste(udid: string) {
+    const id = assertUdid(udid);
+    await refuseWhereSynced('read');
+    return this.exec(['pbpaste', id]);
+  }
+
   /** Puts `text` on the simulator's clipboard, from the Mac: refused where Simulator.app would put it on the Mac's. */
   async pbcopy(udid: string, text: string) {
     const id = assertUdid(udid);
-    await refuseWhereSynced();
+    await refuseWhereSynced('write');
     return new Promise<void>((resolve, reject) => {
       const p = spawn(...xcodeTool('simctl', ['pbcopy', id], this.env), {
         env: this.env,
