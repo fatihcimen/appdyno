@@ -71,6 +71,10 @@ export const NEEDS = {
     title: 'This build has no iPhone stream',
     fix: 'The runner still drives the phone, by screenshots and its own input.',
   },
+  'picture-stopped': {
+    title: 'The picture stopped',
+    fix: 'Unlock the phone and keep it awake. If it goes on, plug it in again, then press Try Again.',
+  },
   'not-connected': {
     title: 'The device is not connected',
     fix: 'Connect it with a data cable: one that only charges shows nothing here. The picture comes back by itself.',

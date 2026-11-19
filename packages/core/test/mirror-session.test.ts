@@ -252,6 +252,29 @@ describe('a mirror, whatever the device', () => {
     expect(mirror.opens).toBe(3);
   });
 
+  it('says what to do of a picture that stops with no reason, tries again slower each time, and stops after ten', async () => {
+    const { session, mirror, clock, viewer } = setup();
+    await session.start();
+    await flush();
+    const opened: number[] = [];
+    const going = () => (session.status.state as string) !== 'stopped';
+    // an iPhone's stream that ended as it began, with no reason: a loop of a try a second it was, for ever
+    for (let i = 0; i < 11 && going(); i++) {
+      const at = clock.now();
+      mirror.push?.('picture-stopped');
+      await flush();
+      while (mirror.opens === opened.length + 1 && going()) await clock.advance(100);
+      opened.push(clock.now() - at);
+    }
+    const said = `${NEEDS['picture-stopped'].title}. ${NEEDS['picture-stopped'].fix}`;
+    expect(viewer().of('note').at(0)).toMatchObject({ text: said });
+    expect(session.status).toMatchObject({ state: 'stopped' });
+    expect((session.status as { why: string }).why).toBe(`no picture after 10 tries: ${said}`);
+    expect(mirror.opens).toBe(11);
+    // 0.2 s, then twice as long each time, up to 5 s: not a try a second
+    expect(opened.slice(0, 6)).toEqual([200, 400, 800, 1_600, 3_200, 5_000]);
+  });
+
   it('stops with the reason when it cannot open, rather than try for ever', async () => {
     const { session, mirror, clock } = setup();
     mirror.openFails = new Error('no agent');
@@ -723,6 +746,7 @@ describe('the table of needs', () => {
         'no-hardware-decoder',
         'camera-permission',
         'no-phone-stream',
+        'picture-stopped',
         'not-connected',
         'simulator-off',
         'no-grpc',

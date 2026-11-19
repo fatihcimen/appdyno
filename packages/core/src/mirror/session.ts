@@ -434,6 +434,12 @@ export class MirrorSession {
       return;
     }
     if (state === 'waiting' && this.current.need === s) return;
+    // a picture that stops with no reason is no person's to wait for: said, tried again slower each time, not for ever
+    if (s === 'picture-stopped') {
+      this.viewer?.send({ op: 'note', text: `${NEEDS[s].title}. ${NEEDS[s].fix}` });
+      this.renew(`${NEEDS[s].title}. ${NEEDS[s].fix}`);
+      return;
+    }
     this.viewer?.send({ op: 'detach' });
     void this.o.mirror.close().catch(() => undefined);
     this.waitFor(s);

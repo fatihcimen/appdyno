@@ -229,7 +229,8 @@ export class PhoneMirror implements Mirror {
         if (e.need) {
           this.blocked = { need: e.need, detail: e.why, until: this.now() + RETRY_NEED_MS };
         }
-        this.tell(e.need ?? 'not-connected');
+        // a phone that is there and gives no reason is no cable's to blame: the session tries again, and not for ever
+        this.tell(e.need ?? 'picture-stopped');
       }
     });
     return handle;

@@ -601,12 +601,12 @@ describe('a phone mirror', () => {
     await expect(mirror.check()).resolves.toMatchObject({ ok: true });
   });
 
-  it('a stream lost with no reason reads as a phone gone', async () => {
+  it('a stream lost with no reason is a picture stopped, which the session tries again, and its check tells a phone gone', async () => {
     const { mirror, say } = fake();
     const seen: DeviceState[] = [];
     mirror.watch((s) => seen.push(s));
     await mirror.open(OPTIONS);
     say({ kind: 'lost', why: 'the tunnel ended' });
-    expect(seen).toEqual(['not-connected']);
+    expect(seen).toEqual(['picture-stopped']);
   });
 });
