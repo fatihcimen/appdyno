@@ -30,7 +30,7 @@ export async function putBack(ctx: Ending, log: (line: object) => void, handedOf
 }
 
 /**
- * The client closing stdin, a kill, a hangup and ctrl-C end the session the same way, once. A second signal of a kind
+ * The client closing stdin or no longer reading stdout, a kill, a hangup and ctrl-C end the session the same way, once. A second signal of a kind
  * finds no listener left, so a server stuck on a device can still be stopped by hand. With no stdin to watch,
  * as a server over HTTP has no client that started it, only the signals. `handOff` starts what puts back the rest once
  * this process has gone, and says for which devices: a client may kill its server half a second after its first word,
@@ -43,6 +43,7 @@ export function endWithClient(
   exit: (code: number) => void = (code) => process.exit(code),
   stdin: NodeJS.ReadableStream | null = process.stdin,
   handOff?: (devices: string[]) => string[],
+  stdout: NodeJS.WritableStream | null = stdin === process.stdin ? process.stdout : null,
 ) {
   let ending = false;
   const end = () => {
@@ -52,6 +53,9 @@ export function endWithClient(
     void putBack(ctx, log, away).then(() => exit(0));
   };
   stdin?.once('close', end);
+  // a client gone while an answer was on its way: the transport closes and stops reading stdin, whose end then never
+  // comes, and a device's connection kept the server alive with its claim
+  stdout?.once('error', end);
   process.once('SIGTERM', end);
   process.once('SIGINT', end);
   // the terminal it ran in closing: left to itself, it ended the server before anything went back

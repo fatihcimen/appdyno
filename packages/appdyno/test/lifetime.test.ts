@@ -31,9 +31,22 @@ function serving(handOff?: (devices: string[]) => string[]) {
   const close = vi.spyOn(ctx, 'close');
   const exit = vi.fn();
   const stdin = new PassThrough();
+  const stdout = new PassThrough();
   const log = vi.fn<(line: object) => void>();
-  endWithClient(ctx, log, exit, stdin, handOff);
-  return { values, set, persist, ctx, close, exit, stdin, log, call: callerOf(ctx), device };
+  endWithClient(ctx, log, exit, stdin, handOff, stdout);
+  return {
+    values,
+    set,
+    persist,
+    ctx,
+    close,
+    exit,
+    stdin,
+    stdout,
+    log,
+    call: callerOf(ctx),
+    device,
+  };
 }
 
 const signals = ['SIGTERM', 'SIGINT', 'SIGHUP'] as const;
@@ -60,6 +73,17 @@ describe('the end of the server', () => {
     s.stdin.destroy();
     await vi.waitFor(() => expect(s.exit).toHaveBeenCalledWith(0));
     expect(s.values.dark_mode).toBe('no');
+    drain();
+  });
+
+  it('the client no longer reading stdout does the same, as the transport then stops reading stdin', async () => {
+    const s = serving();
+    await s.call('set_device', { name: 'dark_mode', value: 'yes' });
+    // an answer written once the client had gone: the stdin's end it would wait for is never read
+    s.stdout.emit('error', Object.assign(new Error('write EPIPE'), { code: 'EPIPE' }));
+    await vi.waitFor(() => expect(s.exit).toHaveBeenCalledWith(0));
+    expect(s.values.dark_mode).toBe('no');
+    expect(s.close).toHaveBeenCalledOnce();
     drain();
   });
 
