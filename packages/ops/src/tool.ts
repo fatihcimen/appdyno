@@ -137,12 +137,15 @@ export function definePart<const N extends string, S extends z.ZodObject, O exte
     ...rest,
     ...(readsOnly && { readsOnly: (args) => readsOnly(args as z.infer<S>) }),
     handler: async (args) => {
+      const notes: string[] = [];
       try {
-        const { value, notes } = await noting(() => inOp(() => run(args as z.infer<S>)));
+        const { value } = await noting(() => inOp(() => run(args as z.infer<S>)), notes);
         return notes.length
           ? { ...value, blocks: [...value.blocks, ...text(notes.join('\n'))] }
           : value;
       } catch (e) {
+        // what it found on the way is said with its refusal too: another device behind the serial, as its agent failed
+        if (notes.length > 0 && e instanceof Error) e.message += `\n${notes.join('\n')}`;
         return refused(e);
       }
     },

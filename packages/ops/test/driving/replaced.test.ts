@@ -2,6 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DeviceProvider, DeviceSettings } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { linkedClient } from '@appdyno/testing/calls.js';
@@ -37,9 +38,10 @@ class Avd extends FakeDevice {
     this.hello = { ...this.hello, osVersion: String(sdk - 20), sdk };
   }
   identity = () => Promise.resolve(onPort.avd);
-  override open() {
+  override async open() {
+    const hello = await super.open();
     this.agentUp = true;
-    return super.open();
+    return hello;
   }
   override close = () => {
     this.closed = true;
@@ -119,6 +121,24 @@ describe('another device behind a serial', () => {
       'is another device than the one its session opened on',
     );
     expect(first.closed).toBe(true);
+    ctx.close();
+  });
+
+  it('is said with the refusal of the first call too, as one that boots fails to start its agent', async () => {
+    const { call, ctx, swap } = await serve(new Avd('emu-36', 36));
+    await call('read_screen');
+    const booting = new Avd('emu-34', 34);
+    booting.openError = new DeviceError(
+      'INTERNAL',
+      'the Android agent could not start: could not open UI automation',
+    );
+    swap(booting);
+    const r = await call('read_screen');
+    expect(r.error).toBe(true);
+    expect(r.text).toContain('could not open UI automation');
+    expect(r.text).toContain(
+      `${SERIAL} is another device than the one its session opened on: emu-34, where it was emu-36`,
+    );
     ctx.close();
   });
 

@@ -54,10 +54,13 @@ export function noteInAnswer(line: string) {
  * `fn` in the scope of the call it serves, with the lines it noted for its answer. Within another's, as a step or a
  * flow's op, what it notes goes to the outer one, whose answer is the one a client reads.
  */
-export async function noting<T>(fn: () => Promise<T>): Promise<{ value: T; notes: string[] }> {
+export async function noting<T>(
+  fn: () => Promise<T>,
+  /** Where the lines go, for a caller that says them with a refusal too. */
+  notes: string[] = [],
+): Promise<{ value: T; notes: string[] }> {
   const store = scope.getStore();
   if (store?.notes) return { value: await fn(), notes: [] };
-  const notes: string[] = [];
   const value = await scope.run({ ...store, notes }, fn);
   return { value, notes };
 }
