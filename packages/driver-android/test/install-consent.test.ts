@@ -447,13 +447,28 @@ describe('install', () => {
     Promise.reject(new Error('Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]'));
   const SWITCH_ON = '1\n/\nXiaomi\nRedmi\n';
 
+  /** A refusal `waitMs` after the install began, on a clock of the test's own. */
+  const after = (waitMs: number) => {
+    let now = 1_000_000;
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    return {
+      clock,
+      refused: () => {
+        now += waitMs;
+        return restricted();
+      },
+    };
+  };
+
   it('with the setting off leaves the screen alone and answers as before', async () => {
     const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }]);
-    const apps = new AndroidApps(adb(restricted, SWITCH_ON), 'phone', screen, {
+    const { clock, refused } = after(15_000);
+    const apps = new AndroidApps(adb(refused, SWITCH_ON), 'phone', screen, {
       prompts: false,
       warnings: true,
     });
     const e = await apps.install(APK).catch((x: unknown) => x);
+    clock.mockRestore();
     expect(screen.presses).toEqual([]);
     expect((e as DeviceError).message).toBe(
       'the phone asked on its screen whether to install over USB, and no one said yes in time',
@@ -476,7 +491,8 @@ describe('install', () => {
   });
 
   it.each([
-    ['a POCO, by its brand', '\n/\nXiaomi\nPOCO\n', 0, 'without asking'],
+    ['a Redmi whose switch reads on, refused at once', SWITCH_ON, 0, 'without asking'],
+    ['a POCO, by its brand', '\n/\nXiaomi\nPOCO\n', 15_000, 'without asking'],
     ['a phone with no such switch, refused at once', '\n/\nvivo\nvivo\n', 0, 'without asking'],
     [
       'a phone with no such switch, refused after a wait',
@@ -485,13 +501,8 @@ describe('install', () => {
       'no one said yes',
     ],
   ])('reads %s', async (_, props, waitMs, says) => {
-    let now = 1_000_000;
-    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
-    const late = () => {
-      now += waitMs;
-      return restricted();
-    };
-    const apps = new AndroidApps(adb(late, props), 'phone', phone([]), {
+    const { clock, refused } = after(waitMs);
+    const apps = new AndroidApps(adb(refused, props), 'phone', phone([]), {
       prompts: false,
       warnings: false,
     });

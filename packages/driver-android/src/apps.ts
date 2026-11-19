@@ -234,16 +234,16 @@ export class AndroidApps implements AppManager {
 
   /**
    * Why the phone refused an install over USB that no one tapped yes on. A Xiaomi, Redmi or POCO with "Install via USB"
-   * off refuses each at once, with no prompt, and its switch reads so; on a phone with no such switch to read, its maker
-   * or a refusal sooner than a person answers says the same. One that asked on its screen waited for a person.
+   * off refuses each at once, with no prompt, and its switch reads so; a refusal sooner than a person answers, or the
+   * maker of a phone with no such switch to read, says the same. One that asked on its screen waited for a person.
    */
   private async restricted(tookMs: number, also: string) {
     const read = await this.sh(
       'getprop persist.security.adbinstall; echo /; getprop ro.product.manufacturer; getprop ro.product.brand',
     ).catch(() => '');
     const [install = '', maker = ''] = read.split('/').map((s) => s.trim());
-    const off = install ? install !== '1' : XIAOMI.test(maker) || tookMs < AT_ONCE_MS;
-    if (!off)
+    const off = install !== '' && install !== '1';
+    if (!off && tookMs >= AT_ONCE_MS && (install || !XIAOMI.test(maker)))
       return new DeviceError(
         'PERMISSION_REQUIRED',
         `the phone asked on its screen whether to install over USB, and no one said yes in time${also}`,
@@ -251,7 +251,7 @@ export class AndroidApps implements AppManager {
       );
     return new DeviceError(
       'PERMISSION_REQUIRED',
-      `the phone refused the install over USB without asking on its screen${install ? `: Developer options › "Install via USB" is off` : ''}${also}`,
+      `the phone refused the install over USB without asking on its screen${off ? `: Developer options › "Install via USB" is off` : ''}${also}`,
       'turn on Developer options › "Install via USB" on the phone, then install again; on HyperOS it can ask for a Mi account to be signed in first',
     );
   }
