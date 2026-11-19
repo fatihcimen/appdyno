@@ -6,12 +6,11 @@
 
 ## 1.3.4
 
-appdyno 1.3.4 lets a recording that has ended by itself give way to the next, keeps text typed on a simulator as typed, tries a phone's stopped picture again for a while, no longer for ever, and makes its Try Again work, names the switch a Xiaomi refuses installs over USB by, and calls the device window Appdyno in the menu bar.
+appdyno 1.3.4 lets a recording that has ended by itself give way to the next, keeps text typed on a simulator as typed, tries a phone's stopped picture again for a while, no longer for ever, and makes its Try Again work, names the switch a Xiaomi refuses installs over USB by, and names the device window Appdyno.
 
 ### Changed
 
 - **A recording or a capture that still runs is refused `DEVICE_CLAIMED`.** A `record_session` start of a video, a timeline or the flight recorder, and a `capture_network` `start`, were refused `INVALID_ARGUMENT` with "stop it first" while one ran on the device. The code is now `DEVICE_CLAIMED`, as a second trace's is, and the hint says how that one ends.
-- **The device window's menu bar reads Appdyno.** A device's window and the hub's are a helper app inside Appdyno.app, in a folder named `Appdyno Window.app`. Its bundle named it Appdyno, but macOS shows a bundle by its folder's name where that differs from the name the bundle gives, as for an app a person renamed, so the menu bar and the Dock read Appdyno Window. The helper's display name is now localized as Appdyno; its folder and bundle identifier stay as they were. Its app menu has had the hub's own About Appdyno, Check for Updates… and Settings… since 1.3.1, and the viewer's self-test now checks a device window's menu as it does the hub's.
 
 ### Fixed
 
@@ -20,6 +19,7 @@ appdyno 1.3.4 lets a recording that has ended by itself give way to the next, ke
 - **iOS: text typed on a simulator changed once its field let go.** The simulator's keyboard rewrote text after `type_text` had read it back as typed: autocorrection made "Grace Hopper" "Good" as Send was pressed, in two goes of five on iOS 27.2, two spaces became a period and quotes curled. A session's first `type_text` on a simulator now turns autocorrection, prediction, the period shortcut and smart punctuation off, written down first and put back as any condition: at the session's end, by `set_device` `restore`, and by the next session after a process that died. An iPhone and Android are left as they are.
 - **An iPhone's window tried a stopped picture again for ever.** A stream that ended as it began, with no reason, read as a phone gone: the window said to connect a data cable to a phone on its cable, and tried again each second for ever. It now says the picture stopped, to unlock the phone and keep it awake, tries again after 0.2 s and then twice as long each time up to 5 s, and after ten tries stops with Try Again, which opens the device's session anew where before it asked the stopped stream and did nothing. What the stop says is in the window's language: a Turkish window showed it in English. A phone that is gone still reads as gone.
 - **Android: an install a Xiaomi refused with no prompt said no one had answered it.** With Developer options › "Install via USB" off, a Xiaomi, Redmi or POCO refuses each install over USB at once and asks nothing, and the refusal said the phone had asked on its screen. It now reads the phone's switch and names it, with that HyperOS can ask for a Mi account to be signed in before it turns on. Any phone that refuses before anyone could answer is told the same, and a phone that asked keeps the words it had.
+- **A device's window was named Appdyno Window.** A device's window and the hub's are a helper app inside Appdyno.app, in a folder named `Appdyno Window.app`. Its bundle named it Appdyno, but macOS shows a bundle by its folder's name where that differs from the name the bundle gives, as for an app a person renamed. The helper's display name is now localized as Appdyno, which macOS takes whole; its folder and bundle identifier stay as they were. Its app menu has had the hub's own About Appdyno, Check for Updates… and Settings… since 1.3.1, and the viewer's self-test now checks a device window's menu as it does the hub's.
 
 ## 1.3.3
 
