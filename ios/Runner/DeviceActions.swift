@@ -20,10 +20,12 @@ extension Device {
     }
 
     /// Does the action; what its answer adds: for a touch the milliseconds it first waited for the app's animations,
-    /// after which a caller told TIMEOUT or CANCELLED gets no touch, and for a key whether its field shows it (`key`).
+    /// after which a caller told TIMEOUT or CANCELLED gets no touch, and for a key whether its field shows it and
+    /// whether no field had the keyboard focus (`key`).
     func perform(_ action: Action, job: Job) throws -> [String: Any] {
         if case let .key(name, modifiers) = action {
-            return try key(name, modifiers, job: job).map { ["verified": $0] } ?? [:]
+            let (seen, unfocused) = try key(name, modifiers, job: job)
+            return (seen.map { ["verified": $0] } ?? [:]).merging(unfocused ? ["noFocus": true] : [:]) { $1 }
         }
         return try touch(action, job: job).map { ["animationWaitMs": $0] } ?? [:]
     }
@@ -139,10 +141,10 @@ extension Device {
      * A key of the keyboard, read back from the field with the focus where what it does can be (`pressSeen`): true once
      * the field shows it, false where it shows nothing of it or shows it otherwise, nil where that cannot be read. A
      * plain letter or digit into a field goes as typed text, which the keyboard does not capitalize: its shift stays
-     * on for a while after text typed into an empty field, and a hardware key then came as a capital ("acX" of x). A
-     * button of the device's own is pressed as it is.
+     * on for a while after text typed into an empty field, and a hardware key then came as a capital ("acX" of x). With
+     * it, whether no field had the keyboard focus as it went. A button of the device's own is pressed as it is.
      */
-    private func key(_ name: String, _ modifiers: [String], job: Job) throws -> Bool? {
+    private func key(_ name: String, _ modifiers: [String], job: Job) throws -> (seen: Bool?, unfocused: Bool) {
         // XCTest's delete does nothing with a modifier held, and typed as text it deletes one character whatever is
         // held (live: option+delete left the word, or took a letter of it)
         if name == "delete", !modifiers.isEmpty {
@@ -155,18 +157,25 @@ extension Device {
         }
         guard Device.keyboard[name] != nil || name.count == 1 else {
             try press(name)
-            return nil
+            return (nil, false)
         }
         let app = front().0
+        // the first read is the one before the key
+        var focused: Bool?
         let pressed = try pressSeen(name, Set(modifiers), waitS: Device.echoWaitS, PressProbe(
-            send: { key, held in try self.send(key, held, in: app) }, read: { self.keyState(app) },
+            send: { key, held in try self.send(key, held, in: app) },
+            read: {
+                let (field, state) = self.keyState(app)
+                focused = focused ?? field
+                return state
+            },
             clock: { Date().timeIntervalSince1970 }, pause: { Thread.sleep(forTimeInterval: $0) },
             over: { job.over }))
         if pressed.seen == false || pressed.sent > 1 {
             NSLog("appdyno runner: %@ went %d times, and its field %@", (modifiers + [name]).joined(separator: "+"),
                   pressed.sent, pressed.seen == true ? "shows it" : "does not show it")
         }
-        return pressed.seen
+        return (pressed.seen, focused == false)
     }
 
     /// One key: a plain letter or digit as typed text where a field has the focus, Enter, delete and tab by XCTest's

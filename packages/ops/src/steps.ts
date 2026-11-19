@@ -15,7 +15,7 @@ import type { Session } from './session.js';
 import { STALE_HINT, ToolError } from './tool.js';
 import { backFromAlert } from './noticed.js';
 import { byPerson, type Policy } from './policy.js';
-import { LEAVES_APP, NEEDS_NO_LOOK, NOTHING_TO_READ, SHORTCUT_LEAVES } from './keys.js';
+import { LEAVES_APP, NEEDS_NO_LOOK, NOTHING_TO_READ, readBack, SHORTCUT_LEAVES } from './keys.js';
 import {
   LONG_PRESS_MS,
   LOOKS_ONLY,
@@ -190,18 +190,16 @@ async function pressKey(
   const dark = NOTHING_TO_READ.has(key);
   const quiet = { settle: false, read: 'none' } as const;
   const count = st.count ?? 1;
-  let unseen = 0;
+  const pressed: ActResult[] = [];
   for (let i = 1; i < count; i++) {
-    if ((await s.device.key(key, quiet, modifiers)).verified === false) unseen++;
+    pressed.push(await s.device.key(key, quiet, modifiers));
     // a call refused meanwhile, as its app died, presses no more
     throwIfCancelled('press_key');
   }
   const r = await s.device.key(key, dark ? quiet : opts, modifiers);
-  if (r.verified === false) unseen++;
-  const lost = count > 1 ? `${unseen} of them` : 'it';
   return {
     r,
-    done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read)' : ''}${unseen ? `, but the field read back does not show ${lost}` : ''}`,
+    done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read)' : ''}${readBack(st.key, key, [...pressed, r])}`,
   };
 }
 

@@ -115,13 +115,10 @@ export class HelperActs {
     // the helper looks at no signal: a stroke of a call stopped meanwhile, as its app died, goes no further than this
     throwIfCancelled('the action');
     if (copies(action)) await refuseWhereSynced('copy');
-    // a keyboard's key into a field goes by the runner, which reads it back from the field (`verified`)
-    if (
-      action.kind === 'key' &&
-      hidKey(action.key)?.page === KEY_USAGES.enter.page &&
-      this.intoField()
-    )
-      return this.p.byRunner(action, opts);
+    // a keyboard's key into a field goes by the runner, which reads it back from the field (`verified`); with none
+    // focused the helper's goes, and says so
+    const typing = action.kind === 'key' && hidKey(action.key)?.page === KEY_USAGES.enter.page;
+    if (typing && this.intoField()) return this.p.byRunner(action, opts);
     if (helperInput && !direct.screenKnown) await reads.read(true);
     const touch = action.kind !== 'key';
     const at = touch ? firstPoint(action) : undefined;
@@ -147,6 +144,10 @@ export class HelperActs {
       out = await settled();
     }
     this.transitionEnds = out.moved ? touchedAt + TRANSITION_MS : 0;
-    return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };
+    return {
+      ...out.result,
+      ...(waited !== undefined && { animationWaitMs: waited }),
+      ...(typing && { noFocus: true }),
+    };
   }
 }

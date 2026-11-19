@@ -1,20 +1,21 @@
 import { KEYS, type Key } from '@appdyno/protocol';
 
-type Trait = 'button' | 'side' | 'leavesApp' | 'leavesHeld' | 'leavesScreen' | 'dark' | 'noLook';
+type Trait =
+  'button' | 'side' | 'leavesApp' | 'leavesHeld' | 'leavesScreen' | 'dark' | 'noLook' | 'appsOwn';
 
 /** What each key does beside its press, each set below by its trait: the one table, so that a new key has to say. */
 const KEY_TRAITS: Record<Key, readonly Trait[]> = {
   back: ['button', 'leavesScreen'],
   home: ['button', 'leavesApp', 'leavesScreen', 'noLook'],
-  enter: [],
+  enter: ['appsOwn'],
   delete: [],
-  tab: ['leavesHeld'],
+  tab: ['leavesHeld', 'appsOwn'],
   appSwitch: ['button', 'leavesApp', 'leavesScreen'],
   volumeUp: ['button', 'leavesScreen'],
   volumeDown: ['button', 'leavesScreen'],
   power: ['button', 'side', 'leavesApp', 'dark', 'noLook'],
   lock: ['button', 'side', 'leavesApp', 'dark', 'noLook'],
-  escape: ['leavesScreen'],
+  escape: ['leavesScreen', 'appsOwn'],
   space: ['leavesHeld'],
   arrowUp: [],
   arrowDown: [],
@@ -50,3 +51,21 @@ export const NOTHING_TO_READ = keysThat('dark');
  * on the screen's power, as a look at a dark screen wakes it and the key would then put it back.
  */
 export const NEEDS_NO_LOOK = keysThat('noLook');
+
+/** `appsOwn`: what a key does is the app's, with a field focused or none: no field to read it back from is not said. */
+const APPS_OWN = keysThat('appsOwn');
+
+/**
+ * What an iOS key's presses read back, as its answer adds it: those its field showed nothing of, and that no field had
+ * the keyboard focus where a key went (`name` as asked for).
+ */
+export function readBack(
+  name: string,
+  key: string,
+  pressed: { verified?: boolean; noFocus?: boolean }[],
+) {
+  const unseen = pressed.filter((p) => p.verified === false).length;
+  const lost = pressed.length > 1 ? `${String(unseen)} of them` : 'it';
+  const blind = pressed.some((p) => p.noFocus) && !APPS_OWN.has(key);
+  return `${unseen ? `, but the field read back does not show ${lost}` : ''}${blind ? `; no field had the keyboard focus: ${name} went to the screen, and nothing was read back` : ''}`;
+}

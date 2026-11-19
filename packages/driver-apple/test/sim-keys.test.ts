@@ -316,7 +316,7 @@ describe('a key pressed on a simulator whose helper takes the keys', () => {
   };
   const quiet = { settle: false, read: 'none' } as const;
 
-  it('goes by the runner into a field, which reads it back, and by the helper where none has the focus', async () => {
+  it('goes by the runner into a field, which reads it back, and by the helper where none has the focus, saying so', async () => {
     const into = acts(true);
     const selectAll: ActParams = { kind: 'key', key: 'a', modifiers: ['command'] };
     expect(await into.a.act(selectAll, quiet)).toEqual({ verified: true });
@@ -324,14 +324,14 @@ describe('a key pressed on a simulator whose helper takes the keys', () => {
     expect(into.byRunner).toHaveLength(2);
     expect(into.sent).toEqual([]);
     const none = acts(false);
-    await none.a.act({ kind: 'key', key: 'arrowLeft' }, quiet);
+    expect(await none.a.act({ kind: 'key', key: 'arrowLeft' }, quiet)).toEqual({ noFocus: true });
     expect(none.sent).toEqual([{ kind: 'key', key: 'arrowLeft' }]);
     expect(none.byRunner).toEqual([]);
   });
 
   it('presses a button by the helper, with a field in focus too', async () => {
     const into = acts(true);
-    await into.a.act({ kind: 'key', key: 'home' }, quiet);
+    expect(await into.a.act({ kind: 'key', key: 'home' }, quiet)).toEqual({});
     expect(into.sent).toEqual([{ kind: 'key', key: 'home' }]);
     expect(into.byRunner).toEqual([]);
   });

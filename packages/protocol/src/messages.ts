@@ -95,6 +95,8 @@ export const ActResult = z.object({
    * showed nothing of it when pressed again, or showed it otherwise; absent where what it does cannot be read.
    */
   verified: z.boolean().optional(),
+  /** iOS: a keyboard's key went with no field holding the keyboard focus, so nothing was read back. */
+  noFocus: z.boolean().optional(),
 });
 export type ActResult = z.infer<typeof ActResult>;
 

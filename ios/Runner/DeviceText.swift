@@ -28,17 +28,19 @@ extension Device {
         (try? f.snapshot()).map(textIn)
     }
 
-    /// What a key can change of the field with the keyboard focus (`KeyState`): nil where none has it, or a secure one,
-    /// which reads back as dots. A phone's pasteboard is the app in front's alone, so a copy there is not read.
-    func keyState(_ app: XCUIApplication) -> KeyState? {
-        guard let (_, snap) = focusedField(app), snap.elementType != .secureTextField else { return nil }
+    /// Whether a field has the keyboard focus, and what a key can change of it (`KeyState`): nil where none has it, or
+    /// a secure one, which reads back as dots. A phone's pasteboard is the app in front's alone, so a copy there is not
+    /// read.
+    func keyState(_ app: XCUIApplication) -> (focused: Bool, state: KeyState?) {
+        guard let (_, snap) = focusedField(app) else { return (false, nil) }
+        guard snap.elementType != .secureTextField else { return (true, nil) }
         #if targetEnvironment(simulator)
         let board: UIPasteboard? = UIPasteboard.general
         #else
         let board: UIPasteboard? = nil
         #endif
-        return KeyState(text: textIn(snap), selection: KeyedSnapshot.selection(of: snap), copies: board?.changeCount,
-                        pasteable: board?.hasStrings ?? false)
+        return (true, KeyState(text: textIn(snap), selection: KeyedSnapshot.selection(of: snap),
+                               copies: board?.changeCount, pasteable: board?.hasStrings ?? false))
     }
 
     /// Reading what another app put on the pasteboard asks the user, whom this thread would wait for

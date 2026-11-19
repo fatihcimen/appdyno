@@ -111,6 +111,22 @@ describe('gestures, keys, clipboard', () => {
     );
   });
 
+  it('says a typing key went with no field focused, and nothing was read back; not Return, Escape nor Tab', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const act = d.act.bind(d);
+    d.act = async (a, o) => ({ ...(await act(a, o)), ...(a.kind === 'key' && { noFocus: true }) });
+    const blind =
+      /; no field had the keyboard focus: (\S+) went to the screen, and nothing was read back\n/;
+    for (const key of ['b', 'arrow_left', 'delete', 'command+a', 'space'])
+      expect((await call('press_key', { key })).text).toMatch(blind);
+    expect((await call('press_key', { key: 'delete', count: 2 })).text).toMatch(
+      /^pressed delete 2 times; no field had the keyboard focus: delete went/,
+    );
+    for (const key of ['enter', 'escape', 'tab'])
+      expect((await call('press_key', { key })).text).not.toMatch(blind);
+  });
+
   it('presses count times with one settle, the last', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
