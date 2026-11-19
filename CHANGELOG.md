@@ -4,6 +4,25 @@
 
 ## Unreleased
 
+## 1.3.3
+
+appdyno 1.3.3 types into a search field that moves as it takes the focus again, taps a selector on the dialog in front, gives another emulator behind a serial a session of its own, and ends a server whose client has gone.
+
+### Changed
+
+- **A claim says its holder's last call.** `DEVICE_CLAIMED` and `list_devices` say how long ago the holder last made a call on the device, so a server left open for days shows as one.
+- A server that shares another live process's agent says in the answer that it is of another build, with its version and that process's pid.
+- The tools reference says an Android device takes one UI automation client at a time: `uiautomator dump` gets nothing while appdyno's agent is connected, and `read_screen` reads the screen.
+
+### Fixed
+
+- **A search field that moves as it takes the focus refused its text.** iOS: Settings' search field on iOS 26.5 and 27.2 rises with the keyboard and makes room for its close button, and since 1.3.2 it read as a field that had let go of the focus, so `type_text` with `replace` was refused `NO_FOCUS` before a key. A field with no identifier still holds the focus where the focused one overlaps where it was found or has its words.
+- **A tap by selector was refused STALE with its button in front.** A selector the device refuses because another window came in front between its read and the touch, as a dialog the app opened again, is looked for once more on the screen in front and touched there. A ref or a point is still refused.
+- **Another emulator behind a serial kept the last one's session.** An AVD booted on the port of one that ended answered `use_device` with the other's Android and SDK. A call that finds the agent's connection gone now asks the device's AVD name, and another device gets a session of its own: its own facts and agent, and the allow list matched again. The last session's changes are not put back on it, and the answer or refusal says so. The same AVD booted again keeps its session.
+- **A server whose client had gone could hold its device for good.** A server that wrote an answer after its client had gone stopped reading stdin and lived on with its claim; a broken stdout now ends it. SIGHUP ends a server as SIGTERM does, with what it changed put back.
+- **Android: an installed app whose launcher activity does not resolve read as maybe not installed.** The answer now says which, and to install the app again.
+- What a call found on its way is said with its refusal too.
+
 ## 1.3.2
 
 appdyno 1.3.2 keeps a slow Mac's runner alive and its typing whole, says first what stands over the app when a step finds nothing, holds a wait until its element stays, and brings a more detailed dragon.

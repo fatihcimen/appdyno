@@ -4,6 +4,25 @@
 
 ## Yayımlanmamış
 
+## 1.3.3
+
+appdyno 1.3.3 odağı alırken yer değiştiren bir arama alanına yeniden yazar, öndeki diyalogda bir selector'a dokunur, bir serial'ın arkasındaki başka bir emulator'a kendi oturumunu verir ve istemcisi gitmiş bir sunucuyu bitirir.
+
+### Değişenler
+
+- **Bir talep, tutanın son çağrısını söyler.** `DEVICE_CLAIMED` ve `list_devices`, tutanın cihazdaki son çağrısının ne kadar önce olduğunu söyler; böylece günlerce açık bırakılmış bir sunucu öyle görünür.
+- Çalışan başka bir sürecin ajanını paylaşan bir sunucu, yanıtında onun başka bir build'den olduğunu, sürümünü ve o sürecin pid'ini söyler.
+- Araçlar başvurusu, bir Android cihazının aynı anda tek bir UI otomasyon istemcisi aldığını söyler: appdyno'nun ajanı bağlıyken `uiautomator dump` hiçbir şey döndürmez, ekranı `read_screen` okur.
+
+### Düzeltilenler
+
+- **Odağı alırken yer değiştiren bir arama alanı metnini reddediyordu.** iOS: Ayarlar'ın arama alanı iOS 26.5 ve 27.2'de klavyeyle yukarı çıkıp kapatma düğmesine yer açıyor ve 1.3.2'den beri odağı bırakmış bir alan gibi okunuyordu; `replace` ile `type_text` hiçbir tuştan önce `NO_FOCUS` ile reddediliyordu. Tanımlayıcısı olmayan bir alan, odaklı alan bulunduğu yerle örtüşüyorsa ya da onun sözcüklerini taşıyorsa odağı tutuyor sayılır.
+- **Selector ile bir dokunuş, düğmesi öndeyken STALE ile reddediliyordu.** Cihazın, okuma ile dokunuş arasında öne başka bir pencere geldiği için reddettiği bir selector, uygulamanın yeniden açtığı bir diyalog gibi, öndeki ekranda bir kez daha aranır ve orada dokunulur. Bir ref ya da nokta yine reddedilir.
+- **Bir serial'ın arkasındaki başka bir emulator, öncekinin oturumunu koruyordu.** Kapanan bir emulator'ın portunda açılan bir AVD, `use_device`'a öncekinin Android'i ve SDK'sıyla yanıt veriyordu. Ajanın bağlantısının gittiğini bulan bir çağrı artık AVD adını sorar; başka bir cihaz kendi bilgileri ve ajanıyla, izin listesi yeniden eşleştirilerek kendi oturumunu alır. Son oturumun değişiklikleri ona geri konmaz ve yanıt ya da ret bunu söyler. Yeniden açılan aynı AVD oturumunu korur.
+- **İstemcisi gitmiş bir sunucu cihazını süresiz tutabiliyordu.** İstemcisi gittikten sonra yanıt yazan bir sunucu stdin'i okumayı bırakıp talebiyle yaşamayı sürdürüyordu; kırılan bir stdout artık onu bitirir. SIGHUP bir sunucuyu SIGTERM gibi, değiştirdiklerini geri koyarak bitirir.
+- **Android: launcher activity'si çözülmeyen kurulu bir uygulama, belki kurulu değilmiş gibi okunuyordu.** Yanıt artık hangisi olduğunu ve uygulamanın yeniden kurulmasını söyler.
+- Bir çağrının yolda bulduğu, reddiyle birlikte de söylenir.
+
 ## 1.3.2
 
 appdyno 1.3.2 yavaş bir Mac'te runner'ı ayakta ve yazmasını eksiksiz tutar, bir adım hiçbir şey bulamadığında uygulamanın üstünde ne durduğunu önce söyler, bir beklemeyi öğesi yerinde kalana kadar tutar ve daha ayrıntılı bir ejderha getirir.
