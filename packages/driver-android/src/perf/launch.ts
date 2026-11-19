@@ -11,7 +11,8 @@ import {
   reportProgress,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg, launcherArg } from '../adb.js';
+import { assertPkg } from '../adb.js';
+import { launcherArg } from '../launcher.js';
 import { traceProcessor } from '../tools.js';
 import {
   type LaunchSample,

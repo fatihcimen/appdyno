@@ -11,7 +11,8 @@ import {
   TIMEOUTS,
 } from '@appdyno/core';
 import { DeviceError, type ErrorCode } from '@appdyno/protocol';
-import { type Adb, amStartError, assertPkg, launcherArg, shq } from './adb.js';
+import { type Adb, amStartError, assertPkg, shq } from './adb.js';
+import { launcherArg } from './launcher.js';
 import { apkId, apkNames } from './apk-names.js';
 import { buildVariant } from './build.js';
 import { stopIfHeld } from './crashes.js';

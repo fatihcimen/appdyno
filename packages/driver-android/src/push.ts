@@ -7,7 +7,8 @@ import {
   type PushType,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { assertPkg, launcherArg, shq } from './adb.js';
+import { assertPkg, shq } from './adb.js';
+import { launcherArg } from './launcher.js';
 import { stopIfHeld } from './crashes.js';
 
 /** What gives an app's code a push on Android: FCM's own message, to the app's own Firebase SDK. */

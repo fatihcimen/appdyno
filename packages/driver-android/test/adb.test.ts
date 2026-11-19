@@ -205,10 +205,21 @@ describe('launching an app', () => {
     });
   });
 
-  it('refuses an app with no launcher activity', async () => {
-    const adb = { exec: () => Promise.resolve('No activity found\n') } as unknown as Adb;
-    await expect(new AndroidDevice('emulator-5640', adb).launch('a.b')).rejects.toMatchObject({
+  it('refuses an app with no launcher activity, saying whether it is installed', async () => {
+    const launch = (paths: string) => {
+      const exec = (_: string, command: string) =>
+        Promise.resolve(command.startsWith('pm path ') ? paths : 'No activity found\n');
+      return new AndroidDevice('emulator-5640', { exec } as unknown as Adb).launch('a.b');
+    };
+    await expect(launch('')).rejects.toMatchObject({
       code: 'APP_NOT_RUNNING',
+      message: 'a.b is not installed',
+    });
+    // an install the system no longer resolves an activity of, as `am start` then says its class does not exist
+    await expect(launch('package:/data/app/~~x==/a.b-y==/base.apk\n')).rejects.toMatchObject({
+      code: 'APP_NOT_RUNNING',
+      message: 'a.b is installed, but the system resolves no launcher activity for it',
+      hint: 'an app that has one on its icon is installed broken: install it again',
     });
   });
 
