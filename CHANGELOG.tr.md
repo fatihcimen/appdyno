@@ -6,11 +6,11 @@
 
 ## 1.3.5
 
-appdyno 1.3.5, Simulator.app bir simulator'ın panosunu eşitlerken Mac'in panosuna dokunmaz.
+appdyno 1.3.5, Simulator.app bir simulator'ın panosunu eşitlerken Mac'in panosuna dokunmaz ve onu appdyno'nun yanıtlarının dışında tutar.
 
 ### Düzeltilenler
 
-- **iOS: appdyno'nun yazdığı bir simulator panosu Mac'inkinin yerine geçiyordu.** Simulator.app, Edit › Automatically Sync Pasteboard açıkken (varsayılan olarak açıktır) çalıştıkça bir simulator'ın panosuna gireni Mac'in panosuna koyar ve kişinin orada kopyaladığı kaybolurdu. Bu eşitleme sürerken bir simulator'ın panosuna yazmak artık, eşitlemenin nasıl kapatılacağı söylenerek `UNSUPPORTED` ile reddedilir: `set_device` `clipboard`, bir flow'un `clipboard` adımı, `press_key` Command-C ve Command-X ve bir pencerede yazılan ya da yapıştırılan, tuşu olmayan harfler; pencere bunun nedenini söyler. Simulator.app bu ayarı yalnızca açılışında ve o menüden okur, bu yüzden appdyno onu bir oturum için Simulator.app'i yeniden başlatmadan kapatamaz ve onu yeniden başlatmaz. Simulator.app çalışmıyorsa ya da eşitleme kapalıysa bir yazma eskisi gibi gider; bir simulator'ın panosunu okumak olduğu gibidir.
+- **iOS: appdyno'nun yazdığı bir simulator panosu Mac'inkinin yerine geçiyor, okuduğu bir simulator panosu ise Mac'inkini ele veriyordu.** Simulator.app, Edit › Automatically Sync Pasteboard açıkken (varsayılan olarak açıktır) çalıştıkça bir simulator'ın panosunu Mac'inkiyle iki yönde eşitler: appdyno'nun bir simulator'ın panosuna koyduğu, kişinin Mac'te kopyaladığının yerine geçiyordu; bir simulator'ın panosunu okumak da kişinin kendi Mac panosunu, bir parola ya da bir token olabilecek her şeyi, yanıtlara, flow report'larına ve modelin bağlamına getiriyordu. Bu eşitleme sürerken appdyno artık ikisini de `UNSUPPORTED` ile reddeder ve eşitlemenin nasıl kapatılacağını söyler. Bir yazma şunlarda reddedilir: bir değerle `set_device` `clipboard`, bir flow'un `clipboard` adımı, `press_key` Command-C ve Command-X ve bir pencerede yazılan ya da yapıştırılan, tuşu olmayan harfler; pencere bunun nedenini söyler. Bir okuma şunlarda reddedilir: değersiz `set_device` `clipboard` ve bir flow'un `clipboard` denetimi; hem Mac'ten hem de runner üzerinden. Simulator.app bu ayarı yalnızca açılışında ve o menüden okur, bu yüzden appdyno onu bir oturum için Simulator.app'i yeniden başlatmadan kapatamaz ve onu yeniden başlatmaz. Simulator.app çalışmıyorsa ya da eşitleme kapalıysa ikisi de eskisi gibi gider.
 
 ## 1.3.4
 
