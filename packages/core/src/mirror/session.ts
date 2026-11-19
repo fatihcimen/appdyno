@@ -269,12 +269,12 @@ export class MirrorSession {
     });
   }
 
-  private reconnect(why: string) {
+  private reconnect(why: string, need?: Need) {
     if (this.current.state === 'stopped') return;
     this.run++;
     const next = this.retries.next(why);
     if ('gaveUp' in next) {
-      void this.stop(next.gaveUp);
+      void this.stop(next.gaveUp, need);
       return;
     }
     this.set({ state: 'reconnecting', attempt: this.retries.attempt });
@@ -282,12 +282,12 @@ export class MirrorSession {
   }
 
   /** The stream is ended on both sides, and a new one is asked for. */
-  private renew(why: string) {
+  private renew(why: string, need?: Need) {
     this.viewer?.send({ op: 'detach' });
     void this.o.mirror
       .close()
       .catch(() => undefined)
-      .then(() => this.reconnect(why));
+      .then(() => this.reconnect(why, need));
   }
 
   private readonly handlers: ViewerHandlers = {
@@ -437,7 +437,7 @@ export class MirrorSession {
     // a picture that stops with no reason is no person's to wait for: said, tried again slower each time, not for ever
     if (s === 'picture-stopped') {
       this.viewer?.send({ op: 'note', text: `${NEEDS[s].title}. ${NEEDS[s].fix}` });
-      this.renew(`${NEEDS[s].title}. ${NEEDS[s].fix}`);
+      this.renew(`${NEEDS[s].title}. ${NEEDS[s].fix}`, s);
       return;
     }
     this.viewer?.send({ op: 'detach' });

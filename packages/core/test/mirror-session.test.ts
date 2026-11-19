@@ -7,6 +7,7 @@ import {
   type MirrorSessionOptions,
   type MirrorStatus,
 } from '../src/index.js';
+import { wordsOf } from '../src/mirror/state.js';
 import { FakeClock, FakeMirror, FakeViewer, flush } from '@appdyno/testing/mirror-fakes.js';
 
 function setup(over: Partial<MirrorSessionOptions> = {}) {
@@ -270,6 +271,8 @@ describe('a mirror, whatever the device', () => {
     expect(viewer().of('note').at(0)).toMatchObject({ text: said });
     expect(session.status).toMatchObject({ state: 'stopped' });
     expect((session.status as { why: string }).why).toBe(`no picture after 10 tries: ${said}`);
+    // the window words it in its own language: a title and the need's words, each in its table
+    expect(wordsOf(session.status)).toEqual({ title: 'No picture after 10 tries', fix: said });
     expect(mirror.opens).toBe(11);
     // 0.2 s, then twice as long each time, up to 5 s: not a try a second
     expect(opened.slice(0, 6)).toEqual([200, 400, 800, 1_600, 3_200, 5_000]);

@@ -46,6 +46,12 @@ export function wordsOf(s: MirrorState): { title: string; fix: string } | undefi
     case 'connecting':
       return { title: 'Connecting', fix: '' };
     case 'stopped':
+      // tries that each stopped as the device said: in words the window has, in either language
+      if (s.need && s.why.startsWith('no picture after'))
+        return {
+          title: 'No picture after 10 tries',
+          fix: `${NEEDS[s.need].title}. ${NEEDS[s.need].fix}`,
+        };
       return s.need ? NEEDS[s.need] : { title: 'Stopped', fix: s.why };
     default:
       return undefined;

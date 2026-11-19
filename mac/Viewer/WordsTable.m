@@ -72,6 +72,7 @@ const MVWordRow MVWordTable[] = {
     {"This build has no iPhone stream", "Bu derlemede iPhone yayını yok"},
     {"The runner still drives the phone, by screenshots and its own input.", "Runner telefonu yine de ekran görüntüleri ve kendi girdileriyle yönetir."},
     {"The picture stopped", "Görüntü durdu"},
+    {"No picture after 10 tries", "10 denemede görüntü gelmedi"},
     {"Unlock the phone and keep it awake. If it goes on, plug it in again, then press Try Again.", "Telefonun kilidini açın ve uyanık tutun. Sürerse yeniden takın, sonra Yeniden Dene'ye basın."},
     {"The picture stopped. Unlock the phone and keep it awake. If it goes on, plug it in again, then press Try Again.", "Görüntü durdu. Telefonun kilidini açın ve uyanık tutun. Sürerse yeniden takın, sonra Yeniden Dene'ye basın."},
     {"The device is not connected", "Cihaz bağlı değil"},

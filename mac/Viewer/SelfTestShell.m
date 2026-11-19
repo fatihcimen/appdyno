@@ -351,7 +351,26 @@ static void checkOneName(void) {
   MVCheck(@"bar: a model that is the device's name is said once", about.hidden, about.stringValue);
 }
 
+/// A stream that stopped ten times as it started: the stopped card says so in the window's language, with what to do.
+static void checkStoppedWords(void) {
+  MVTestTurkish(YES);
+  MVWindow *window = [MVWindow new];
+  window.behind = YES;
+  [window configure:@{@"title": @"stopped",
+                      @"look": @{@"controls": @[@"home"]}}];
+  [window setStatus:@{@"op": @"status",
+                      @"state": @"stopped",
+                      @"title": @"No picture after 10 tries",
+                      @"fix": @"The picture stopped. Unlock the phone and keep it awake. If it goes on, plug it in again, then press Try Again."}];
+  [window.nsWindow layoutIfNeeded];
+  NSString *words = [[MVWindowParts(window.nsWindow) valueForKey:@"text"] componentsJoinedByString:@"|"];
+  MVTestTurkish(NO);
+  MVCheck(@"stopped: a stream that stopped ten times says so in Turkish, with what to do, and Try Again", [words containsString:@"10 denemede görüntü gelmedi"] && [words containsString:@"Görüntü durdu. Telefonun kilidini açın"] && [words containsString:@"Yeniden Dene"], words);
+  [window.nsWindow orderOut:nil];
+}
+
 void MVCheckShell(void) {
+  checkStoppedWords();
   checkOneName();
   checkMotion();
   checkStateMoves();
