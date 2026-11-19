@@ -4,6 +4,23 @@
 
 ## Unreleased
 
+## 1.3.4
+
+appdyno 1.3.4 lets a recording that has ended by itself give way to the next, keeps text typed on a simulator as typed, tries a phone's stopped picture again for a while, no longer for ever, and makes its Try Again work, names the switch a Xiaomi refuses installs over USB by, and calls the device window Appdyno in the menu bar.
+
+### Changed
+
+- **A recording or a capture that still runs is refused `DEVICE_CLAIMED`.** A `record_session` start of a video, a timeline or the flight recorder, and a `capture_network` `start`, were refused `INVALID_ARGUMENT` with "stop it first" while one ran on the device. The code is now `DEVICE_CLAIMED`, as a second trace's is, and the hint says how that one ends.
+- **The device window's menu bar reads Appdyno.** A device's window and the hub's are a helper app inside Appdyno.app, in a folder named `Appdyno Window.app`. Its bundle named it Appdyno, but macOS shows a bundle by its folder's name where that differs from the name the bundle gives, as for an app a person renamed, so the menu bar and the Dock read Appdyno Window. The helper's display name is now localized as Appdyno; its folder and bundle identifier stay as they were. Its app menu has had the hub's own About Appdyno, Check for Updates… and Settings… since 1.3.1, and the viewer's self-test now checks a device window's menu as it does the hub's.
+
+### Fixed
+
+- **A recording that had ended by itself refused every one after it.** A recording that ended at its `maxSeconds`, at Android's screenrecord limit or as its process went stayed written down as the device's, and a `start` hours later was refused. A start now finishes one that has ended as `stop` would, keeps its file, and its answer says when it ended and where the file is; one whose file cannot be kept says why, and the start goes on. Ended means its loop on Android said so or no screenrecord runs, its recorder's process on a Mac has gone, or the time it was given has passed, which a Mac that slept can outlast. A timeline and the flight recorder start the same way, and a video start is refused while they hold their own.
+- **Android: a packet trace that had ended by itself refused the next capture.** The trace ends after 10 minutes. A `capture_network` `start` after that reads it as `stop` would, and its answer says when it ended and what it saw. A stop signals the trace's process only while it is still Perfetto's, not one that took its number.
+- **iOS: text typed on a simulator changed once its field let go.** The simulator's keyboard rewrote text after `type_text` had read it back as typed: autocorrection made "Grace Hopper" "Good" as Send was pressed, in two goes of five on iOS 27.2, two spaces became a period and quotes curled. A session's first `type_text` on a simulator now turns autocorrection, prediction, the period shortcut and smart punctuation off, written down first and put back as any condition: at the session's end, by `set_device` `restore`, and by the next session after a process that died. An iPhone and Android are left as they are.
+- **An iPhone's window tried a stopped picture again for ever.** A stream that ended as it began, with no reason, read as a phone gone: the window said to connect a data cable to a phone on its cable, and tried again each second for ever. It now says the picture stopped, to unlock the phone and keep it awake, tries again after 0.2 s and then twice as long each time up to 5 s, and after ten tries stops with Try Again, which opens the device's session anew where before it asked the stopped stream and did nothing. What the stop says is in the window's language: a Turkish window showed it in English. A phone that is gone still reads as gone.
+- **Android: an install a Xiaomi refused with no prompt said no one had answered it.** With Developer options › "Install via USB" off, a Xiaomi, Redmi or POCO refuses each install over USB at once and asks nothing, and the refusal said the phone had asked on its screen. It now reads the phone's switch and names it, with that HyperOS can ask for a Mi account to be signed in before it turns on. A phone of another maker that refuses before anyone could answer is told the same, and a phone that asked keeps the words it had.
+
 ## 1.3.3
 
 appdyno 1.3.3 types into a search field that moves as it takes the focus again, taps a selector on the dialog in front, gives another emulator behind a serial a session of its own, and ends a server whose client has gone.
