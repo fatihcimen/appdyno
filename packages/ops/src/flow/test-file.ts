@@ -3,6 +3,7 @@ import { isThisProcess, must } from '@appdyno/core';
 import type { CaseFailure, RunCase, RunResult } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import { mediaRestored } from '../media.js';
+import { redact } from '../policy.js';
 import type { Session } from '../session.js';
 import { restoreConditions } from '../settings.js';
 import { journeyText, measureJourney, type JourneyAnswer } from './journey.js';
@@ -101,12 +102,14 @@ export function fileRunner(
 
   const failureOf = (file: string, { result, error }: Attempt): CaseFailure => {
     const f = result?.failure;
+    // what kept a file from running may quote it, as a line that does not parse is quoted
+    const why = error && redact(ctx.policy, error.message);
     return {
       message: f
         ? `${f.file ? `${basename(f.file)} ` : ''}line ${f.line}, step ${f.n}: ${firstLine(f.message)}`
-        : firstLine(error?.message ?? 'failed'),
+        : firstLine(why ?? 'failed'),
       // the files it left are the record's to name, by where the run's folder is read
-      detail: f ? runner.failureText(file, f) : (error?.message ?? ''),
+      detail: f ? runner.failureText(file, f) : (why ?? ''),
     };
   };
 

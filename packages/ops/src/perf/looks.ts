@@ -1,6 +1,6 @@
 import { loadavg } from 'node:os';
 import { must, pause, type CompileMode, type CpuProfile, type LaunchMode } from '@appdyno/core';
-import { stepLine, type Flow, type StepEvent } from '@appdyno/flows';
+import { mapStrings, stepLine, type Flow, type FlowStep, type StepEvent } from '@appdyno/flows';
 import {
   journeyKind,
   loadMeasurement,
@@ -10,6 +10,7 @@ import {
   type Seen,
 } from '@appdyno/perf';
 import type { ServerContext } from '../context.js';
+import { redact } from '../policy.js';
 import { stepTime, type FlowRunner } from '../flow/runner.js';
 import { readFlow } from '../flow/shared.js';
 import type { Session } from '../session.js';
@@ -232,10 +233,12 @@ export async function lookAtSteps(
     each((e as Error).message);
     return;
   }
+  // a step's line as its run said it, a listed secret hidden
+  const lineOf = (st: FlowStep) => stepLine(mapStrings(st, (v) => redact(l.ctx.policy, v)));
   const steps = places.flatMap((p) => {
     const n = Number(p.name.split('_')[0]);
     const step = flow.steps[n - 1];
-    if (step && journeyKind(n, stepLine(step), 'ms') === `journey.${p.name}.ms`)
+    if (step && journeyKind(n, lineOf(step), 'ms') === `journey.${p.name}.ms`)
       return [{ ...p, n, action: step.action, after: flow.steps[n - 2]?.action }];
     seenAt(p.name).cannot.push(`${file} has changed: this is no longer its step ${n}`);
     return [];

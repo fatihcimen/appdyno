@@ -336,6 +336,7 @@ export function flowRunner(
         from,
         values,
         platform: at.platform,
+        hide: clean,
         onFailure: (f) => seenAsItFailed(ctx, s, f, was, o.evidence, answers),
         ...(o.onStep && { onStep: o.onStep }),
         ...(o.progress && { progress: o.progress }),
@@ -344,7 +345,6 @@ export function flowRunner(
           reportProgress(`step ${n} of ${total}: ${st.action}`);
         },
       });
-      for (const f of result.teardown?.failed ?? []) f.message = clean(f.message);
       return result;
     } finally {
       undo();

@@ -1,12 +1,29 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { must } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { paramsOf } from '../../src/index.js';
+import {
+  commentRun,
+  flowFiles,
+  mergeRuns,
+  paramsOf,
+  readRun,
+  shareLines,
+  zipRun,
+} from '../../src/index.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { SCREENS } from '@appdyno/testing/fake-screens.js';
-import { callerOf, SECRET, flowHelpers } from './harness.js';
+import { callerOf, flowsFor, SECRET, flowHelpers } from './harness.js';
 
 describe('flows', () => {
   let dir: string;
@@ -76,6 +93,96 @@ tap id=greeting
       expect(text).not.toContain('kod-9911');
       expect(text).toContain('secret SECRET_1');
       expect(text).toContain('type "${SECRET_1}" id=name');
+    });
+
+    it('a value of APPDYNO_SECRETS or of a secret, written in a flow as it is, is in nothing a run writes or answers', async () => {
+      device.screen = 'login';
+      const PIN = 'fake-pin-0000';
+      // a quote in it: a line holds it escaped
+      const QUOTED = 'fake-left"fake-right';
+      const flows = join(dir, 'flows');
+      mkdirSync(flows);
+      const typed = `type "${SECRET}" id=pass\n`;
+      const file = (name: string, text: string) => {
+        writeFileSync(join(flows, name), `app dev.app\n${text}`);
+        return join(flows, name);
+      };
+      const passes = file(
+        'a-passes.flow',
+        `${typed}type ${JSON.stringify(QUOTED)} id=user\nassert id=greeting check=text equals="Merhaba ${SECRET}"\n`,
+      );
+      const fails = file(
+        'b-fails.flow',
+        `secret PIN\ntype "\${PIN}" id=user\n${typed}assert id=greeting check=text equals="${PIN} ${SECRET}" timeoutMs=200\n`,
+      );
+      // a line that does not parse, its error quoting it
+      const broken = file('c-broken.flow', `type "${SECRET}\\q" id=pass\n`);
+      const ctx = context([SECRET, QUOTED]);
+      const call = callerOf(ctx);
+      /** Each thing a run wrote or answered, by where it is. */
+      const said: Record<string, string> = {};
+      const filesIn = (folder: string) => {
+        for (const f of readdirSync(folder, { recursive: true }) as string[])
+          if (statSync(join(folder, f)).isFile())
+            said[join(folder, f)] = readFileSync(join(folder, f), 'utf8');
+      };
+
+      // appdyno test: its record, page, JUnit, verdict, pull request text and evidence, and the lines it printed
+      const artifacts = join(dir, 'artifacts', 'cli');
+      const lines: string[] = [];
+      const r = await flowsFor(ctx).test({
+        files: flowFiles([flows]),
+        devices: [],
+        artifacts,
+        params: { PIN },
+        retries: 1,
+        log: (l) => lines.push(l),
+      });
+      said['the run as code has it'] = JSON.stringify(r);
+      said['the lines appdyno test printed'] = lines.join('\n');
+      filesIn(artifacts);
+      // appdyno test merge, share, share --zip and comment, from the folder alone
+      mergeRuns([artifacts], join(dir, 'merged'));
+      filesIn(join(dir, 'merged'));
+      said['test share'] = shareLines(readRun(artifacts)).join('\n');
+      const zip = join(dir, 'run.zip');
+      zipRun(artifacts, zip);
+      said['test share --zip'] = execFileSync('/usr/bin/unzip', ['-p', zip], { encoding: 'utf8' });
+      said['test comment'] = readFileSync(commentRun(artifacts, join(dir, 'comment.md')), 'utf8');
+      // run_flow: test, and run of a file that passes and of one that fails
+      const to = join(dir, 'artifacts', 'mcp');
+      said['run_flow test'] = JSON.stringify(
+        await call('run_flow', { action: 'test', file: flows, to, params: [`PIN=${PIN}`] }),
+      );
+      filesIn(to);
+      said['run_flow run'] = JSON.stringify(
+        await call('run_flow', { action: 'run', file: passes }),
+      );
+      const e = await refusal(
+        call('run_flow', { action: 'run', file: fails, params: [`PIN=${PIN}`] }),
+      );
+      said['run_flow run, refused'] = `${e.message}\n${e.hint ?? ''}`;
+
+      const values = [SECRET, PIN, ...QUOTED.split('"')];
+      expect(Object.keys(said).filter((k) => values.some((v) => said[k]?.includes(v)))).toEqual([]);
+      // it ran: the values were typed, its steps are there with them hidden, and the failure is the step's
+      expect(device.typed).toEqual(expect.arrayContaining([SECRET, QUOTED, PIN]));
+      expect(r.record.cases.map((c) => [c.label, c.outcome])).toEqual([
+        ['a-passes.flow', 'passed'],
+        ['b-fails.flow', 'failed'],
+        ['c-broken.flow', 'failed'],
+      ]);
+      expect(r.record.cases[0]?.steps?.map((st) => st.step).slice(0, 2)).toEqual([
+        'type "•••" id=pass',
+        'type "•••" id=user',
+      ]);
+      expect(r.record.cases[1]?.attempts).toHaveLength(2);
+      expect(r.record.cases[1]?.attempts[1]?.failure?.step).toBe(
+        'assert id=greeting check=text equals="••• •••" timeoutMs=200',
+      );
+      expect(r.record.cases[2]?.attempts[0]?.failure?.message).toBe(
+        `${broken}: line 2: not a quoted string: "•••\\q"`,
+      );
     });
   });
 

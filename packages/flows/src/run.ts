@@ -2,6 +2,7 @@ import { must } from '@appdyno/core';
 import {
   fillStep,
   givesOf,
+  mapStrings,
   namesOf,
   runsOn,
   stepLine,
@@ -98,6 +99,8 @@ export type RunOptions = {
   onFailure?: (failure: RunFailure) => void | Promise<void>;
   /** The device's platform: a step kept to the other one is skipped, and its result says so. */
   platform?: string;
+  /** What a result says of a step, each string of its line and a failure's message, with the caller's secrets hidden. */
+  hide?: (value: string) => string;
 };
 
 /** How a device carries out a step: `prepare` waits for its target, `act` does it. */
@@ -122,6 +125,7 @@ export async function runSteps(
     onFailure,
     platform,
     progress,
+    hide = (value) => value,
   }: RunOptions = {},
 ): Promise<RunResult> {
   // a prepare step's values join them, for this run alone
@@ -140,7 +144,8 @@ export async function runSteps(
       line: written.line,
       ...(written.file && { file: written.file }),
       ...(phase && { phase }),
-      step: stepLine(written),
+      // a line holds a placeholder, not its value, but a value written in the file as it is would be in it
+      step: stepLine(mapStrings(written, hide)),
     };
     if (!runsOn(written, platform))
       return { result: { ...at, ms: 0, skipped: `${String(written.only)} only` } };
@@ -170,7 +175,7 @@ export async function runSteps(
       return {
         failure: {
           ...at,
-          message: err.message,
+          message: hide(err.message),
           ...(err.code && { code: err.code }),
           ...(err.hint && { hint: err.hint }),
         },

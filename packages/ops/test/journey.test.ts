@@ -358,6 +358,34 @@ describe('a journey as a performance scenario', () => {
     expect((await newestRun(measurements))[0]?.scenario).toBe('journey-a');
   });
 
+  it('keeps no listed secret a step holds as it is, in its numbers or its report', async () => {
+    const { ctx, measurements, perf } = phone();
+    const value = 'fake-secret-5150';
+    ctx.hide([value]);
+    const artifacts = fresh();
+    const logged: string[] = [];
+    const r = await onFakeTime(
+      flowsFor(ctx).test({
+        files: [flowFile(`${JOURNEY}type "${value}" id=name\n`, 'a.flow')],
+        devices: [],
+        artifacts,
+        iterations: 2,
+        log: (l) => logged.push(l),
+      }),
+    );
+    const kept = [artifacts, measurements, perf].flatMap((d) =>
+      readdirSync(d, { recursive: true, withFileTypes: true })
+        .filter((f) => f.isFile())
+        .map((f) => readFileSync(join(f.parentPath, f.name), 'utf8')),
+    );
+    expect(r.passed).toBe(true);
+    expect(
+      [JSON.stringify(r), logged.join('\n'), ...kept].filter((t) => t.includes(value)),
+    ).toEqual([]);
+    // its time is still read by the step it was kept under
+    expect(r.record.cases[0]?.out).toMatch(/\n4\. type "•••" id=name: \d+ ms/);
+  });
+
   it('keeps two files of one name in two folders apart: their evidence, their cases and their scenarios', async () => {
     const repo = fresh();
     mkdirSync(join(repo, '.git'));
