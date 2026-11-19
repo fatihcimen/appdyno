@@ -16,6 +16,7 @@ import {
 } from '@appdyno/flows';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
+import { DEFAULT_POLICY, redact, type Policy } from '../policy.js';
 import { ToolError } from '../tool.js';
 import { writeNew } from '../writes.js';
 import { preparedFlow, projectRoot } from './prepare.js';
@@ -170,12 +171,17 @@ function sharedFiles(file: string): SharedFiles {
   return { setup: there(SETUP_FILE), teardown: there(TEARDOWN_FILE).reverse() };
 }
 
-/** A flow file with the flows it runs in place, and its setup and teardown: all a run, a test or an export is given. */
-export const readFlow = (file: string): Flow => {
+/**
+ * A flow file with the flows it runs in place, and its setup and teardown: all a run, a test or an export is given. A
+ * line that does not parse is refused with `policy`'s secrets hidden, as the refusal quotes it.
+ */
+export const readFlow = (file: string, policy: Policy = DEFAULT_POLICY): Flow => {
   try {
     return composeFlow(file, parsedFile, sharedFiles(file));
   } catch (e) {
-    if (e instanceof FlowError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
+    if (e instanceof FlowError) throw new ToolError(redact(policy, e.message), 'INVALID_ARGUMENT');
+    // a line of a file, already refused as it was parsed
+    if (e instanceof ToolError) e.message = redact(policy, e.message);
     throw e;
   }
 };

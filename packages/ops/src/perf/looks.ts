@@ -228,7 +228,7 @@ export async function lookAtSteps(
   }
   let flow: Flow;
   try {
-    flow = readFlow(file);
+    flow = readFlow(file, l.ctx.policy);
   } catch (e) {
     each((e as Error).message);
     return;

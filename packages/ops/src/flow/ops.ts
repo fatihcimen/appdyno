@@ -169,7 +169,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           if (to !== undefined && !/\.ya?ml$/.test(to))
             throw new ToolError(`to is a .yaml file: ${to}`, 'INVALID_ARGUMENT');
           try {
-            const yaml = toMaestro(readFlow(need()));
+            const yaml = toMaestro(readFlow(need(), ctx.policy));
             if (to === undefined) return reply(yaml, { done: 'exported' });
             const written = writeInside(ctx.policy, to, yaml, overwrite);
             return reply(`${yaml}\nwritten to ${written}`, { done: 'exported', file: written });
@@ -234,12 +234,15 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
               ...(from !== undefined && { from }),
             };
             const { result, journey } = iterations
-              ? await measureJourney(ctx, runner, s, readFlow(path), path, {
+              ? await measureJourney(ctx, runner, s, readFlow(path, ctx.policy), path, {
                   ...replay,
                   iterations,
                   ...(scenario && { scenario }),
                 })
-              : { result: await runner.run(s, readFlow(path), path, replay), journey: undefined };
+              : {
+                  result: await runner.run(s, readFlow(path, ctx.policy), path, replay),
+                  journey: undefined,
+                };
             // what a teardown or the run could not clean up is said beside the failure, and is the refusal after a pass
             const left = [runner.teardownText(path, result), ...(result.cleanup ?? [])]
               .filter(Boolean)

@@ -149,7 +149,7 @@ tap id=greeting
       zipRun(artifacts, zip);
       said['test share --zip'] = execFileSync('/usr/bin/unzip', ['-p', zip], { encoding: 'utf8' });
       said['test comment'] = readFileSync(commentRun(artifacts, join(dir, 'comment.md')), 'utf8');
-      // run_flow: test, and run of a file that passes and of one that fails
+      // run_flow: test, and run of a file that passes, one that fails and one that does not parse
       const to = join(dir, 'artifacts', 'mcp');
       said['run_flow test'] = JSON.stringify(
         await call('run_flow', { action: 'test', file: flows, to, params: [`PIN=${PIN}`] }),
@@ -158,10 +158,18 @@ tap id=greeting
       said['run_flow run'] = JSON.stringify(
         await call('run_flow', { action: 'run', file: passes }),
       );
-      const e = await refusal(
-        call('run_flow', { action: 'run', file: fails, params: [`PIN=${PIN}`] }),
-      );
-      said['run_flow run, refused'] = `${e.message}\n${e.hint ?? ''}`;
+      const refusals = {
+        'run_flow run of a file that fails': () =>
+          call('run_flow', { action: 'run', file: fails, params: [`PIN=${PIN}`] }),
+        'run_flow run of a file that does not parse': () =>
+          call('run_flow', { action: 'run', file: broken }),
+        'run_flow export of it': () => call('run_flow', { action: 'export', file: broken }),
+        'a replay of it from code': () => flowsFor(ctx).replay(broken),
+      };
+      for (const [what, refused] of Object.entries(refusals)) {
+        const e = await refusal(refused());
+        said[`${what}, refused`] = `${e.message}\n${e.hint ?? ''}`;
+      }
 
       const values = [SECRET, PIN, ...QUOTED.split('"')];
       expect(Object.keys(said).filter((k) => values.some((v) => said[k]?.includes(v)))).toEqual([]);
@@ -179,6 +187,9 @@ tap id=greeting
       expect(r.record.cases[1]?.attempts).toHaveLength(2);
       expect(r.record.cases[1]?.attempts[1]?.failure?.step).toBe(
         'assert id=greeting check=text equals="••• •••" timeoutMs=200',
+      );
+      expect(said['run_flow run of a file that does not parse, refused']).toContain(
+        'not a quoted string: "•••\\q"',
       );
       expect(r.record.cases[2]?.attempts[0]?.failure?.message).toBe(
         `${broken}: line 2: not a quoted string: "•••\\q"`,

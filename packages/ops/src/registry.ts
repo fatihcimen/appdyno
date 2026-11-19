@@ -98,7 +98,7 @@ export function flowsFor(ctx: ServerContext) {
   const { runner } = build(ctx);
   return {
     replay: async (file: string, o?: ReplayOptions) =>
-      runner.run(await ctx.session(), readFlow(file), file, o),
+      runner.run(await ctx.session(), readFlow(file, ctx.policy), file, o),
     // from code as from a command line: the caller is who runs the project's own commands
     test: (o: TestOptions) => runTests(ctx, runner, { prepares: true, ...o }),
   };
