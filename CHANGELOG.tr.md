@@ -8,9 +8,13 @@
 
 appdyno 1.3.6, bir flow'un olduğu gibi tuttuğu bir sırrı bir test çalıştırmasının yazdığı ve yanıtladığı her şeyde gizler.
 
+### Değişenler
+
+- Bir sır tutan ölçülmüş bir adım artık yeni bir adla tutulur; bu yüzden önceki baseline'ıyla karşılaştırılmaz.
+
 ### Düzeltilenler
 
-- **Bir flow'a olduğu gibi yazılmış bir sır, test çalıştırmasının kaydında, sayfasında ve JUnit'inde duruyordu.** `APPDYNO_SECRETS`'ın bir değeri ya da bir flow'un `secret`'ı için verilen bir değer, bir adım onu olduğu gibi tuttuğunda, `type "${PASSWORD}"` gizlenirken `type "the-password"` gibi, `run.json`'daki, çalıştırmanın sayfasındaki ve JUnit'teki adım satırında, `test merge` ile `test share --zip`'in bunlardan kopyaladığında, `run_flow` `run`'ın yanıtında ve ölçülen bir flow'un sayılarında, onları tutan adlarda ve satırlarında duruyordu. Satırı ayrıştırılamayan bir dosyanın hatasında satırdaki değer vardı; bunu `verdict.txt`, pull request metni ve `appdyno test`'in yazdığı satırlar da gösteriyordu. Değer artık orada da, başka her yerde olduğu gibi, `•••` olur. Böyle bir değer tutan ölçülmüş bir adım yeni bir adla tutulur; bu yüzden daha önce alınmış bir baseline'ın onunla karşılaştıracağı bir şey yoktur.
+- **Bir flow'a olduğu gibi yazılmış bir sır, test çalıştırmasının kaydında, sayfasında ve JUnit'inde duruyordu.** `APPDYNO_SECRETS`'ın bir değeri ya da bir flow'un `secret`'ı için verilen bir değer, bir adım onu olduğu gibi tuttuğunda, `type "${PASSWORD}"` gizlenirken `type "the-password"` gibi, `run.json`'daki, çalıştırmanın sayfasındaki ve JUnit'teki adım satırında, `test merge` ile `test share --zip`'in bunlardan kopyaladığında, `run_flow` `run`'ın yanıtında ve ölçülen bir flow'un sayılarında, onları tutan adlarda ve satırlarında duruyordu. Satırı ayrıştırılamayan bir dosyanın hatasında satırdaki değer vardı; bunu `verdict.txt`, pull request metni ve `appdyno test`'in yazdığı satırlar da gösteriyordu. Değer artık orada da, başka her yerde olduğu gibi, `•••` olur.
 
 ## 1.3.5
 
