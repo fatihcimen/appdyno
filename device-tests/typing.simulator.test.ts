@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { simulatorProvider } from './workspace.js';
@@ -11,7 +13,21 @@ import { opsOn } from './helpers.js';
  * as a journey measured, and typed then sent by hand; then the keyboard reads as it did before.
  */
 const udid = process.env.APPDYNO_IOS_UDID ?? '';
-const FORM = join(import.meta.dirname, '../docs/examples/vitest/flows/form.flow');
+/** The form as a flow, written here: the Vitest example's own. */
+const FORM = join(mkdtempSync(join(tmpdir(), 'appdyno-typing-')), 'form.flow');
+writeFileSync(
+  FORM,
+  [
+    'app dev.appdyno.fixture',
+    'stop',
+    'launch',
+    'tap text="Form"',
+    'type "Grace Hopper" id=name_input replace',
+    'tap id=submit',
+    'assert id=result check=text equals="Sent: Grace Hopper"',
+    '',
+  ].join('\n'),
+);
 const KEYS = [
   'com.apple.keyboard.preferences KeyboardAutocorrection',
   'com.apple.keyboard.predictive KeyboardPrediction',
@@ -46,7 +62,6 @@ describe.runIf(udid)('text typed on a simulator', () => {
       action: 'run',
       file: FORM,
       iterations: 5,
-      remeasure: 0,
     });
     expect(measured.error ? measured.text : '').toBe('');
     for (let round = 1; round <= 5; round++) {
