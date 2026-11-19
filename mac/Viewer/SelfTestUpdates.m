@@ -31,6 +31,9 @@ static void checkMenu(void) {
   NSMenuItem *hide = itemTitled(app, @"Hide Appdyno"), *others = itemTitled(app, @"Hide Others"), *quit = itemTitled(app, @"Quit Appdyno");
   BOOL own = about.target == MVAppItems.shared && check.target == MVAppItems.shared && settings.target == MVAppItems.shared;
   MVCheck(@"menu: the app's menu has About, Check for Updates and Settings, as a Mac app's has", own && [settings.keyEquivalent isEqual:@","] && itemTitled(app, @"Show All") && itemTitled(app, @"Services").submenu, [[app.itemArray valueForKey:@"title"] componentsJoinedByString:@"|"]);
+  NSMenu *window = MVMainMenu(nil).itemArray.firstObject.submenu;
+  BOOL same = itemTitled(window, @"About Appdyno").target == MVAppItems.shared && itemTitled(window, @"Check for Updates…").target == MVAppItems.shared && itemTitled(window, @"Settings…").target == MVAppItems.shared;
+  MVCheck(@"menu: a device's own window has the same About, Check for Updates and Settings", same, [[window.itemArray valueForKey:@"title"] componentsJoinedByString:@"|"]);
   MVCheck(@"menu: and the system's own, by their keys", [hide.keyEquivalent isEqual:@"h"] && others.keyEquivalentModifierMask == (NSEventModifierFlagCommand | NSEventModifierFlagOption) && [quit.keyEquivalent isEqual:@"q"], nil);
   setenv("APPDYNO_VERSION", "9.8.7", 1);
   NSDictionary *options = MVAboutOptions();

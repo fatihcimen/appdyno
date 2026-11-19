@@ -474,7 +474,13 @@ try {
     const apps = spawnSync('/usr/bin/lsappinfo', ['list'], { encoding: 'utf8' }).stdout;
     const kind = new RegExp(`pid = ${String(child.pid)} .*type="(\\w+)"`).exec(apps)?.[1];
     if (kind !== 'UIElement') throw new Error(`its type is ${String(kind)}`);
-    return `${got} after ${ms} ms, and no place in the Dock for the app itself`;
+    // the name the menu bar shows over the window, which was its folder's, "Appdyno Window"
+    const [pid = ''] = got.split(' ');
+    const name = spawnSync('/usr/bin/lsappinfo', ['info', '-only', 'name', pid], {
+      encoding: 'utf8',
+    }).stdout.trim();
+    if (name !== '"LSDisplayName"="Appdyno"') throw new Error(`its window's app is ${name}`);
+    return `${got} after ${ms} ms, named Appdyno, and no place in the Dock for the app itself`;
   });
   await step('a double click: LaunchServices opens the bundle', async () => {
     await stopAll();

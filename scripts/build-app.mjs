@@ -196,15 +196,26 @@ function icon() {
 }
 
 /**
- * No Dock icon of its own: a window's process takes one, and gives it up with the window.
+ * No Dock icon of its own: a window's process takes one, and gives it up with the window. `folder`: a bundle's name
+ * where it is not the app's. macOS shows a bundle by its folder's name where that differs from the name the bundle
+ * gives, as one a person renamed: the menu bar read "Appdyno Window" over a device's window. A display name localized
+ * from one that is the folder's is taken whole, as the system's own apps' are.
  * @param {string} to
  * @param {string} identifier
  * @param {string} executable
+ * @param {string} [folder]
  */
-function infoPlist(to, identifier, executable) {
+function infoPlist(to, identifier, executable, folder) {
+  if (folder) {
+    mkdirSync(join(to, 'Resources/en.lproj'), { recursive: true });
+    writeFileSync(
+      join(to, 'Resources/en.lproj/InfoPlist.strings'),
+      `CFBundleDisplayName = "${NAME}";\n`,
+    );
+  }
   const keys = {
     CFBundleDevelopmentRegion: 'en',
-    CFBundleDisplayName: NAME,
+    CFBundleDisplayName: folder ?? NAME,
     CFBundleExecutable: executable,
     CFBundleIconFile: ICON,
     CFBundleIconName: ICON,
@@ -226,7 +237,7 @@ function infoPlist(to, identifier, executable) {
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-${entries.join('\n')}
+${entries.join('\n')}${folder ? '\n  <key>LSHasLocalizedDisplayName</key>\n  <true/>' : ''}
   <key>LSUIElement</key>
   <true/>
   <key>NSHighResolutionCapable</key>
@@ -260,7 +271,7 @@ function assemble() {
     mkdirSync(d, { recursive: true });
   mkdirSync(join(resources, 'licenses'));
   infoPlist(contents, 'dev.appdyno.app', NAME);
-  infoPlist(join(helper, 'Contents'), 'dev.appdyno.window', 'appdyno-viewer');
+  infoPlist(join(helper, 'Contents'), 'dev.appdyno.window', 'appdyno-viewer', WINDOW);
   copyFileSync(join(repo, 'THIRD_PARTY_NOTICES'), join(resources, 'licenses/third-party.txt'));
   copyFileSync(join(repo, 'mac/App/appdyno'), join(resources, 'bin/appdyno'));
   for (const tool of ['xcrun', 'xcodebuild']) {
