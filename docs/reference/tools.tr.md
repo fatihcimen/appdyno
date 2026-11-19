@@ -781,6 +781,8 @@ USB hata ayıklamayı açın, bağlayın ve `appdyno devices` ile kontrol edin.
 
 Bir Xiaomi, USB üzerinden her yeni kurulumdan önce ekranında sorar ve 10 s sonra kendiliğinden hayır der: `manage_app install` telefonu uyandırır ve o sorunun evet düğmesine dokunur, ama yalnızca kendi başlattığı bir kurulum sırasında; yanıt ve `record_session` bunu söyler (`--no-install-consent` bunu size bırakır).
 
+Developer options › "Install via USB" kapalıyken bir Xiaomi, Redmi ya da POCO hiçbir şey sormaz ve her kurulumu hemen `PERMISSION_REQUIRED` ile reddeder: ret o anahtarın adını verir; HyperOS'ta anahtar açılmadan önce bir Mi hesabıyla oturum açılmasını isteyebilir. Kimse yanıtlayamadan reddeden başka bir üreticinin telefonuna da aynısı söylenir.
+
 Play Protect'in uygulamayı Google'a gönderme sorusu her zaman hayırla yanıtlanır: özel bir build Google'a gönderilmez. Sunucu `--accept-install-warnings` ile çalışmıyorsa bir Play Protect uyarısına dokunulmaz, metni aktarılır. Hangi telefonda neyin görüldüğü için bkz. [Bir telefonun kurulum soruları](protocol.tr.md#bir-telefonun-kurulum-soruları).
 
 One UI'lı bir Samsung'un kendine ait bir sorusu yoktur, Play Protect'inkiler de yalnızca "Verify apps over USB" açıkken gelir. İkisi arasındaki öteki farklar [One UI ile HyperOS karşılaştırması](perf.tr.md#one-ui-ile-hyperos-karşılaştırması) bölümündedir.

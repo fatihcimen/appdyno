@@ -436,17 +436,20 @@ describe('answering during an install', () => {
 });
 
 describe('install', () => {
-  const adb = (run: (stop?: AbortSignal) => Promise<string>) =>
+  /** `props`: what the phone reads of its "Install via USB" switch, then its maker and brand, as `getprop` prints them. */
+  const adb = (run: (stop?: AbortSignal) => Promise<string>, props = '') =>
     ({
-      exec: () => Promise.resolve(''),
+      exec: (_s: string, c: string) =>
+        Promise.resolve(c.includes('persist.security.adbinstall') ? props : ''),
       run: (_a: string[], _ms: number, stop?: AbortSignal) => run(stop),
     }) as unknown as Adb;
   const restricted = () =>
     Promise.reject(new Error('Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]'));
+  const SWITCH_ON = '1\n/\nXiaomi\nRedmi\n';
 
   it('with the setting off leaves the screen alone and answers as before', async () => {
     const screen = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }]);
-    const apps = new AndroidApps(adb(restricted), 'phone', screen, {
+    const apps = new AndroidApps(adb(restricted, SWITCH_ON), 'phone', screen, {
       prompts: false,
       warnings: true,
     });
@@ -456,6 +459,46 @@ describe('install', () => {
       'the phone asked on its screen whether to install over USB, and no one said yes in time',
     );
     expect((e as DeviceError).hint).toContain('within 10 s');
+  });
+
+  it('names the switch of a Redmi whose installs over USB are off, as it asks nothing', async () => {
+    const apps = new AndroidApps(adb(restricted, '0\n/\nXiaomi\nRedmi\n'), 'phone', phone([]), {
+      prompts: true,
+      warnings: false,
+    });
+    const e = (await apps.install(APK).catch((x: unknown) => x)) as DeviceError;
+    expect(e.code).toBe('PERMISSION_REQUIRED');
+    expect(e.message).toBe(
+      'the phone refused the install over USB without asking on its screen: Developer options › "Install via USB" is off',
+    );
+    expect(e.hint).toContain('turn on Developer options › "Install via USB"');
+    expect(e.hint).toContain('Mi account');
+  });
+
+  it.each([
+    ['a POCO, by its brand', '\n/\nXiaomi\nPOCO\n', 0, 'without asking'],
+    ['a phone with no such switch, refused at once', '\n/\nvivo\nvivo\n', 0, 'without asking'],
+    [
+      'a phone with no such switch, refused after a wait',
+      '\n/\nvivo\nvivo\n',
+      15_000,
+      'no one said yes',
+    ],
+  ])('reads %s', async (_, props, waitMs, says) => {
+    let now = 1_000_000;
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const late = () => {
+      now += waitMs;
+      return restricted();
+    };
+    const apps = new AndroidApps(adb(late, props), 'phone', phone([]), {
+      prompts: false,
+      warnings: false,
+    });
+    const e = (await apps.install(APK).catch((x: unknown) => x)) as DeviceError;
+    clock.mockRestore();
+    expect(e.message).toContain(says);
+    expect(e.message).not.toContain('is off');
   });
 
   it.each([

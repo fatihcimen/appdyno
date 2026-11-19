@@ -781,6 +781,8 @@ Turn on USB debugging, connect, and check `appdyno devices`.
 
 A Xiaomi asks on its screen before each new install over USB and says no by itself after 10 s: `manage_app install` wakes the phone and taps that prompt's yes, but only during an install it started itself; the answer and `record_session` say so (`--no-install-consent` leaves it to you).
 
+With Developer options › "Install via USB" off, a Xiaomi, Redmi or POCO asks nothing and refuses each install at once, `PERMISSION_REQUIRED`: the refusal names that switch, which on HyperOS can ask for a Mi account to be signed in before it turns on. A phone of another maker that refuses before anyone could answer is told the same.
+
 Play Protect's prompt to send the app to Google is always answered no: a private build is not sent to Google. A Play Protect warning is left alone, quoted, unless the server runs with `--accept-install-warnings`. See [A phone's install prompts](protocol.md#a-phones-install-prompts) for what was seen on which phone.
 
 A Samsung with One UI has no prompt of its own, and Play Protect's come only with "Verify apps over USB" on. What else differs between the two is in [One UI against HyperOS](perf.md#one-ui-against-hyperos).

@@ -65,6 +65,11 @@ const REFUSED: Record<string, [ErrorCode, string, string]> = {
   ],
 };
 
+/** The makers whose phones refuse an install over USB with no prompt while their own switch for it is off. */
+const XIAOMI = /\b(xiaomi|redmi|poco)\b/i;
+/** A refusal sooner than this had no prompt for anyone to answer: a phone that asks gives a person 10 s. */
+const AT_ONCE_MS = 5_000;
+
 /** What the device says of a `.dm` it cannot load, as a warning before Android 17 and as its refusal from it. */
 const WRONG_PROFILE = 'The profile is in the wrong format';
 
@@ -152,6 +157,7 @@ export class AndroidApps implements AppManager {
     const said: string[] = [];
     const stop = new AbortController();
     let pending = true;
+    const began = Date.now();
     const installing = this.adb
       .run(
         [
@@ -205,11 +211,7 @@ export class AndroidApps implements AppManager {
               `the phone said no to the install over USB though its prompt was tapped${also}`,
               'the system can block injected touches on that window: see "USB debugging (Security settings)" in Developer options, or answer it on the phone within 10 s',
             )
-          : new DeviceError(
-              'PERMISSION_REQUIRED',
-              `the phone asked on its screen whether to install over USB, and no one said yes in time${also}`,
-              'install again and answer it on the phone within 10 s; ticking its remember box stops it asking',
-            );
+          : await this.restricted(Date.now() - began, also);
       const reason = /\bINSTALL_FAILED_\w+/.exec(adbSaid)?.[0];
       const refused = reason && REFUSED[reason];
       if (refused)
@@ -228,6 +230,30 @@ export class AndroidApps implements AppManager {
       if (e instanceof DeviceError) throw new DeviceError(e.code, `${e.message}${also}`, e.hint);
       throw e;
     }
+  }
+
+  /**
+   * Why the phone refused an install over USB that no one tapped yes on. A Xiaomi, Redmi or POCO with "Install via USB"
+   * off refuses each at once, with no prompt, and its switch reads so; on a phone with no such switch to read, its maker
+   * or a refusal sooner than a person answers says the same. One that asked on its screen waited for a person.
+   */
+  private async restricted(tookMs: number, also: string) {
+    const read = await this.sh(
+      'getprop persist.security.adbinstall; echo /; getprop ro.product.manufacturer; getprop ro.product.brand',
+    ).catch(() => '');
+    const [install = '', maker = ''] = read.split('/').map((s) => s.trim());
+    const off = install ? install !== '1' : XIAOMI.test(maker) || tookMs < AT_ONCE_MS;
+    if (!off)
+      return new DeviceError(
+        'PERMISSION_REQUIRED',
+        `the phone asked on its screen whether to install over USB, and no one said yes in time${also}`,
+        'install again and answer it on the phone within 10 s; ticking its remember box stops it asking',
+      );
+    return new DeviceError(
+      'PERMISSION_REQUIRED',
+      `the phone refused the install over USB without asking on its screen${install ? `: Developer options › "Install via USB" is off` : ''}${also}`,
+      'turn on Developer options › "Install via USB" on the phone, then install again; on HyperOS it can ask for a Mi account to be signed in first',
+    );
   }
 
   async buildAndInstall(request: BuildRequest) {
