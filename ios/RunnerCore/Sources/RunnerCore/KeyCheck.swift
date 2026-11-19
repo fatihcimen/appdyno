@@ -35,6 +35,16 @@ private func shows(_ now: String, _ expected: String) -> Bool {
     now == expected || lettersAndDigits(now) == lettersAndDigits(expected)
 }
 
+/// Whether `now` holds the letters and digits of `before` with one of them taken, or none, as one delete leaves them: a
+/// field that formats what is typed takes a separator alone, or with the digit before it. Two taken are two deletes.
+private func oneGone(_ before: String, _ now: String) -> Bool {
+    let was = Array(lettersAndDigits(before)), left = Array(lettersAndDigits(now))
+    guard was != left else { return true }
+    guard was.count == left.count + 1 else { return false }
+    let same = zip(was, left).prefix { $0 == $1 }.count
+    return Array(was[(same + 1)...]) == Array(left[same...])
+}
+
 /// What an arrow across the line leaves: the cursor gone that way, a selection ended, or with shift one made from the
 /// cursor. Nil where nothing can move that way, or which end of a selection shift moves is not known.
 private func arrowTakes(left: Bool, extending: Bool, from before: KeyState) -> ((KeyState) -> Bool)? {
@@ -75,7 +85,8 @@ public func keyTakes(_ key: String, _ modifiers: Set<String>, from before: KeySt
         return plain ? arrowTakes(left: key == "arrowLeft", extending: !modifiers.isEmpty, from: before) : nil
     case "delete":
         guard modifiers.isEmpty, !was.isEmpty || was.lowerBound > 0 else { return nil }
-        return { $0.text != before.text }
+        if !was.isEmpty { return { shows($0.text, replacing(before.text, was, with: "")) } }
+        return { $0.text != before.text && oneGone(before.text, $0.text) }
     case "space":
         return plain ? { $0.text == replacing(before.text, was, with: " ") } : nil
     case _ where key.count != 1:
@@ -88,19 +99,23 @@ public func keyTakes(_ key: String, _ modifiers: Set<String>, from before: KeySt
     }
 }
 
-/// The plain key that takes back a key gone in as the plain key of its letter or arrow, as XCTest's first key with a
-/// modifier to an app came (shift+arrow moved the cursor alone): the other arrow after a cursor moved, delete after one
-/// character typed at it. Nil where the field changed otherwise.
+/// The plain key that takes back one key's doing at the cursor, as a key gone in as the plain key of its letter or
+/// arrow (XCTest's first key with a modifier to an app: shift+arrow moved the cursor alone), or a key that came late,
+/// after it was sent again: the other arrow after a cursor moved, delete after a character typed, and a character
+/// deleted typed again. Nil where the field changed otherwise.
 public func takeBack(_ before: KeyState, _ now: KeyState) -> String? {
-    guard let was = before.selection, was.isEmpty, let at = now.selection, at.isEmpty else { return nil }
-    if now.text == before.text, at != was { return at.lowerBound < was.lowerBound ? "arrowRight" : "arrowLeft" }
+    guard let was = before.selection, was.isEmpty, let at = now.selection, at.isEmpty, at != was else { return nil }
+    if now.text == before.text { return at.lowerBound < was.lowerBound ? "arrowRight" : "arrowLeft" }
     let old = Array(before.text.utf16), new = Array(now.text.utf16)
-    guard was.lowerBound <= old.count, at.lowerBound > was.lowerBound, at.lowerBound <= new.count,
-          new.count == old.count + at.lowerBound - was.lowerBound,
-          new[..<was.lowerBound] == old[..<was.lowerBound], new[at.lowerBound...] == old[was.lowerBound...],
-          String(decoding: new[was.lowerBound ..< at.lowerBound], as: UTF16.self).count == 1
-    else { return nil }
-    return "delete"
+    // what lies between the two cursors, added to the text or gone from it
+    let added = at.lowerBound > was.lowerBound
+    let long = added ? new : old, short = added ? old : new
+    let from = min(was.lowerBound, at.lowerBound), to = max(was.lowerBound, at.lowerBound)
+    guard to <= long.count, from <= short.count, long.count - short.count == to - from,
+          long[..<from] == short[..<from], long[to...] == short[from...] else { return nil }
+    let one = String(decoding: long[from ..< to], as: UTF16.self)
+    guard one.count == 1 else { return nil }
+    return added ? "delete" : one
 }
 
 /// What `pressSeen` asks of its caller: a key sent with its modifiers, what keys can change (nil: no field holds the
@@ -131,12 +146,24 @@ private func until(_ passes: (KeyState) -> Bool, waitS: Double, _ p: PressProbe)
     }
 }
 
+/// A key sent again and seen, once more `waitS` on: the first may come after the second, and a second change of the
+/// field's text or cursor is taken back (`takeBack`) so that the key goes in once, or said where it cannot be.
+private func once(_ seen: KeyState, waitS: Double, _ p: PressProbe) throws -> Pressed {
+    guard let later = until({ $0.text != seen.text || $0.selection != seen.selection }, waitS: waitS, p),
+          later.text != seen.text || later.selection != seen.selection
+    else { return Pressed(seen: true, sent: 2) }
+    guard !p.over(), let back = takeBack(seen, later) else { return Pressed(seen: false, sent: 2) }
+    try p.send(back, [])
+    return Pressed(seen: until({ $0 == seen }, waitS: waitS, p) == seen, sent: 2)
+}
+
 /**
  * A key into the field with the focus, read back: seen once the field shows what it does (`keyTakes`), within `waitS`
  * of its sending. A key the field shows nothing of after that is sent once more, as on a hosted Mac XCTest's keys
  * reached no app now and then (⌘A selected nothing, so the delete after it took one letter; a letter after an arrow
- * went nowhere). One gone in as its plain key is taken back (`takeBack`) and sent once more. Not seen then, or with the
- * field letting go of the focus, it is said so. A key whose doing cannot be read is sent once.
+ * went nowhere), and watched for the first coming late (`once`). One gone in as its plain key is taken back
+ * (`takeBack`) and sent once more. Not seen then, or with the field letting go of the focus, it is said so. A key
+ * whose doing cannot be read is sent once.
  */
 public func pressSeen(_ key: String, _ modifiers: Set<String>, waitS: Double, _ p: PressProbe) throws -> Pressed {
     guard let before = p.read(), let takes = keyTakes(key, modifiers, from: before) else {
@@ -148,7 +175,7 @@ public func pressSeen(_ key: String, _ modifiers: Set<String>, waitS: Double, _ 
         try p.send(key, modifiers)
         sent += 1
         guard let now = until(takes, waitS: waitS, p) else { break }
-        if takes(now) { return Pressed(seen: true, sent: sent) }
+        if takes(now) { return sent == 1 ? Pressed(seen: true, sent: 1) : try once(now, waitS: waitS, p) }
         if now == before { continue }
         guard sent < 2, !p.over(), let back = takeBack(before, now) else { break }
         try p.send(back, [])

@@ -19,6 +19,8 @@ private final class KeyField {
     var plain: Set<Int> = []
     var shifted: Set<Int> = []
     var lateS = 0.0
+    /// How late the keys of these numbers come, in place of `lateS`.
+    var late: [Int: Double] = [:]
     var focused = true
     var now = 0.0
     private(set) var sent: [String] = []
@@ -34,7 +36,7 @@ private final class KeyField {
         sent.append((modifiers.sorted() + [key]).joined(separator: "+"))
         if !drops.contains(sent.count) {
             let held = plain.contains(sent.count) ? [] : shifted.contains(sent.count) ? ["shift"] : modifiers
-            coming.append(Coming(at: now + lateS, key: key, modifiers: held))
+            coming.append(Coming(at: now + (late[sent.count] ?? lateS), key: key, modifiers: held))
         }
     }
 
@@ -156,7 +158,9 @@ final class KeyTakesTests: XCTestCase {
         XCTAssertEqual(takeBack(at("xy", 2), at("xy", 1)), "arrowRight")
         XCTAssertEqual(takeBack(at("he", 2), at("hea", 3)), "delete")
         XCTAssertEqual(takeBack(at("ab", 1), at("aVb", 2)), "delete")
-        XCTAssertNil(takeBack(at("he", 2), at("h", 1)))
+        XCTAssertEqual(takeBack(at("he", 2), at("h", 1)), "e")
+        XCTAssertNil(takeBack(at("hel", 3), at("h", 1)))
+        XCTAssertNil(takeBack(at("ab", 1), at("ab", 1)))
         XCTAssertNil(takeBack(at("ab", 2), at("abcd", 4)))
         XCTAssertNil(takeBack(KeyState(text: "ab", selection: 0 ..< 2), at("c", 1)))
     }
@@ -218,6 +222,47 @@ final class PressSeenTests: XCTestCase {
         XCTAssertEqual(press("c", into: field), Pressed(seen: true, sent: 1))
         XCTAssertEqual(field.text, "abc")
         XCTAssertLessThan(field.now, 1.5)
+    }
+
+    func testAKeyThatCameLateAfterItWasSentAgainGoesInOnce() {
+        // the first comes 2 s after it went, past the wait, so after the second
+        let backspace = KeyField("hello")
+        backspace.late = [1: 2]
+        XCTAssertEqual(press("delete", into: backspace), Pressed(seen: true, sent: 2))
+        XCTAssertEqual(backspace.sent.joined(separator: " "), "delete delete l")
+        XCTAssertEqual(backspace.text, "hell")
+        let letter = KeyField("abc")
+        letter.late = [1: 2]
+        XCTAssertEqual(press("d", into: letter), Pressed(seen: true, sent: 2))
+        XCTAssertEqual(letter.sent, ["d", "d", "delete"])
+        XCTAssertEqual(letter.text, "abcd")
+        let arrow = KeyField("ac")
+        arrow.late = [1: 2]
+        XCTAssertEqual(press("arrowLeft", into: arrow), Pressed(seen: true, sent: 2))
+        XCTAssertEqual(arrow.sent, ["arrowLeft", "arrowLeft", "arrowRight"])
+        XCTAssertEqual(arrow.selection, 1 ..< 1)
+        // twice all selected is all selected
+        let all = KeyField("he")
+        all.late = [1: 2]
+        XCTAssertEqual(press("a", ["command"], into: all), Pressed(seen: true, sent: 2))
+        XCTAssertEqual(all.sent, ["command+a", "command+a"])
+    }
+
+    func testAKeyThatCameLateWhileItsSecondWasLostGoesInOnce() {
+        let field = KeyField("abc")
+        field.late = [1: 2]
+        field.drops = [2]
+        XCTAssertEqual(press("d", into: field), Pressed(seen: true, sent: 2))
+        XCTAssertEqual(field.sent, ["d", "d"])
+        XCTAssertEqual(field.text, "abcd")
+    }
+
+    func testTwoDeletesReadAtOnceAreNotOne() {
+        XCTAssertEqual(verdict(keyTakes("delete", [], from: KeyState(text: "hello", selection: 5 ..< 5)),
+                               KeyState(text: "hel", selection: 3 ..< 3)), .other)
+        // a field that formats what is typed takes the separator with the digit before it
+        XCTAssertEqual(verdict(keyTakes("delete", [], from: KeyState(text: "(599) ", selection: 6 ..< 6)),
+                               KeyState(text: "(59", selection: 3 ..< 3)), .takes)
     }
 
     func testAKeyNeverSeenGoesTwiceAndIsSaidLost() {
