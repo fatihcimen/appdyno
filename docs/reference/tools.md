@@ -226,6 +226,8 @@ A refused call's `code` is one of these, and its `hint` says what to do next. `T
 | `DEVICE_LOCKED`          | the phone is locked behind what appdyno cannot answer, as a passcode                                                                        | unlock it                                                                                                           |
 | `OFFLINE`                | the package registry, or a pinned tool's release, cannot be reached                                                                         | try again when online                                                                                               |
 
+An Android device takes one UI automation client at a time, and appdyno's agent holds it while a server or a command is connected to it: `adb shell uiautomator dump` then ends `Killed` and writes nothing. `read_screen` reads the same tree.
+
 ## Targets
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read just before the action. A selector the device refuses because another window came in front between that read and the touch, as a dialog the app opened again, is looked for once more on the screen in front, and touched there where it matches; a ref or a point is refused `STALE`, as what it named was on the screen before.

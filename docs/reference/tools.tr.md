@@ -226,6 +226,8 @@ Reddedilen bir çağrının `code` değeri bunlardan biridir ve `hint` sonra ne 
 | `DEVICE_LOCKED`          | telefon, appdyno'nun yanıtlayamadığı bir kilidin, örneğin bir parolanın ardında                                                                               | kilidini açın                                                                                                             |
 | `OFFLINE`                | paket registry'sine ya da sabitlenmiş bir aracın sürümüne ulaşılamıyor                                                                                        | çevrimiçi olunca yeniden deneyin                                                                                          |
 
+Bir Android cihazı aynı anda tek bir UI otomasyon istemcisi alır ve appdyno'nun ajanı, ona bir sunucu ya da bir komut bağlıyken onu tutar: `adb shell uiautomator dump` o sırada `Killed` ile biter ve hiçbir şey yazmaz. `read_screen` aynı ağacı okur.
+
 ## Hedefler
 
 Bir hedef bir `ref`, `x` ve `y` ya da bir `selector` `{ text, id, role, index }`'tir ve işlemden hemen önce yeni bir okumada çözülür. Cihazın, o okumayla dokunuş arasında öne başka bir pencere geldiği için reddettiği bir selector, uygulamanın yeniden açtığı bir diyalog gibi, öndeki ekranda bir kez daha aranır ve orada eşleşiyorsa ona dokunulur; bir ref ya da bir nokta `STALE` ile reddedilir, çünkü gösterdiği şey önceki ekrandaydı.
