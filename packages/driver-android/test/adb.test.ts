@@ -205,6 +205,15 @@ describe('launching an app', () => {
     });
   });
 
+  it('tells an emulator by its AVD, as two of one image have one build, and a phone by its serial number', async () => {
+    const identity = (props: string) => {
+      const exec = () => Promise.resolve(`${props}:appdyno-end:\n`);
+      return new AndroidDevice('emulator-5640', { exec } as unknown as Adb).identity();
+    };
+    expect(await identity('appdyno-emu-1\n\nEMULATOR37X2X12X0\n')).toBe('appdyno-emu-1');
+    expect(await identity('\n\nR58N91XYZ2Q\n')).toBe('R58N91XYZ2Q');
+  });
+
   it('refuses an app with no launcher activity, saying whether it is installed', async () => {
     const launch = (paths: string) => {
       const exec = (_: string, command: string) =>

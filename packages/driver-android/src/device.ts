@@ -53,6 +53,10 @@ import { currentFocus, focusSteady, lockedError, wakeScreen } from './wake.js';
 import { androidViews } from './views.js';
 import { noWindowHint } from './window-dump.js';
 
+/** The AVD's name as an emulator of API 30 and later says it, as one before, and a device's serial number. */
+const IDENTITY =
+  'getprop ro.boot.qemu.avd_name; getprop ro.kernel.qemu.avd_name; getprop ro.serialno';
+
 export type AndroidOptions = {
   /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
   reconnectWaitMs?: number;
@@ -144,6 +148,9 @@ export class AndroidDevice extends RpcDevice implements Device {
       .trim()
       .split(/\s+/)[0] || undefined;
   appRunning = (app: string) => androidRunning(this.adb, this.serial, app);
+  /** An emulator's AVD name, else the device's own serial number: two AVDs of one image have the same build. */
+  identity = async () =>
+    (await wholeAnswer(this.adb, this.serial, IDENTITY)).trim().split(/\s*\n/)[0] ?? '';
   /** The views of the activity in front, from the system's own dump of it: no agent, probe or debuggable build. */
   views = () => androidViews((command, timeoutMs) => this.shell(command, timeoutMs));
   appCrashing = (app: string) => androidCrashing(this.adb, this.serial, app);

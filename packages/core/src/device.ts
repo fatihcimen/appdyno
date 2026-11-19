@@ -190,6 +190,11 @@ export type Device = {
    * waits on it, nothing is refused by it.
    */
   warm?(app?: string): void;
+  /**
+   * What tells this device from another that answers to its serial later, as an AVD booted on the port of one that
+   * ended, read with no agent; the same through a reboot. Undefined where a serial is one device's alone.
+   */
+  identity?(): Promise<string>;
   close(): void;
   /** `asItIs`: a look that leaves a dark or locked screen so, for what reads with no one asking it to. */
   tree(opts?: TreeOptions): Promise<Tree>;

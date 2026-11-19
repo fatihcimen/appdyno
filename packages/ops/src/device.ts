@@ -99,9 +99,10 @@ export function deviceOps(ctx: ServerContext, { info, changing, afterChange }: A
               ...left.failed.map((f) => `; could not restore ${f}`),
             ].join('')
           : '';
+        // a device already open may have turned since its hello, and one that lost its agent says it again on this way
+        const now = await s.device.screenNow?.().catch(() => undefined);
         const h = must(s.device.hello, "the agent's hello");
-        // a device already open may have turned since its hello
-        const screen = (await s.device.screenNow?.().catch(() => undefined)) ?? h.screen;
+        const screen = now ?? h.screen;
         return reply(
           `selected ${serial === device ? device : `${device} (${serial})`}: ${h.model}, ${osName(s.device.platform, h.osVersion)}, screen ${screen.w}x${screen.h}` +
             `${s.device.lastStartWasCold ? ' (agent started)' : ''}${s.appId ? `; app ${s.appId}` : ''}${note}`,

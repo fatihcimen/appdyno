@@ -2,7 +2,6 @@ import { join } from 'node:path';
 import {
   DeviceQueue,
   kindOf,
-  must,
   readState,
   reportProgress,
   stateDir,
@@ -17,6 +16,7 @@ import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
 import { endSession, leftHere, sweep, type Taken } from './leftovers.js';
+import { anotherDevice, letGo } from './replaced.js';
 import { inputGuard } from './apps-guard.js';
 import { APP_ID, byPerson, checkApp, checkLaunch, type Policy } from './policy.js';
 import { Session } from './session.js';
@@ -248,9 +248,11 @@ export class ServerContext {
    * goes on to launch.
    */
   async use(serial: string, app?: string, share = false, launching?: string): Promise<Session> {
+    const was = await this.openOn(serial);
     this.checkDevice(serial);
+    app ??= was.app;
     if (app) checkApp(this.policy, app);
-    let s = this.sessions.get(serial);
+    let s = was.s;
     if (!s) {
       // calls come in parallel: the first opens the device, the others wait for it
       const start =
@@ -290,6 +292,7 @@ export class ServerContext {
       inputGuard(this.policy),
     );
     if (saved) s.carryOver(saved);
+    this.identities.set(serial, await s.device.identity?.().catch(() => undefined));
     this.sessions.set(serial, s);
     if (owner) this.leftovers.set(serial, await sweep(this, s));
     return s;
@@ -297,6 +300,26 @@ export class ServerContext {
 
   /** What the start of a session put back or could not, by device. */
   readonly leftovers = new Map<string, Taken>();
+
+  /** The device each session opened on, as `Device.identity` says it. */
+  private readonly identities = new Map<string, string | undefined>();
+
+  /**
+   * The session of `serial`, while the device behind the serial is the one it opened on. Another one's session goes, as
+   * an AVD's booted on the port of one that ended: nothing of it is this device's, and its app is the next one's.
+   */
+  private async openOn(serial: string): Promise<{ s?: Session; app?: string }> {
+    const s = this.sessions.get(serial);
+    const was = this.identities.get(serial);
+    const now = s && (await anotherDevice(s, was));
+    if (!s || !now || was === undefined) return { s };
+    this.sessions.delete(serial);
+    this.leftovers.delete(serial);
+    // let in by an AVD's name, which the device behind the serial no longer has
+    this.allowedAs.delete(serial);
+    await letGo(this, s, was, now);
+    return { ...(s.appId && { app: s.appId }) };
+  }
 
   /** Who holds a device, when this server keeps to claims. */
   heldBy(serial: string) {
@@ -359,10 +382,10 @@ export class ServerContext {
 
   /** The session of `serial`, else the default device (the configured one, or the only allowed one). */
   async session(serial?: string, launching?: string): Promise<Session> {
-    if (serial) return this.sessions.get(serial) ?? this.use(serial, undefined, false, launching);
-    if (this.currentSerial)
-      return must(this.sessions.get(this.currentSerial), 'the selected session');
-    return this.use(await this.defaultSerial(), undefined, false, launching);
+    const on = serial ?? this.currentSerial;
+    if (on === undefined) return this.use(await this.defaultSerial(), undefined, false, launching);
+    const { s, app } = await this.openOn(on);
+    return s ?? this.use(on, app, false, launching);
   }
 
   /** The device a call means when it names none. Opens nothing. */

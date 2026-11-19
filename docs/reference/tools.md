@@ -763,6 +763,8 @@ With no device selected and more than one this server may drive, a call that nee
 
 A `shutdown` of the selected device ends the session on it and what its apps held in memory, and asks no one, as nothing the device keeps on its disk goes: its progress says so before it begins, and its answer once it is done. What the session changed goes back first, as at the session's end, while the device still answers: dark mode, text size, animations, the rotation a turn set and the rest, and the answer names each, or what could not go back. There is no reboot: a `shutdown` and a `boot` are two calls, as [SECURITY.md](../../SECURITY.md) has it.
 
+An emulator ended some other way, and another AVD booted on its port, answers to the same serial. The first call after that finds it by the AVD's name, as the agent's connection went with the emulator, says so, and opens a session afresh: that device's Android and screen, its own agent, the allow list matched again by its own names, and the app the last session had selected. What the last session changed on the device that was there is not put back on this one, and the answer names it. The same AVD booted again keeps its session. The check costs an `adb` read, only on a call that finds the agent's connection gone.
+
 With `--allow-devices`, `create` is off, and the hub's New Simulator with it, refused before anything is made: a new simulator's UDID is not known before it is made, so no list names it, and a server that made one only to refuse it left it behind. One made that does not start says how a person removes it, as nothing here deletes one.
 
 ## Reaching a phone
