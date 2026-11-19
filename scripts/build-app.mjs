@@ -198,7 +198,7 @@ function icon() {
 /**
  * No Dock icon of its own: a window's process takes one, and gives it up with the window. `folder`: a bundle's name
  * where it is not the app's. macOS shows a bundle by its folder's name where that differs from the name the bundle
- * gives, as one a person renamed: the menu bar read "Appdyno Window" over a device's window. A display name localized
+ * gives, as one a person renamed: a device's window read "Appdyno Window". A display name localized
  * from one that is the folder's is taken whole, as the system's own apps' are.
  * @param {string} to
  * @param {string} identifier

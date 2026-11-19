@@ -140,11 +140,15 @@ async function step(name, fn) {
   }
 }
 
-/** The windows of the window server, read with no permission: an off-screen one is in the list too. */
+/**
+ * The windows of the window server, read with no permission: an off-screen one is in the list too. Given a bundle, the
+ * name macOS shows it by, as Finder and the Dock do.
+ */
 const WINDOWS = `
 #import <CoreGraphics/CoreGraphics.h>
 #import <Foundation/Foundation.h>
-int main(void) {
+int main(int argc, char **argv) {
+  if (argc > 1) return printf("%s\\n", [NSFileManager.defaultManager displayNameAtPath:@(argv[1])].UTF8String) < 0;
   NSArray *all = CFBridgingRelease(CGWindowListCopyWindowInfo(kCGWindowListOptionAll, kCGNullWindowID));
   for (NSDictionary *w in all) {
     NSString *owner = w[(id)kCGWindowOwnerName];
@@ -169,7 +173,10 @@ function windowLister() {
     bin,
     source,
   ]);
-  return () => execFileSync(bin, { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  const list = () => execFileSync(bin, { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  /** @param {string} bundle */
+  list.named = (bundle) => execFileSync(bin, [bundle], { encoding: 'utf8' }).trim();
+  return list;
 }
 
 /** @param {string} pattern */
@@ -474,13 +481,13 @@ try {
     const apps = spawnSync('/usr/bin/lsappinfo', ['list'], { encoding: 'utf8' }).stdout;
     const kind = new RegExp(`pid = ${String(child.pid)} .*type="(\\w+)"`).exec(apps)?.[1];
     if (kind !== 'UIElement') throw new Error(`its type is ${String(kind)}`);
-    // the name the menu bar shows over the window, which was its folder's, "Appdyno Window"
-    const [pid = ''] = got.split(' ');
-    const name = spawnSync('/usr/bin/lsappinfo', ['info', '-only', 'name', pid], {
-      encoding: 'utf8',
-    }).stdout.trim();
-    if (name !== '"LSDisplayName"="Appdyno"') throw new Error(`its window's app is ${name}`);
-    return `${got} after ${ms} ms, named Appdyno, and no place in the Dock for the app itself`;
+    return `${got} after ${ms} ms, and no place in the Dock for the app itself`;
+  });
+  // a bundle whose folder's name is not its own is shown by the folder's, as one a person renamed: "Appdyno Window"
+  await step("the window's app is named Appdyno where macOS shows it", () => {
+    const name = windows.named(join(app, 'Contents/Helpers/Appdyno Window.app'));
+    if (name !== 'Appdyno') throw new Error(`it is named ${name}`);
+    return name;
   });
   await step('a double click: LaunchServices opens the bundle', async () => {
     await stopAll();
