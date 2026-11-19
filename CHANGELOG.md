@@ -14,7 +14,7 @@ appdyno 1.3.6 hides a secret that a flow holds as it is in all a test run writes
 
 ### Fixed
 
-- **A secret written in a flow as it is was in the test run's record, page and JUnit.** A value of `APPDYNO_SECRETS`, or one given for a flow's `secret`, that a step held as it is, as `type "the-password"` where `type "${PASSWORD}"` was hidden, was in the step's line in `run.json`, the run's page and JUnit, and in what `test merge` and `test share --zip` copy of them; in `run_flow` `run`'s answer; and in a measured flow's numbers, the names they are kept by and its lines. A file whose line did not parse had the line's value in its error, which `verdict.txt`, the pull request's text and the lines `appdyno test` prints showed too. It is now `•••` there, as everywhere else.
+- **A secret written in a flow as it is was in the test run's record, page and JUnit.** A value of `APPDYNO_SECRETS`, or one given for a flow's `secret`, that a step held as it is, as `type "the-password"` where `type "${PASSWORD}"` was hidden, was in the step's line in `run.json`, the run's page and JUnit, and in what `test merge` and `test share --zip` copy of them; in `run_flow` `run`'s answer; and in a measured flow's numbers, the names they are kept by and its lines. A file whose line did not parse had the line's value in its error, which `verdict.txt`, the pull request's text and the lines `appdyno test` prints showed too. It is now `•••` there, as everywhere else. If a run of such a flow was shared, change that secret, and write it in the flow as `${NAME}`.
 
 ## 1.3.5
 
