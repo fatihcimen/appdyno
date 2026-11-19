@@ -173,6 +173,8 @@ export function windowControls(
   session: () => WindowSession,
   measures: WindowMeasures,
   policy: Policy,
+  /** A stopped window's Try Again: its device's session opened anew, as choosing the device does. */
+  again?: () => Promise<unknown>,
 ) {
   let opened: Promise<unknown> | undefined;
   const note = (text: string) => session().tell({ op: 'note', text });
@@ -243,7 +245,10 @@ export function windowControls(
         return;
       }
       if (m.op !== 'control') return;
-      if (m.name === 'reconnect') session().askAgain();
+      // a stopped session asks nothing of its device again: what stopped it opens anew
+      if (m.name === 'reconnect')
+        if (session().status.state === 'stopped' && again) trying(again);
+        else session().askAgain();
       else if (m.name === 'record') trying(movie.record);
       else if (m.name === 'measureLaunch') trying(() => perf.measure(measures.launch));
       else if (m.name === 'measureScroll') trying(() => perf.measure(measures.scroll));

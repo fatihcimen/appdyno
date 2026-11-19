@@ -260,6 +260,24 @@ describe("a window's captures", () => {
     controls.onWindow({ op: 'control', name: 'reconnect' });
     expect(session.askAgain).toHaveBeenCalledOnce();
   });
+
+  it("opens a stopped window's device anew at its Try Again, where the stopped stream asks nothing", async () => {
+    const { session, measures, device } = fixture('ios');
+    const again = vi.fn(() => Promise.resolve());
+    const controls = windowControls(
+      device,
+      undefined,
+      () => session,
+      measures,
+      DEFAULT_POLICY,
+      again,
+    );
+    // stopped after ten tries, or by any other stop: the button stood there and did nothing
+    (session.status as { state: string }).state = 'stopped';
+    controls.onWindow({ op: 'control', name: 'reconnect' });
+    await vi.waitFor(() => expect(again).toHaveBeenCalledOnce());
+    expect(session.askAgain).not.toHaveBeenCalled();
+  });
 });
 
 describe("a window's live numbers", () => {
