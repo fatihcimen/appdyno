@@ -1,5 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -109,6 +116,22 @@ describe('runs that are already there', () => {
       execFileSync('/usr/bin/unzip', ['-Z1', zip], { encoding: 'utf8' }).trim().split('\n');
     const textIn = (zip: string, name: string) =>
       execFileSync('/usr/bin/unzip', ['-p', zip, name], { encoding: 'utf8' });
+
+    it('leave out every link in the folder, to a file or a folder, and say how many', async () => {
+      const elsewhere = join(dir, 'elsewhere');
+      mkdirSync(elsewhere);
+      writeFileSync(join(elsewhere, 'id_rsa'), 'PRIVATE KEY');
+      const run = await part(2, 2);
+      symlinkSync(join(elsewhere, 'id_rsa'), join(run, 'notes.txt'));
+      symlinkSync(elsewhere, join(run, device.serial, 'more'));
+      const packed = zipRun(run, join(dir, 'run.zip'));
+      expect(packed.links).toBe(2);
+      expect(namesIn(packed.file).filter((n) => /notes|more|id_rsa/.test(n))).toEqual([]);
+      const merged = mergeRuns([run], join(dir, 'merged'));
+      expect(merged.links).toBe(2);
+      expect(existsSync(join(dir, 'merged', 'notes.txt'))).toBe(false);
+      expect(existsSync(join(dir, 'merged', device.serial, 'more'))).toBe(false);
+    });
 
     it('say what the folder holds, a video first', async () => {
       const lines = shareLines(readRun(await part(2, 2, video)));

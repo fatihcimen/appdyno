@@ -187,7 +187,7 @@ This folder holds:
   41.0 MB. Listed secrets: 2.
 ```
 
-`--zip file` packs the folder into one file, and the folder itself is not changed. `--without video,logs,trees` leaves those kinds out of the copy, where `logs` are the log lines and the crash reports. The copy's page, record, verdict and JUnit are written again, so they name no file the copy lacks, and the page says what was left out. A folder that holds a video is not packed until you say `--without video` or `--with video`, because a video is not painted. `appdyno test` records no video itself: one is counted when something else put it in the folder.
+`--zip file` packs the folder into one file, and the folder itself is not changed. `--without video,logs,trees` leaves those kinds out of the copy, where `logs` are the log lines and the crash reports. The copy's page, record, verdict and JUnit are written again, so they name no file the copy lacks, and the page says what was left out. A folder that holds a video is not packed until you say `--without video` or `--with video`, because a video is not painted. `appdyno test` records no video itself: one is counted when something else put it in the folder. Neither `--zip` nor `appdyno test merge` takes a link it finds in a run's folder, to a file or a folder, as what a link leads to may be any file of this Mac: each says how many it left out.
 
 `appdyno test comment <dir>` writes `pr.md` again from the folder's `run.json`, or to the file `--out` names.
 

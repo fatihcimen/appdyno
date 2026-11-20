@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import {
@@ -31,12 +31,28 @@ export function readRun(dir: string): RunRecord {
   return read.data;
 }
 
-/** A run's folder into another, the files written from the record aside, and those `skip` names. */
-const copyRun = (from: string, to: string, skip: (file: string) => boolean = () => false) =>
+/**
+ * A run's folder into another, the files written from the record aside, those `skip` names, and every link in it: what
+ * a link leads to may be any file of this Mac, and is no part of the run. How many links it left out.
+ */
+function copyRun(from: string, to: string, skip: (file: string) => boolean = () => false) {
+  let links = 0;
   cpSync(from, to, {
     recursive: true,
-    filter: (file) => !(WRITTEN.includes(relative(from, file)) || skip(file)),
+    filter: (file) => {
+      // the folder named is the one a person chose, a link to it or not
+      if (file !== from && lstatSync(file).isSymbolicLink()) return (links++, false);
+      return !(WRITTEN.includes(relative(from, file)) || skip(file));
+    },
   });
+  return links;
+}
+
+/** What a copy says of the links it left out, if any. */
+export const linksLine = (links: number) =>
+  links > 0
+    ? `left out ${String(links)} link${links === 1 ? '' : 's'}: what a link leads to may be any file of this Mac, and is no part of the run`
+    : undefined;
 
 /**
  * Several runs' folders as one, in `out`: lanes of one run or shards of one suite. Their files are copied, and one
@@ -55,13 +71,14 @@ export function mergeRuns(
     if (e instanceof MergeError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
     throw e;
   }
-  for (const dir of dirs) if (resolve(dir) !== resolve(out)) copyRun(dir, out);
+  let links = 0;
+  for (const dir of dirs) if (resolve(dir) !== resolve(out)) links += copyRun(dir, out);
   const record = {
     ...merged,
     command: ['appdyno', 'test', 'merge', ...dirs, '--out', out],
     contents: contentsOf(out, merged.cases, merged.contents.secretsListed),
   };
-  return { record, ...writeRun(out, record, o) };
+  return { record, links, ...writeRun(out, record, o) };
 }
 
 /** The kinds a copy can be made without, by the kinds of file each takes away and the evidence that named them. */
@@ -108,7 +125,7 @@ export function zipRun(dir: string, file: string, o: { with?: string; without?: 
   const gone = new Set(without.flatMap((k) => LEAVES[k]?.evidence ?? []));
   const copy = mkdtempSync(join(tmpdir(), 'appdyno-share-'));
   try {
-    copyRun(dir, copy, (f) => left.some((kind) => kindOf(f) === kind));
+    const links = copyRun(dir, copy, (f) => left.some((kind) => kindOf(f) === kind));
     const cases = r.cases.map((c) => ({
       ...c,
       attempts: c.attempts.map((a) => ({
@@ -127,7 +144,7 @@ export function zipRun(dir: string, file: string, o: { with?: string; without?: 
     const to = resolve(file);
     rmSync(to, { force: true });
     execFileSync('/usr/bin/zip', ['-r', '-q', to, '.'], { cwd: copy });
-    return { file: to, contents };
+    return { file: to, contents, links };
   } finally {
     rmSync(copy, { recursive: true, force: true });
   }

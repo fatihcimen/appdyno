@@ -8,6 +8,7 @@ import {
   flowsFor,
   flowsTagged,
   JOURNEY_ITERATIONS,
+  linksLine,
   mergeRuns,
   paramsOf,
   readRun,
@@ -74,12 +75,14 @@ const OF_RUNS: Record<string, (rest: string[], err: (line: string) => void) => n
       err(usage('test merge'));
       return 2;
     }
-    const { record, page } = mergeRuns(positionals, values.out, {
+    const { record, page, links } = mergeRuns(positionals, values.out, {
       ...(values['allow-mixed'] && { allowMixed: true }),
       ...(values.junit && { junit: values.junit }),
       ...(values['pr-body'] && { prBody: values['pr-body'] }),
     });
     console.log(readFileSync(join(values.out, 'verdict.txt'), 'utf8').trimEnd());
+    const left = linksLine(links);
+    if (left) console.log(left);
     console.log(`report: ${String(page)}`);
     return record.verdict === 'PASS' ? 0 : 1;
   },
@@ -106,6 +109,8 @@ const OF_RUNS: Record<string, (rest: string[], err: (line: string) => void) => n
       ...(values.without && { without: values.without }),
     });
     console.log(shareLines({ ...readRun(dir), contents: packed.contents }).join('\n'));
+    const left = linksLine(packed.links);
+    if (left) console.log(left);
     console.log(`packed in ${packed.file}`);
     return 0;
   },

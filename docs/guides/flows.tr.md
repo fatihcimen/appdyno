@@ -187,7 +187,7 @@ This folder holds:
   41.0 MB. Listed secrets: 2.
 ```
 
-`--zip file` klasörü tek bir dosyaya paketler; klasörün kendisi değişmez. `--without video,logs,trees` bu türleri kopyanın dışında bırakır; burada `logs`, log satırları ve crash raporlarıdır. Kopyanın sayfası, kaydı, kararı ve JUnit dosyası yeniden yazılır; böylece kopyada olmayan hiçbir dosyayı adlandırmazlar ve sayfa neyin dışarıda bırakıldığını söyler. Video tutan bir klasör, siz `--without video` ya da `--with video` diyene kadar paketlenmez, çünkü bir video boyanmaz. `appdyno test` kendisi video kaydetmez: bir video, başka bir şey onu klasöre koyduğunda sayılır.
+`--zip file` klasörü tek bir dosyaya paketler; klasörün kendisi değişmez. `--without video,logs,trees` bu türleri kopyanın dışında bırakır; burada `logs`, log satırları ve crash raporlarıdır. Kopyanın sayfası, kaydı, kararı ve JUnit dosyası yeniden yazılır; böylece kopyada olmayan hiçbir dosyayı adlandırmazlar ve sayfa neyin dışarıda bırakıldığını söyler. Video tutan bir klasör, siz `--without video` ya da `--with video` diyene kadar paketlenmez, çünkü bir video boyanmaz. `appdyno test` kendisi video kaydetmez: bir video, başka bir şey onu klasöre koyduğunda sayılır. Ne `--zip` ne de `appdyno test merge`, bir çalıştırmanın klasöründe bulduğu bir bağlantıyı, bir dosyaya ya da bir klasöre olsun, almaz, çünkü bir bağlantının götürdüğü yer bu Mac'in herhangi bir dosyası olabilir: her biri kaç tanesini dışarıda bıraktığını söyler.
 
 `appdyno test comment <dir>`, `pr.md` dosyasını klasörün `run.json` dosyasından yeniden yazar; `--out` bir dosya adlandırıyorsa oraya yazar.
 
