@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,8 +31,13 @@ describe('a recording that may have ended by itself', () => {
   });
 
   it('runs while its own process does, told from another by its command', async () => {
-    const child = spawn('sh', ['-c', 'sleep 30; : simctl io recordVideo'], { stdio: 'ignore' });
+    // asked once it is up, as a recorder is once it has said it started: /bin/sh hands itself over to bash first, an
+    // exec in which ps need not read the command line
+    const child = spawn('sh', ['-c', 'echo up; sleep 30; : simctl io recordVideo'], {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
     try {
+      await once(child.stdout, 'data');
       await expect(recorder.endedAt?.({ pid: Number(child.pid), file, log })).resolves.toBe(
         undefined,
       );
