@@ -219,12 +219,12 @@ static void checkDone(MVHub *hub) {
   MVCheck(@"done: and Open opens it", [hub.chosen isEqual:@"R5C"] && hub.placeShown == nil, hub.chosen);
   [hub pokeClick:@"noteClients"];
   MVPump(0.3);
-  MVCheck(@"done: AI Clients is one step away", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
+  MVCheck(@"done: AI Clients is one step away", [hub.placeShown isKindOfClass:MVClientsPane.class], NSStringFromClass(hub.placeShown.class));
   MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   [hub pokeClick:@"toClients"];
   MVPump(0.3);
-  MVCheck(@"done: from the guide too", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
+  MVCheck(@"done: from the guide too", [hub.placeShown isKindOfClass:MVClientsPane.class], NSStringFromClass(hub.placeShown.class));
   [hub show:@{@"devices": @[]}];
 }
 

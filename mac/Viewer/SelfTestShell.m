@@ -4,6 +4,25 @@
 #import "WindowParts.h"
 #import "Words.h"
 
+static const double kClickComesSeconds = 3;
+
+/// A click posted to this process comes back through the window server when it will: a slowed Mac's came up to 443 ms
+/// later and was handled up to 893 ms later, where a check after it pumped a fixed 0.1 or 0.3 s (a hosted runner's AI
+/// Clients from the guide, a loaded Mac's Inspector tab, each read as not done). A control's own tracking takes the
+/// mouse-up while its mouse-down is handled. One that never comes is given up, and what it would have done is not done.
+void MVClickHandled(int64_t tag) {
+  NSDate *end = [NSDate dateWithTimeIntervalSinceNow:kClickComesSeconds];
+  BOOL (^up)(NSEvent *) = ^BOOL(NSEvent *e) {
+    return e.type == NSEventTypeLeftMouseUp && CGEventGetIntegerValueField(e.CGEvent, kCGEventSourceUserData) == tag;
+  };
+  while (end.timeIntervalSinceNow > 0) {
+    NSEvent *e = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate dateWithTimeIntervalSinceNow:0.02] inMode:NSDefaultRunLoopMode dequeue:YES];
+    if (!e) continue;
+    [NSApp sendEvent:e];
+    if (up(e) || up(NSApp.currentEvent)) return;
+  }
+}
+
 void MVPump(double seconds) {
   NSDate *end = [NSDate dateWithTimeIntervalSinceNow:seconds];
   while (end.timeIntervalSinceNow > 0)

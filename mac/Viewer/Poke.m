@@ -10,16 +10,23 @@ void MVRealClick(NSWindow *window, NSPoint at) {
   // shortcut: the event record's window and the setter of its place in it are private, and a window kept off every screen
   // is under no pointer for the server to name. Tests only: if either goes, a click reaches nothing and the check fails.
   static const CGEventField kWindowOfEvent = 51;
+  static int64_t clicks;
+  int64_t tag = ++clicks;
   void (*setPlace)(CGEventRef, CGPoint) = dlsym(RTLD_DEFAULT, "CGEventSetWindowLocation");
   NSPoint onScreen = [window convertPointToScreen:at];
   CGPoint global = CGPointMake(onScreen.x, NSScreen.screens.firstObject.frame.size.height - onScreen.y);
   for (NSNumber *type in @[@(kCGEventLeftMouseDown), @(kCGEventLeftMouseUp)]) {
     CGEventRef click = CGEventCreateMouseEvent(NULL, type.intValue, global, kCGMouseButtonLeft);
     CGEventSetIntegerValueField(click, kWindowOfEvent, window.windowNumber);
+    // which click it is, for the self test to know when it has come through
+    CGEventSetIntegerValueField(click, kCGEventSourceUserData, tag);
     if (setPlace) setPlace(click, CGPointMake(at.x, window.frame.size.height - at.y));
     CGEventPostToPid(getpid(), click);
     CFRelease(click);
   }
+#ifdef MV_SELFTEST
+  MVClickHandled(tag);
+#endif
 }
 
 @implementation MVWindow (Poke)

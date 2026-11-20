@@ -144,6 +144,10 @@ CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark) CF_RETURNS_R
 
 /// A mouse's click at a point of a window, posted to this process as the window server would send it.
 void MVRealClick(NSWindow *window, NSPoint at);
+#ifdef MV_SELFTEST
+/// Lets the click `tag` names come through the window server and be handled; in the self test's build alone.
+void MVClickHandled(int64_t tag);
+#endif
 /// The same on a control, wherever it is scrolled to, and what the click landed on, for the parent.
 NSDictionary *MVClickControl(NSWindow *window, NSButton *_Nullable button, NSString *name);
 
