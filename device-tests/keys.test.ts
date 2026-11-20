@@ -156,6 +156,8 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-keys-')));
     await new Simctl().install(SIMULATOR, SIM_FIXTURE);
     o = opsOn(simulatorProvider(), SIMULATOR, APP);
+    // the runner's start here, in this budget: a hosted Mac took over 100 s for it, which the first case's 120 s ran out under
+    ok(await o.call('launch_app'));
   }, 300_000);
   afterAll(() => o.ctx.close());
   keysOf(() => o.call, macSyncsPasteboard);
