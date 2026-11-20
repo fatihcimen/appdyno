@@ -12,6 +12,8 @@
 - A flow run on the command line hides each value it took from the environment, as it does one from an env file. Before, it showed them in answers and reports.
 - A switch that an app gives as a row and a switch at one place (Flutter) is listed once, as the switch with its state. Before, an off switch read as a plain row.
 - `type_text` by a label that names both a text and its field types into the field. Before, it was refused as ambiguous.
+- Like-named elements with nothing around them to tell them apart say the ids the app gave them, in the screen list and in a refusal that lists several matches.
+- A row whose label is cut short no longer lists the text it already holds on a line of its own.
 
 ## 1.3.8
 

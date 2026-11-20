@@ -283,7 +283,7 @@ A whole screen in an answer folds what repeats.
 - A row named by the words inside it says a name that comes right after the same once; a value with no letter or of one character, as a score of 3 to 3, stays as many times as it is there.
 - Three or more like rows in a sequence share one header (`cell x=201 clickable: ref "label" y`).
 - Rows that only their context tells apart share one too, each with its context after its place (`button x=339 clickable: ref "label" y — context`, then `@d62s "Add" 137 — Product 35`).
-- A label that an element gives twice is shown once, and what tells two like elements apart, such as their place, is shown only when another line has the same name.
+- A label that an element gives twice is shown once, and what tells two like elements apart, such as their place, is shown only when another line has the same name. Like names with nothing around them to tell them apart say the ids the app gave them (`button "Aa" 606,1978 clickable — id=button_theme_dark`), in the list and in a refusal that lists several matches.
 
 Only the text is folded: `read_screen` with `selector`, selectors, refs, diffs, flows and `record_session` still reach every element. `raw: true` gives every element of the tree in the structured answer as well, with its rect and the index of its parent, as [the library](library.md) has it, and a ref it gives is one `tap_screen` takes.
 

@@ -1,4 +1,4 @@
-import { must, nearest, throwIfCancelled, reportProgress } from '@appdyno/core';
+import { must, throwIfCancelled, reportProgress } from '@appdyno/core';
 import {
   type FlowStep,
   type RunOptions,
@@ -237,9 +237,9 @@ export function flowRunner(
       // a wait that ran out fails as a check does, and a flow says it as the time it is
       if (st.action !== 'wait_for' || e.code !== 'CHECK_FAILED') throw e;
       const screen = await s.read();
-      const near = nearest(screen.list, st.selector?.text ?? st.selector?.id).map(steps.line);
+      const near = steps.offer(screen.list, st.selector?.text ?? st.selector?.id);
       throw new ToolError(
-        `${st.args.gone ? '' : overApp(s, screen, clean)}${st.args.gone ? 'still there' : 'not shown'} after ${String(st.args.timeoutMs ?? REPLAY_WAIT_MS)} ms${near.length > 0 ? `; nearest: ${near.join('; ')}` : ''}`,
+        `${st.args.gone ? '' : overApp(s, screen, clean)}${st.args.gone ? 'still there' : 'not shown'} after ${String(st.args.timeoutMs ?? REPLAY_WAIT_MS)} ms${near}`,
         'TIMEOUT',
       );
     });

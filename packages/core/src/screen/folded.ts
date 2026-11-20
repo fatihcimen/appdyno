@@ -23,7 +23,8 @@ const wordEdge = (c: string | undefined) => !c || !/[\p{L}\p{N}]/u.test(c);
 function holds(label: string, part: string) {
   const row = uncut(label);
   const own = uncut(part);
-  const cut = own !== part;
+  // a row cut short before the end of a part it holds has only how that part starts
+  const cut = own !== part || (row !== label && !row.includes(own));
   const at = row.indexOf(cut ? own.slice(0, MIN_OVERLAP) : own);
   // an edge counts only where a letter runs on into another: "[" is a part of "[b]"
   if (at < 0 || !(wordEdge(own[0]) || wordEdge(row[at - 1]))) return false;
@@ -178,13 +179,16 @@ export function renderFolded(
   const inside = insideRows(list);
   const rows = list.filter((e) => !inside.has(e));
   const named = (e: Pick<ScreenElement, 'role' | 'label'>) => `${e.role} ${e.label}`;
-  const names = rows.map(named);
   // a context tells apart what is shown together, and needs few words for that; a nameless element has
   // nothing else to go by. Redacted before it is cut, or part of a secret would stay
+  const twins = (e: ScreenElement) => rows.filter((o) => named(o) === named(e));
+  // like names with nothing around to tell them apart still differ by the ids the app gave them
   const context = (e: ScreenElement) =>
-    e.refContext && (!e.label || names.indexOf(named(e)) !== names.lastIndexOf(named(e)))
+    e.refContext && (!e.label || twins(e).length > 1)
       ? cutContext(clean(e.refContext))
-      : undefined;
+      : e.label && e.id && !e.refContext && new Set(twins(e).map((o) => o.id)).size > 1
+        ? `id=${asName(clean(e.id))}`
+        : undefined;
   const line = ({ refContext: _, ...bare }: ScreenElement, told: string | undefined) =>
     elementLine(told ? { ...bare, refContext: told } : bare, say);
   const lines = [

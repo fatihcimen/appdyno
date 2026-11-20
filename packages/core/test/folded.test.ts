@@ -204,6 +204,39 @@ describe('what repeats in an answer', () => {
     expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@b']);
   });
 
+  it('knows a short text whose end the row cut away', () => {
+    const list = [
+      row('@a', 'Show link previews Show a quick preview of articles when ta…', 100),
+      element(
+        '@b',
+        'text',
+        'Show a quick preview of articles when tapping on links.',
+        90,
+        inner({ y: 85 }),
+      ),
+      element('@c', 'text', 'Show a quick preview of something else.', 90, inner({ y: 85 })),
+      element('@d', 'text', 'tapping', 90, inner({ y: 85 })),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@b']);
+  });
+
+  it('tells like names with no context apart by their ids, and says no id where it tells nothing', () => {
+    const lines = renderFolded([
+      element('@a', 'button', 'Aa', 40, { id: 'theme_light' }),
+      element('@b', 'button', 'Aa', 40, { id: 'theme_dark', x: 300 }),
+      element('@c', 'button', 'Save', 80, { id: 'save' }),
+      element('@d', 'text', 'More', 90, { id: 'title' }),
+      element('@e', 'text', 'More', 95, { id: 'title' }),
+    ]).split('\n');
+    expect(lines.slice(1)).toEqual([
+      '@a button "Aa" 200,40 — id=theme_light',
+      '@b button "Aa" 300,40 — id=theme_dark',
+      '@c button "Save" 200,80',
+      '@d text "More" 200,90',
+      '@e text "More" 200,95',
+    ]);
+  });
+
   it('leaves out what is inside a text field and its own name says', () => {
     const list = [
       element('@f', 'textField', 'Search', 100),

@@ -283,7 +283,7 @@ Bir yanıttaki bütün bir ekran, tekrar edeni katlar.
 - İçindeki sözlerle adlanan bir satır, aynısının hemen ardından gelen bir adı bir kez söyler; harfsiz ya da tek karakterli bir değer, 3'e 3 biten bir skor gibi, kaç kez varsa o kadar kalır.
 - Art arda gelen, birbirine benzeyen üç ya da daha fazla satır tek bir başlığı paylaşır (`cell x=201 clickable: ref "label" y`).
 - Yalnızca bağlamlarının ayırdığı satırlar da bir başlığı paylaşır; her biri bağlamını yerinden sonra taşır (`button x=339 clickable: ref "label" y — context`, ardından `@d62s "Add" 137 — Product 35`).
-- Bir öğenin iki kez verdiği etiket bir kez gösterilir; benzer iki öğeyi ayıran bilgi, örneğin yerleri, yalnızca başka bir satır aynı adı taşıdığında gösterilir.
+- Bir öğenin iki kez verdiği etiket bir kez gösterilir; benzer iki öğeyi ayıran bilgi, örneğin yerleri, yalnızca başka bir satır aynı adı taşıdığında gösterilir. Çevrelerinde onları ayıracak bir şey olmayan aynı adlı öğeler, uygulamanın onlara verdiği id'leri söyler (`button "Aa" 606,1978 clickable — id=button_theme_dark`); listede ve birkaç eşleşmeyi sayan bir rette.
 
 Yalnızca metin katlanır: `selector` ile `read_screen`, seçiciler, ref'ler, diff'ler, flow'lar ve `record_session` yine her öğeye ulaşır. `raw: true`, yapılandırılmış yanıtta ağacın her öğesini de dikdörtgeni ve üst öğesinin index'iyle verir, [kütüphane](library.tr.md) bunu anlatır; verdiği bir ref `tap_screen`'in aldığı bir ref'tir.
 

@@ -62,7 +62,7 @@ export function checksFor({
 }: {
   ctx: ServerContext;
   clean: (s: string) => string;
-  line: (e: ScreenElement) => string;
+  line: (e: ScreenElement, among?: ScreenElement[]) => string;
   offer: (list: ScreenElement[], want?: string) => string;
 }) {
   /** Whether a check holds on this screen, and why or why not in words. */
@@ -80,14 +80,20 @@ export function checksFor({
         ? { pass: false, why: missing, none: true }
         : {
             pass: false,
-            why: `${what} is on the screen: ${hits.slice(0, 5).map(line).join('; ')}`,
+            why: `${what} is on the screen: ${hits
+              .slice(0, 5)
+              .map((e) => line(e, hits))
+              .join('; ')}`,
           };
     }
     if (hits.length === 0) return { pass: false, why: missing, none: true };
     if (hits.length > 1)
       return {
         pass: false,
-        why: `${hits.length} elements match ${what}: ${hits.slice(0, 5).map(line).join('; ')}`,
+        why: `${hits.length} elements match ${what}: ${hits
+          .slice(0, 5)
+          .map((e) => line(e, hits))
+          .join('; ')}`,
       };
     const at = attributesOf(screen.elements, must(hits[0], 'the one match'));
     if (a.check === 'text') {

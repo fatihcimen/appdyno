@@ -37,7 +37,7 @@ export async function checkHere(
   s: Session,
   st: FlowStep,
   clean: (text: string) => string,
-  line: (e: ScreenElement) => string,
+  line: (e: ScreenElement, among?: ScreenElement[]) => string,
 ) {
   const a = st.args;
   const ms = (a.timeoutMs as number | undefined) ?? REPLAY_WAIT_MS;
@@ -49,7 +49,14 @@ export async function checkHere(
     if (countFits(a, hits.length)) return;
     throw new ToolError(
       clean(
-        `${hits.length} elements match ${selectorLine(sel)}, not ${countWanted(a)}${hits.length > 0 ? `: ${hits.slice(0, 5).map(line).join('; ')}` : ''}`,
+        `${hits.length} elements match ${selectorLine(sel)}, not ${countWanted(a)}${
+          hits.length > 0
+            ? `: ${hits
+                .slice(0, 5)
+                .map((e) => line(e, hits))
+                .join('; ')}`
+            : ''
+        }`,
       ),
       'CHECK_FAILED',
     );

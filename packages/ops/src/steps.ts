@@ -437,6 +437,7 @@ export function stepsFor(
     waitFor,
     holdsStill,
     line,
+    offer,
     missing,
   };
 }

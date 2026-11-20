@@ -138,6 +138,37 @@ describe('targeting', () => {
     }),
   );
 
+  it('names the id of each of several matches no row tells apart', async () => {
+    withScreen('themes', [
+      {
+        c: 'android.widget.Button',
+        t: 'Aa',
+        id: 'dev.app:id/theme_light',
+        b: [0, 100, 100, 200],
+        f: 19,
+      },
+      {
+        c: 'android.widget.Button',
+        t: 'Aa',
+        id: 'dev.app:id/theme_dark',
+        b: [200, 100, 300, 200],
+        f: 19,
+      },
+    ]);
+    const d = new FakeDevice();
+    d.screen = 'themes';
+    const { call } = await connect(d);
+    const many = await call('tap_screen', { selector: { text: 'Aa' } });
+    expect(many.text).toMatch(
+      /^AMBIGUOUS: 2 elements match text="Aa": @[\w-]+ button "Aa" 50,150 — id=theme_light; @[\w-]+ button "Aa" 250,150 — id=theme_dark \(/,
+    );
+    expect((await call('read_screen')).text).toContain(
+      'button "Aa" 250,150 clickable — id=theme_dark',
+    );
+    await call('tap_screen', { selector: { id: 'theme_dark' } });
+    expect(act(d).at(-1)).toMatchObject({ x: 250, y: 150 });
+  });
+
   it('names the row each of many matches is in, ten of them, and how many more', async () => {
     withScreen(
       'products',

@@ -12,6 +12,8 @@
 - Komut satırında çalışan bir flow, ortamdan aldığı her değeri bir ortam dosyasından aldığı gibi gizler; önceden onları yanıtlarda ve raporlarda gösteriyordu.
 - Bir uygulamanın aynı yerde satır ve switch olarak verdiği anahtar (Flutter) bir kez, durumu ile switch olarak listelenir; önceden kapalı bir anahtar düz bir satır olarak okunuyordu.
 - Hem bir metni hem de alanını adlandıran etiketle `type_text` alana yazar; önceden belirsiz diye reddediliyordu.
+- Çevrelerinde onları ayıracak bir şey olmayan aynı adlı öğeler, uygulamanın verdiği id'leri söyler; ekran listesinde ve birkaç eşleşmeyi sayan bir rette.
+- Etiketi kısaltılmış bir satır, zaten içerdiği metni ayrı bir satırda yeniden listelemez.
 
 ## 1.3.8
 

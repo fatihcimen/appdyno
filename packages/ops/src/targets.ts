@@ -38,16 +38,25 @@ export const NO_MATCH_WAIT_MS = 1_500;
 /** How a step names elements: by its words made safe, one to a line, and the nearest to what it wanted. */
 export type Words = {
   clean: (s: string) => string;
-  line: (e: ScreenElement) => string;
+  /** `among`: what it is listed with, where like names with no row to tell them apart say their ids. */
+  line: (e: ScreenElement, among?: ScreenElement[]) => string;
   offer: (list: ScreenElement[], want?: string) => string;
 };
 
 export function wordsOf(clean: (s: string) => string): Words {
   // what tells like elements apart is the row each is in, where the list has one
-  const line = (e: ScreenElement) =>
-    `${e.ref} ${asName(e.role)} ${quoted(e.label ? shownLabel(e, clean) : clean(e.id ?? ''))} ${e.x},${e.y}${e.refContext ? ` — ${onLine(cutContext(clean(e.refContext)))}` : ''}`;
+  const twin = (e: ScreenElement, o: ScreenElement) =>
+    o.role === e.role && o.label === e.label && o.id !== e.id;
+  const line = (e: ScreenElement, among: ScreenElement[] = []) =>
+    `${e.ref} ${asName(e.role)} ${quoted(e.label ? shownLabel(e, clean) : clean(e.id ?? ''))} ${e.x},${e.y}${
+      e.refContext
+        ? ` — ${onLine(cutContext(clean(e.refContext)))}`
+        : e.label && e.id && among.some((o) => twin(e, o))
+          ? ` — id=${asName(clean(e.id))}`
+          : ''
+    }`;
   const offer = (list: ScreenElement[], want?: string) => {
-    const near = nearest(list, want).map(line);
+    const near = nearest(list, want).map((e) => line(e));
     return near.length > 0 ? `; nearest: ${near.join('; ')}` : '';
   };
   return { clean, line, offer };
@@ -63,7 +72,10 @@ export function pick(
   line: Words['line'],
   sent = false,
 ): ScreenElement {
-  const listed = `${hits.slice(0, MANY_SHOWN).map(line).join('; ')}${hits.length > MANY_SHOWN ? `; and ${hits.length - MANY_SHOWN} more` : ''}`;
+  const listed = `${hits
+    .slice(0, MANY_SHOWN)
+    .map((e) => line(e, hits))
+    .join('; ')}${hits.length > MANY_SHOWN ? `; and ${hits.length - MANY_SHOWN} more` : ''}`;
   const { index, ...words } = sel;
   if (index !== undefined && index >= hits.length)
     throw new ToolError(
