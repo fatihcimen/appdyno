@@ -14,10 +14,14 @@ export const Owner = z.object({
 });
 export type Owner = z.infer<typeof Owner>;
 
-/** When a process started, as `ps` says it; empty when it has gone. */
+/**
+ * When a process started, as `ps` says it; empty when it has gone. In one language whoever asks: `ps` writes the day and
+ * the month in the asker's, and a window opened from the Dock has none where a terminal has the person's.
+ */
 export const startOf = (pid: number) => {
   try {
     return execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
+      env: { ...process.env, LC_ALL: 'C' },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();

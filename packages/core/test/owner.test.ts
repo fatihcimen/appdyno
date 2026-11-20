@@ -34,6 +34,18 @@ vi.mock('node:fs', async (original) => {
 const file = () => join(mkdtempSync(join(tmpdir(), 'appdyno-owner-')), 'a', 'held.json');
 const busy = (o: { tool: string }) => new Error(`held by ${o.tool}`);
 
+describe('a process that runs', () => {
+  it('is alive to one that asks in another language', () => {
+    const here = thisOwner('one');
+    vi.stubEnv('LC_ALL', 'tr_TR.UTF-8');
+    try {
+      expect(isAlive(here)).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
 describe('one at a time', () => {
   it('refuses a second holder in this process, and frees it at the end', async () => {
     const f = file();
