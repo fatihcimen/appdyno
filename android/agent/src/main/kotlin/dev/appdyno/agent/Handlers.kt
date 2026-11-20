@@ -136,11 +136,8 @@ class Handlers(private val automation: Automation, private val token: String) {
     private fun textSet(r: TextRequest, job: Job): Reply {
         settling.beforeAction()
         val then = settling.appWindows()
-        val cancelled = { job.cancelled }
-        val tapAt = r.at?.let { (x, y) -> { input.tap(x, y, cancelled) } }
         job.goOn()
-        tapAt?.invoke()
-        val o = text.set(r.text, r.replace, r.focusTimeoutMs, cancelled, tapAt, r.at)
+        val o = text.set(r.text, r.replace, r.focusTimeoutMs, { job.cancelled }, r.at)
         val submits = TextPlan.submits(r.submit, o.verified)
         if (submits) {
             job.goOn()

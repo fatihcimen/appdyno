@@ -15,6 +15,7 @@
 - Like-named elements with nothing around them to tell them apart say the ids the app gave them, in the screen list and in a refusal that lists several matches.
 - A row whose label is cut short no longer lists the text it already holds on a line of its own.
 - On Android, typing at a point that is on no field, as a Flutter note's page, no longer goes into the screen's one field, its title, answered as typed: the field must be at the touch, or the touch inside the field's own small holder, as a text-input layout; else it is refused with `NO_FOCUS`.
+- On Android, a second `type_text` in Chrome goes into the field it touches, where Chrome's late word of the new focus had the text go into the field typed before, answered as typed.
 
 ## 1.3.8
 

@@ -15,6 +15,7 @@
 - Çevrelerinde onları ayıracak bir şey olmayan aynı adlı öğeler, uygulamanın verdiği id'leri söyler; ekran listesinde ve birkaç eşleşmeyi sayan bir rette.
 - Etiketi kısaltılmış bir satır, zaten içerdiği metni ayrı bir satırda yeniden listelemez.
 - Android'de alan olmayan bir noktaya yazma, bir Flutter notunun sayfası gibi, artık ekranın tek alanına, başlığına yazılıp yazıldı denmiyor: alan dokunuşun olduğu yerde olmalı ya da dokunuş, bir text-input layout gibi, alanın kendi küçük kabının içinde olmalı; değilse `NO_FOCUS` ile reddedilir.
+- Android'de Chrome'da ikinci bir `type_text` dokunduğu alana yazar; Chrome yeni odağı geç bildirdiği için metin daha önce yazılan alana giriyor ve yazıldı deniyordu.
 
 ## 1.3.8
 

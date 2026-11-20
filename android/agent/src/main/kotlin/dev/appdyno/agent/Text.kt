@@ -1,6 +1,7 @@
 package dev.appdyno.agent
 
 import android.content.ClipData
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
@@ -91,6 +92,35 @@ object EditablePick {
     }
 }
 
+/** The field a typing at a tapped point goes into, through the waits of `TextInput.set` (pure, unit tested). */
+object TapFocus {
+    /**
+     * The field with the focus, waited for (`wait`) until a third of `timeoutMs` from `start`; then the field at the point,
+     * `pick`, asked for it (`focus`) and waited for until two thirds; then the point tapped again (`retap`) and waited for
+     * to the end. `old`, the field that had the focus before the tap where the tap was not on it, is passed over: still
+     * focused after the tap, it is a focus the app has not moved yet (Chrome tells a new one late), and the text would go
+     * into the field typed before. It is meant only where `pick` names it, as a layout's helper text names its field.
+     */
+    fun <F : Any> field(
+        old: F?,
+        start: Long,
+        timeoutMs: Long,
+        wait: (deadline: Long, meant: (F) -> Boolean) -> F?,
+        pick: () -> F?,
+        focus: (F) -> Unit,
+        retap: () -> Unit,
+    ): F? {
+        val meant = { f: F -> f != old }
+        wait(start + timeoutMs / 3, meant)?.let { return it }
+        val p = pick()
+        if (p != null && p == old) return p
+        p?.let(focus)
+        wait(start + timeoutMs * 2 / 3, meant)?.let { return it }
+        retap()
+        return wait(start + timeoutMs, meant)
+    }
+}
+
 /** The device clipboard, read and written as the shell package (allowed in the background). */
 class Clipboard {
     private val service: Any by lazy { Platform.asInterface("android.content.IClipboard\$Stub", Platform.service("clipboard")) }
@@ -116,31 +146,32 @@ class Clipboard {
  */
 class TextInput(private val automation: Automation, private val input: Input, private val clipboard: Clipboard) {
     /**
-     * `at`: the point the caller tapped. When no field takes the focus from the tap (a container such as a
-     * Material text-input layout whose middle is not its text field, a tap lost while the screen moved),
-     * the one editable field under that point is focused through accessibility, then the point is tapped
-     * again (`retap`).
+     * `at`: the point to tap first, and type into the field it focuses. When no field takes the focus from the tap (a
+     * container such as a Material text-input layout whose middle is not its text field, a tap lost while the screen
+     * moved), the one editable field under that point is focused through accessibility, then the point is tapped again
+     * (TapFocus).
      */
-    fun set(
-        text: String,
-        replace: Boolean,
-        focusTimeoutMs: Long,
-        cancelled: () -> Boolean,
-        retap: (() -> Unit)? = null,
-        at: Pair<Float, Float>? = null,
-    ): TextOutcome {
+    fun set(text: String, replace: Boolean, focusTimeoutMs: Long, cancelled: () -> Boolean, at: Pair<Float, Float>? = null): TextOutcome {
+        // by its box before the tap: the page may move up for the keyboard after it
+        val old = at?.let { (x, y) -> focused()?.takeUnless { f -> Rect().also(f::getBoundsInScreen).contains(x.toInt(), y.toInt()) } }
+        val tap = { at?.let { (x, y) -> input.tap(x, y, cancelled) } }
+        tap()
         val start = SystemClock.uptimeMillis()
-        var field = if (at != null) waitFocus(start + focusTimeoutMs / 3, cancelled) else null
-        if (field == null && at != null) {
-            editableAt(at.first, at.second)?.let { f ->
-                f.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-                f.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            }
-            field = waitFocus(start + focusTimeoutMs * 2 / 3, cancelled)
-        }
-        if (field == null) {
-            retap?.invoke()
-            field = waitFocus(start + focusTimeoutMs, cancelled)
+        val field = if (at == null) {
+            waitFocus(start + focusTimeoutMs, cancelled) { true }
+        } else {
+            TapFocus.field(
+                old,
+                start,
+                focusTimeoutMs,
+                { deadline, meant -> waitFocus(deadline, cancelled, meant) },
+                { editableAt(at.first, at.second) },
+                { f ->
+                    f.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                    f.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                },
+                { tap() },
+            )
         }
         val focusMs = SystemClock.uptimeMillis() - start
         if (field == null) {
@@ -265,7 +296,7 @@ class TextInput(private val automation: Automation, private val input: Input, pr
             }
             i++
         }
-        val boxes = nodes.map { n -> android.graphics.Rect().also { n.getBoundsInScreen(it) } }
+        val boxes = nodes.map { n -> Rect().also { n.getBoundsInScreen(it) } }
         val pick = EditablePick.under(
             boxes.map { intArrayOf(it.left, it.top, it.right, it.bottom) },
             parents,
@@ -300,14 +331,17 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         return out.sortedByDescending { it.isFocused }
     }
 
-    private fun waitFocus(deadline: Long, cancelled: () -> Boolean): AccessibilityNodeInfo? = FocusWait.until(deadline, cancelled, SystemClock::uptimeMillis, Thread::sleep) { polls ->
+    /** The field with the focus, once it is one `meant` (FocusWait). */
+    private fun waitFocus(deadline: Long, cancelled: () -> Boolean, meant: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? = FocusWait.until(deadline, cancelled, SystemClock::uptimeMillis, Thread::sleep) { polls ->
         // the cached answer may predate the tap's focus change
         if (polls % 3 == 0) automation.clearCache()
-        automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable }
-            // a toolkit that draws its own fields (Compose) reports the host view as the input focus, and a sheet
-            // that just opened is a window of its own: the focused editable node of any window
-            ?: editables().firstOrNull { it.isFocused }
+        focused()?.takeIf(meant)
     }
+
+    private fun focused(): AccessibilityNodeInfo? = automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable }
+        // a toolkit that draws its own fields (Compose) reports the host view as the input focus, and a sheet that just
+        // opened is a window of its own: the focused editable node of any window
+        ?: editables().firstOrNull { it.isFocused }
 
     companion object {
         const val TAG = "appdyno"
