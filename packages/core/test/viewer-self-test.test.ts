@@ -29,9 +29,13 @@ describe('the viewer, compiled by its first-use path', () => {
       (failed: unknown) => {
         // what execFile rejects with: the error, with what the binary said
         const e = failed as { stdout: string; stderr: string; code?: number; signal?: string };
+        // past its verdict the lines say which check failed: what stderr held last was AppKit's, and read as the cause
+        const verdict = e.stdout.includes('"selftest":"done"');
         return {
           stdout: e.stdout,
-          ended: `it ended by ${e.signal ?? `exit ${String(e.code)}`}: ${e.stderr.slice(-1_000)}`,
+          ended: verdict
+            ? ''
+            : `it ended by ${e.signal ?? `exit ${String(e.code)}`}: ${e.stderr.slice(-1_000)}`,
         };
       },
     );
