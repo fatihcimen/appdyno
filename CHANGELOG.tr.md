@@ -4,6 +4,11 @@
 
 ## Yayımlanmamış
 
+### Düzeltilenler
+
+- Xcode 27'nin Device Hub'ı ya da menü çubuğu öğesi veya `devicectl device pasteboard sync-with-host` çalışırken bir simulator'ın panosuna dokunulmaz, çünkü her biri onu bu Mac'inkiyle eşitler: onu okumak, ona yazmak, Command-C, Command-X ve Command-V ve bir pencereden gelen, tuşu olmayan harfler, neyin kapatılacağı söylenerek `UNSUPPORTED` ile reddedilir. Önceden yalnızca Simulator.app sayılıyordu ve Xcode 27 onu içermiyor; bu yüzden `set_device` `clipboard` Mac'in panosunu ele verebilir ya da değiştirebilirdi.
+- Bu Mac'te penceresi olan bir emulator çalışırken bir emulator'ın panosuna dokunulmaz, çünkü böyle bir emulator panosunu Mac'inkiyle paylaşır: onu okumak, ona yazmak ve C, X ya da V ile birlikte Command ya da Control, `-no-window` ile başlatılan birinin hiçbir şey paylaşmadığı söylenerek `UNSUPPORTED` ile reddedilir. Bir emulator'da, bir alanın ayarlanarak almadığı metin tuş vuruşlarıyla girilir, hiçbir zaman yapıştırılmaz. Önceden `set_device` `clipboard` Mac'in panosunu okuyabilir ya da değiştirebilirdi; yazılan metin, bir parola da, oraya düşebilirdi.
+
 ## 1.3.9
 
 appdyno 1.3.9, araç çağrılarını kendi durum dosyalarından uzak tutar ve okumalarını yazdıkları klasörlerle sınırlar; Android'de dokunuşun üzerinde olmadığı bir alana artık yazmaz ve yavaş bir UI automation bağlantısından sonra takılı kalmaz; bir Flutter anahtarını, aynı adlı bir denetimi ve etiketiyle adlanan bir alanı oldukları gibi okur.

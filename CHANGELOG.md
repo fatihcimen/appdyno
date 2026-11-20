@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- A simulator's clipboard is left alone while Xcode 27's Device Hub or its menu bar extra runs, or `devicectl device pasteboard sync-with-host`, as each syncs it with this Mac's: a read of it, a write to it, Command-C, Command-X and Command-V, and letters with no key from a window are refused `UNSUPPORTED`, saying what to quit. Before, only Simulator.app counted, and Xcode 27 ships none, so `set_device` `clipboard` could hand out the Mac's clipboard or replace it.
+- An emulator's clipboard is left alone while an emulator with a window runs on this Mac, as such an emulator shares its clipboard with the Mac's: a read of it, a write to it, and Command or Control with C, X or V are refused `UNSUPPORTED`, saying that one started with `-no-window` shares none. On an emulator, text a field does not take as set goes in as keys, never by a paste. Before, `set_device` `clipboard` could read or replace the Mac's clipboard, and typed text, a password too, could land on it.
+
 ## 1.3.9
 
 appdyno 1.3.9 keeps tool calls out of its own state files and keeps their reads in the folders they write in; on Android it no longer types into a field the touch is not on, nor stays stuck after a slow UI automation connect; and it reads a Flutter switch, a like-named control and a field named by its label as they are.
