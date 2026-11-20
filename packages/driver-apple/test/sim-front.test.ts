@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { inCall, TRANSITION_MS } from '@appdyno/core';
+import { inCall, TIMEOUTS, TRANSITION_MS } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/index.js';
 import { IosDevice } from '../src/device.js';
@@ -226,6 +226,35 @@ describe('an app just opened on a simulator', () => {
       runner.mockRestore();
       vi.useRealTimers();
     }
+  });
+
+  /** A launch by a runner that reads, or by the helper: each call to the runner, with the time it was given. */
+  const launchedBy = async (reads: boolean) => {
+    const asked: [string, number][] = [];
+    const call = (method: string, _: unknown, o: { timeoutMs: number }) => {
+      asked.push([method, o.timeoutMs]);
+      const tree = { windows: [], nodes: [], truncated: false, elapsedMs: 1, hash: 'h' };
+      return Promise.resolve({
+        result:
+          method === 'tree.get' ? tree : method === 'app.foreground' ? { pkg: 'dev.app' } : {},
+      });
+    };
+    const direct = { reads, front: () => Promise.resolve('dev.app'), close: vi.fn() };
+    const simctl = Object.assign(new Listed(LISTING, RUNNING), { launch: () => Promise.resolve() });
+    const device = new IosSimulatorDevice(UDID, simctl, direct as never);
+    Object.defineProperty(device, 'runnerUp', { value: true });
+    Object.assign(device, { rpc: { closed: false, call } });
+    await device.launch('dev.app');
+    return asked;
+  };
+
+  it("is read once by a runner that reads before its launch returns, by a launch's time, not a read's", async () => {
+    // its start loads its accessibility before the runner can read it: 15 s to over 30 s on a GitHub runner
+    expect((await launchedBy(false)).filter(([m]) => m === 'tree.get')).toEqual([
+      ['tree.get', TIMEOUTS.app],
+    ]);
+    // the helper reads it: no runner waits on it
+    expect((await launchedBy(true)).map(([m]) => m)).not.toContain('tree.get');
   });
 });
 

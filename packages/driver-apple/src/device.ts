@@ -372,7 +372,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
     if (!(await this.launchedAlongside(pkg)))
       await this.queue.run(() => this.ops.launch(assertBundle(pkg)));
     await this.target(pkg);
-    await this.untilFront(pkg);
+    // a process just started loads its accessibility before the runner can read it, 15 s to over 30 s on a GitHub runner:
+    // the launch's wait, by its time (Android's `am start -W`), and not the first read's 15 s, which ran out there
+    if ((await this.untilFront(pkg)) && this.waits) await this.call('tree.get', {}, TIMEOUTS.app);
   }
 
   /** One read: the app's window shows content. */
