@@ -49,6 +49,24 @@ describe('targeting', () => {
     expect(act(d).at(-1)).toMatchObject({ y: 350 });
   });
 
+  it('types into the field of a label and the field named by it, where a tap on the words names both', async () => {
+    withScreen('labelled', [
+      { t: 'Password', b: [0, 100, 300, 160] },
+      { c: 'android.widget.EditText', h: 'Password', b: [0, 200, 1000, 300], f: 1 | 4 | 16 | 128 },
+    ]);
+    const d = new FakeDevice();
+    d.screen = 'labelled';
+    const { call } = await connect(d);
+    const typed = await call('type_text', { selector: { text: 'Password' }, text: 'x' });
+    expect(typed.error).toBe(false);
+    expect(d.calls.find((c) => c.name === 'typeText')?.args[0]).toMatchObject({
+      at: { x: 500, y: 250 },
+    });
+    expect((await call('tap_screen', { selector: { text: 'Password' } })).data.code).toBe(
+      'AMBIGUOUS',
+    );
+  });
+
   it('says an index past the last match names none, and how many match', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);

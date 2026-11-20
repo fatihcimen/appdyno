@@ -99,7 +99,7 @@ const closes = (s: Session, at: Point) => (s.fresh ? backFromAlert(s, s.fresh, a
 type Kit = {
   policy: Policy;
   settleRead: Answers['settleRead'];
-  target: (s: Session, a: Aim, patient?: boolean) => ReturnType<typeof aim>;
+  target: (s: Session, a: Aim, patient?: boolean, typing?: boolean) => ReturnType<typeof aim>;
   scrolling: ReturnType<typeof scrollingFor>;
   checks: ReturnType<typeof checksFor>;
   missing: (
@@ -286,7 +286,9 @@ async function call(
     }
     case 'type_text': {
       const t =
-        st.ref || st.selector || st.x !== undefined ? await target(s, st, patient) : undefined;
+        st.ref || st.selector || st.x !== undefined
+          ? await target(s, st, patient, true)
+          : undefined;
       if (!t) await focusFirst(s);
       return typeText(s, st, t?.point, aimedOn(opts, t));
     }
@@ -337,8 +339,8 @@ export function stepsFor(
 ) {
   const words = wordsOf(clean);
   const { line, offer } = words;
-  const target = async (s: Session, a: Aim, patient = false) => {
-    const t = await pastKeyboard(s, a, () => aim(s, a, words), patient);
+  const target = async (s: Session, a: Aim, patient = false, typing = false) => {
+    const t = await pastKeyboard(s, a, () => aim(s, a, words, typing), patient);
     // a ref is named by its words at the touch: where those are not the ones it was shown with, which the answer's diff
     // is against, both are said, as an old screen's ref read as if the touch had renamed it
     const was = a.ref ? s.refWords.get(a.ref) : undefined;

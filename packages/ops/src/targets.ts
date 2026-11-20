@@ -106,6 +106,9 @@ export function missed(
 /** How a session's read gives its elements: a ref names one of the list, else one of the whole tree. */
 const READS: Reads<Screen, ScreenElement> = { list: (x) => x.list, byRef };
 
+/** What typing is for: of a label and the field named by it, a text goes into the field. */
+const isField = (e: ScreenElement) => e.role === 'textField';
+
 export type Aim = { ref?: string; x?: number; y?: number; selector?: SelectorOf };
 
 /** What a touch's answer adds where a selector's text named its element by only a part of a paragraph. */
@@ -140,8 +143,9 @@ export type Aimed = { point: Point; name: string; on?: string };
 /**
  * The point of a ref (on the device's current screen), a selector or x,y. One not there is waited for a moment, by the
  * rule a device opened from code aims by, and one still not there is said with its words and what is there in its place.
+ * `typing`: of several matches the only field is the one meant.
  */
-export async function aim(s: Session, a: Aim, words: Words): Promise<Aimed> {
+export async function aim(s: Session, a: Aim, words: Words, typing = false): Promise<Aimed> {
   const { clean, line, offer } = words;
   const target = a.ref ? { ref: a.ref } : a.selector;
   if (!target) {
@@ -158,6 +162,7 @@ export async function aim(s: Session, a: Aim, words: Words): Promise<Aimed> {
     target,
     READS,
     NO_MATCH_WAIT_MS,
+    typing ? isField : undefined,
   );
   if ('element' in got) {
     const aimed = aimedAt(got.element, clean, got.list);

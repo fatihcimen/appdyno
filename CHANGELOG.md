@@ -11,6 +11,7 @@
 - `appdyno test share --zip` and `appdyno test merge` leave out the links in a run's folder and say how many. Before, they copied what the links led to.
 - A flow run on the command line hides each value it took from the environment, as it does one from an env file. Before, it showed them in answers and reports.
 - A switch that an app gives as a row and a switch at one place (Flutter) is listed once, as the switch with its state. Before, an off switch read as a plain row.
+- `type_text` by a label that names both a text and its field types into the field. Before, it was refused as ambiguous.
 
 ## 1.3.8
 

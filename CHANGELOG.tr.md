@@ -11,6 +11,7 @@
 - `appdyno test share --zip` ve `appdyno test merge`, bir çalıştırmanın klasöründeki bağlantıları dışarıda bırakır ve kaç tane olduğunu söyler; önceden bağlantıların götürdüğü dosyaları kopyalıyorlardı.
 - Komut satırında çalışan bir flow, ortamdan aldığı her değeri bir ortam dosyasından aldığı gibi gizler; önceden onları yanıtlarda ve raporlarda gösteriyordu.
 - Bir uygulamanın aynı yerde satır ve switch olarak verdiği anahtar (Flutter) bir kez, durumu ile switch olarak listelenir; önceden kapalı bir anahtar düz bir satır olarak okunuyordu.
+- Hem bir metni hem de alanını adlandıran etiketle `type_text` alana yazar; önceden belirsiz diye reddediliyordu.
 
 ## 1.3.8
 

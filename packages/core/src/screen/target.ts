@@ -123,18 +123,24 @@ export function chosen<E extends Aimable>(
   return element ? { element } : { miss: 'several' };
 }
 
-/** A target on one read, as it stands. */
+/**
+ * A target on one read, as it stands. `only`: the kind an action is for; of several matches with no index, the one of
+ * that kind alone is meant, as the field among a label and the field named by it.
+ */
 export function seekOn<S, E extends Aimable>(
   screen: S,
   target: Target,
   reads: Reads<S, E>,
+  only?: (e: E) => boolean,
 ): Sought<S, E> {
   const list = reads.list(screen);
   if ('ref' in target) {
     const element = reads.byRef(screen, target.ref);
     return element ? { element, list, screen } : { miss: 'ref', hits: [], screen };
   }
-  const hits = selectIn(list, target);
+  const all = selectIn(list, target);
+  const kind = only && target.index === undefined && all.length > 1 ? all.filter(only) : [];
+  const hits = kind.length === 1 ? kind : all;
   const one = chosen(hits, target.index);
   return 'element' in one ? { ...one, list, screen } : { ...one, hits, screen };
 }
@@ -149,6 +155,7 @@ export async function seek<S, E extends Aimable>(
   target: Target,
   reads: Reads<S, E>,
   waitMs: number,
+  only?: (e: E) => boolean,
 ): Promise<Sought<S, E>> {
   const there = (x: S) => 'element' in seekOn(x, target, reads);
   if ('ref' in target) {
@@ -158,5 +165,5 @@ export async function seek<S, E extends Aimable>(
   }
   const matches = (x: S) => selectIn(reads.list(x), target).length > 0;
   const { screen } = await reader.until(matches, waitMs);
-  return screen ? seekOn(screen, target, reads) : { miss: 'unread', hits: [] };
+  return screen ? seekOn(screen, target, reads, only) : { miss: 'unread', hits: [] };
 }
