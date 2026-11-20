@@ -1,4 +1,4 @@
-import { heldElsewhere, isThisProcess, must, ownerGone, type Owner } from '@appdyno/core';
+import { isAlive, isThisProcess, must, ownerGone, type Owner } from '@appdyno/core';
 import type { ServerContext } from './context.js';
 import { dropFlightFolder } from './timeline/flight.js';
 import { flowRecordings } from './flow/shared.js';
@@ -147,8 +147,10 @@ export async function sweep(ctx: ServerContext, s: Session): Promise<Taken> {
     return at ? [`${name}: unreadable, kept as ${at}`] : [];
   });
   const { restored, failed } = await takeBack(ctx, s, ownerGone);
-  // its segments were this Mac's to keep only while a recorder held them
-  if (!heldElsewhere(filming.read(serial)?.owner)) dropFlightFolder(serial);
+  // its segments were this Mac's to keep only while a recorder held them: one of this process's other sessions holds
+  // them still, as a program's other connect to the device does
+  const recorder = filming.read(serial)?.owner;
+  if (!recorder || !isAlive(recorder)) dropFlightFolder(serial);
   const flow = flowRecordings.read(serial);
   // stopped, not removed: what it holds can still be saved
   if (flow?.running && ownerGone(flow.owner)) {

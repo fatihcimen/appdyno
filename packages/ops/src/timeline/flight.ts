@@ -49,7 +49,7 @@ const dropTrace = async (marks: FrameMarks | { why: string }) => {
   if ('tracePath' in marks && marks.tracePath) await rm(marks.tracePath, { force: true });
 };
 
-const flightFolder = (serial: string) => join(stateDir(), 'flight', safeName(serial));
+export const flightFolder = (serial: string) => join(stateDir(), 'flight', safeName(serial));
 
 /** What a dead process left of a ring on this Mac. */
 export const dropFlightFolder = (serial: string) =>

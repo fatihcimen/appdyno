@@ -13,6 +13,7 @@ import { fakeVideo } from '@appdyno/testing/fake-video.js';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { filming } from '../src/record.js';
+import { flightFolder } from '../src/timeline/flight.js';
 import { VideoRing } from '../src/timeline/ring.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { callerOf } from '@appdyno/testing/calls.js';
@@ -530,6 +531,17 @@ describe('the flight recorder', () => {
     const off = call('record_session', { kind: 'report', action: 'stop' });
     await vi.advanceTimersByTimeAsync(2_000);
     await off;
+  });
+
+  it("keeps its ring while another session of this process opens on the device, as a program's second connect does", async () => {
+    const d = new FlightDevice();
+    const { call } = connect(d, 20);
+    await call('record_session', { kind: 'flight', action: 'start' });
+    expect(existsSync(flightFolder(d.serial))).toBe(true);
+    // the second opens a session of its own, which looks for what a dead process left
+    await connect(d).call('read_screen');
+    expect(existsSync(flightFolder(d.serial))).toBe(true);
+    await call('record_session', { kind: 'report', action: 'stop' });
   });
 
   it('ends with its session', async () => {

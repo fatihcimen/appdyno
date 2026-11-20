@@ -8,6 +8,7 @@
 
 - Bir iPhone'da `set_device`, telefonda ne olursa olsun `increase_contrast`'ı `off` okuyordu, çünkü devicectl bu tek anahtarı yalın bir true ya da false olarak verir. Bu yüzden bir `restore`, bir kişinin açtığı kontrastı kapatabiliyordu. Artık telefonda olduğu gibi okunur.
 - iOS runner'ın başlarkenki ilerlemesi stderr'e JSON olarak gidiyordu; `appdyno test` bunu terminalde gösteriyordu. Artık cihazın öteki satırları gibi, cihazın kimliğiyle başlayan bir satırdır.
+- Aynı sürecin başka bir oturumu cihazda açılınca, bir programın aynı cihaza ikinci `connect()` çağrısında olduğu gibi, flight recorder halkasını kaybediyordu. Artık çalıştığı sürece halkasını korur.
 
 ## 1.3.6
 

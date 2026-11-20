@@ -8,6 +8,7 @@
 
 - On an iPhone, `set_device` read `increase_contrast` as `off` whatever the phone had, as devicectl gives that one switch as a bare true or false. A `restore` could so turn off a contrast a person had on. It now reads as the phone has it.
 - The iOS runner's start progress went to stderr as JSON, which `appdyno test` showed on a terminal. It is now a line led by the device's id, as the device's other lines are.
+- A flight recorder lost its ring when another session of the same process opened on the device, as a program's second `connect()` to that device does. It now keeps it while it runs.
 
 ## 1.3.6
 
