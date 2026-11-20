@@ -16,6 +16,7 @@
 - Etiketi kısaltılmış bir satır, zaten içerdiği metni ayrı bir satırda yeniden listelemez.
 - Android'de alan olmayan bir noktaya yazma, bir Flutter notunun sayfası gibi, artık ekranın tek alanına, başlığına yazılıp yazıldı denmiyor: alan dokunuşun olduğu yerde olmalı ya da dokunuş, bir text-input layout gibi, alanın kendi küçük kabının içinde olmalı; değilse `NO_FOCUS` ile reddedilir.
 - Android'de Chrome'da ikinci bir `type_text` dokunduğu alana yazar; Chrome yeni odağı geç bildirdiği için metin daha önce yazılan alana giriyor ve yazıldı deniyordu.
+- Android'de `type_text`, uygulamanın çizdiği bir düzenleyiciye, bir Flutter zengin metin sayfası gibi, düz ASCII metni tuş olarak yazar; önce 5 s bekleyip reddediyordu. Başka harfler ve `replace`, nedeni söylenerek hemen `UNSUPPORTED` ile reddedilir.
 
 ## 1.3.8
 

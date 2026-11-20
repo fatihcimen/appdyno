@@ -16,6 +16,7 @@
 - A row whose label is cut short no longer lists the text it already holds on a line of its own.
 - On Android, typing at a point that is on no field, as a Flutter note's page, no longer goes into the screen's one field, its title, answered as typed: the field must be at the touch, or the touch inside the field's own small holder, as a text-input layout; else it is refused with `NO_FOCUS`.
 - On Android, a second `type_text` in Chrome goes into the field it touches, where Chrome's late word of the new focus had the text go into the field typed before, answered as typed.
+- On Android, `type_text` types plain ASCII as keys into an editor the app draws, as a Flutter rich-text page, where it waited 5 s and refused; other letters, and `replace`, are refused at once with `UNSUPPORTED`, saying why.
 
 ## 1.3.8
 

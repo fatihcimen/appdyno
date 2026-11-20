@@ -53,6 +53,28 @@ object FocusWait {
         }
         throw AgentFailure("CANCELLED", "the host no longer waits for it")
     }
+
+    /** How long an editor the app draws must hold the focus before it is typed into: a tapped field tells its focus later. */
+    const val DRAWN_MS = 500L
+
+    /**
+     * One look of the wait: `field`, the field with the focus, where it is one `meant`; else, where no field has it,
+     * `drawn`, an editor the app draws with the focus (Saber's page, Flutter's rich text), once `steady` has seen it
+     * `DRAWN_MS`. Never while a field has the focus, as the field typed before still has it after a tap in Chrome.
+     */
+    fun <F : Any> look(field: F?, meant: (F) -> Boolean, drawn: () -> F?, steady: Steady<F>, now: Long): F? = if (field != null) field.takeIf(meant).also { steady.of(now, null) } else steady.of(now, drawn())
+
+    /** What a look finds, once it has found it at each look for `holdMs`. */
+    class Steady<F : Any>(private val holdMs: Long) {
+        private var seen: F? = null
+        private var since = 0L
+
+        fun of(now: Long, found: F?): F? {
+            if (found != seen) since = now
+            seen = found
+            return found?.takeIf { now - since >= holdMs }
+        }
+    }
 }
 
 /** `verified`: the field read back holds the text (null: it cannot be read back, a password or no field). */
@@ -158,13 +180,13 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         tap()
         val start = SystemClock.uptimeMillis()
         val field = if (at == null) {
-            waitFocus(start + focusTimeoutMs, cancelled) { true }
+            waitFocus(start + focusTimeoutMs, cancelled, null) { true }
         } else {
             TapFocus.field(
                 old,
                 start,
                 focusTimeoutMs,
-                { deadline, meant -> waitFocus(deadline, cancelled, meant) },
+                { deadline, meant -> waitFocus(deadline, cancelled, at, meant) },
                 { editableAt(at.first, at.second) },
                 { f ->
                     f.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
@@ -174,6 +196,12 @@ class TextInput(private val automation: Automation, private val input: Input, pr
             )
         }
         val focusMs = SystemClock.uptimeMillis() - start
+        if (field != null && !field.isEditable) {
+            // an editor the app draws takes keys, as a person's; it is never cleared, and nothing is read back
+            if (replace) throw AgentFailure("UNSUPPORTED", "the focus is on an editor the app draws, not a field: what it holds cannot be replaced from here", "type without replace")
+            if (TextPlan.isAscii(text) && input.typeKeys(text)) return TextOutcome("keys", null, focusMs)
+            throw AgentFailure("UNSUPPORTED", "the focus is on an editor the app draws, not a field: it takes plain keys only, ASCII letters, digits and signs", "type the text in plain ASCII")
+        }
         if (field == null) {
             // no field reports the focus but the keyboard is up (a code entry drawn by the app): the keys go to
             // whatever has the keyboard, as a person's would; the text cannot be read back. Never while a field
@@ -331,11 +359,26 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         return out.sortedByDescending { it.isFocused }
     }
 
-    /** The field with the focus, once it is one `meant` (FocusWait). */
-    private fun waitFocus(deadline: Long, cancelled: () -> Boolean, meant: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? = FocusWait.until(deadline, cancelled, SystemClock::uptimeMillis, Thread::sleep) { polls ->
-        // the cached answer may predate the tap's focus change
-        if (polls % 3 == 0) automation.clearCache()
-        focused()?.takeIf(meant)
+    /** The field with the focus, once it is one `meant`, else an editor the app draws at `at` (FocusWait.look). */
+    private fun waitFocus(deadline: Long, cancelled: () -> Boolean, at: Pair<Float, Float>?, meant: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
+        val steady = FocusWait.Steady<AccessibilityNodeInfo>(FocusWait.DRAWN_MS)
+        // no field at the point, as the tree under it says: asked once, where an editor the app draws has the focus
+        val noField by lazy { at == null || editableAt(at.first, at.second) == null }
+        return FocusWait.until(deadline, cancelled, SystemClock::uptimeMillis, Thread::sleep) { polls ->
+            // the cached answer may predate the tap's focus change
+            if (polls % 3 == 0) automation.clearCache()
+            FocusWait.look(focused(), meant, { drawnEditor(at)?.takeIf { noField } }, steady, SystemClock.uptimeMillis())
+        }
+    }
+
+    /**
+     * What has the input focus where no field has it, with the keyboard up: an editor the app draws, as Flutter's rich
+     * text, which keys reach as a person's do. Where a point is given, one that holds it.
+     */
+    private fun drawnEditor(at: Pair<Float, Float>?): AccessibilityNodeInfo? {
+        if (!keyboardShown()) return null
+        val f = automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeUnless { it.isEditable } ?: return null
+        return f.takeIf { at == null || Rect().also(f::getBoundsInScreen).contains(at.first.toInt(), at.second.toInt()) }
     }
 
     private fun focused(): AccessibilityNodeInfo? = automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable }
