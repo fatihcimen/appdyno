@@ -71,7 +71,7 @@ describe('what repeats in an answer', () => {
       element('@other', 'button', 'More', 100, { ...at, flags: ['clickable'] }),
       element('@on', 'switch', 'General', 100, { ...at, flags: ['clickable', 'checked'] }),
     ];
-    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@same', '@twice']);
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@a', '@same', '@twice']);
   });
 
   it("says a toggle row once, by its toggle, as SwiftUI's four parts of one Toggle say it", () => {
@@ -92,6 +92,20 @@ describe('what repeats in an answer', () => {
       element('@l', 'cell', 'Larger Text, Off', 213, { ...at(20, 187, 362, 53), ...clickable }),
     ];
     expect([...insideRows(list)].map((e) => e.ref).sort()).toEqual(['@b', '@c', '@o', '@s']);
+  });
+
+  it('says a row and its toggle at one place by the toggle, on or off', () => {
+    // as a Flutter switch tile reads on Android: the row, then its switch, alike in words and place
+    const tile = (ref: string, label: string, y: number, on: boolean) => [
+      element(`${ref}-row`, 'tappable', label, y, { flags: ['clickable'] }),
+      element(ref, 'switch', label, y, { flags: on ? ['clickable', 'checked'] : ['clickable'] }),
+    ];
+    const list = [...tile('@off', 'Greyscale', 100, false), ...tile('@on', 'Eraser', 200, true)];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@off-row', '@on-row']);
+    expect(renderFolded(list).split('\n').slice(1)).toEqual([
+      '@off switch "Greyscale" 200,100 clickable',
+      '@on switch "Eraser" 200,200 clickable checked',
+    ]);
   });
 
   it('keeps the first of two alike at the same place', () => {

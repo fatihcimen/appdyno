@@ -44,7 +44,8 @@ const clickable = (e: ScreenElement) => e.flags.includes('clickable');
 
 /**
  * What says nothing the row does not: a plain element whose text its label holds, a control of the same
- * name at the same place, where a touch on one is a touch on the other, what the app gives twice at one place,
+ * name at the same place, where a touch on one is a touch on the other (of a row and its toggle, the row), what the
+ * app gives twice at one place,
  * and a plain element named by the words of a plain one inside it, which says them where they are.
  * A control elsewhere in the row stays: it may do something else than the row.
  */
@@ -63,12 +64,21 @@ export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
     r.x === e.x &&
     r.y === e.y &&
     once(r.label) === once(e.label) &&
+    !toggleOver(e, r) &&
     (flagsOf(e) === 'clickable'
       ? clickable(r)
       : r.role === e.role &&
         r.flags.join() === e.flags.join() &&
         within(e.rect, r.rect) &&
         within(r.rect, e.rect));
+  // a row and its toggle given as two at one place (a Flutter switch tile) are said by the toggle, which has the state
+  const toggleOver = (t: ScreenElement, r: ScreenElement) =>
+    TOGGLES.has(t.role) && !TOGGLES.has(r.role);
+  const saidByToggle = (e: ScreenElement) =>
+    flagsOf(e) === 'clickable' &&
+    list.some(
+      (t) => toggleOver(t, e) && t.x === e.x && t.y === e.y && once(t.label) === once(e.label),
+    );
   const area = (e: ScreenElement) => e.rect.width * e.rect.height;
   // an alert is named by its title
   const namedByInner = (e: ScreenElement) =>
@@ -80,6 +90,7 @@ export function insideRows(list: ScreenElement[]): Set<ScreenElement> {
       (e, i) =>
         around.has(e) ||
         parts.has(e) ||
+        (e.label && saidByToggle(e)) ||
         (e.label &&
           ((plain(e) &&
             (rows.some((r) => within(e.rect, r.rect) && holds(r.label, e.label)) ||
