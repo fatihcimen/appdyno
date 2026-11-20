@@ -310,10 +310,8 @@ export class IosRunnerLauncher {
     child.once('exit', (code) => (exited = code));
     const s: State = { port, token, sha256: build.sha256, ...(child.pid && { pid: child.pid }) };
     const startedAt = Date.now();
-    const say = (line: string) =>
-      process.stderr.write(
-        `${JSON.stringify({ runner: this.udid, startingMs: Date.now() - startedAt, line })}\n`,
-      );
+    // a person's line, by the device, as the device's other lines on stderr are: a terminal shows it
+    const say = (line: string) => process.stderr.write(`${this.udid}: ${line}\n`);
     say('starting the iOS runner: xcodebuild connects, installs and launches it');
     let told = startedAt;
     let reached = startPhase('');

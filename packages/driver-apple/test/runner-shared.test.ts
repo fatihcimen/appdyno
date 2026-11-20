@@ -237,6 +237,11 @@ describe('a start that cannot come', () => {
       );
       expect(within, refused?.message).not.toBeNull();
       expect(Number(within?.[1])).toBeGreaterThanOrEqual(90);
+      // a line a person reads on a terminal, as the device's other lines are
+      expect(said[0]).toBe(
+        `${UDID}: starting the iOS runner: xcodebuild connects, installs and launches it\n`,
+      );
+      expect(said.filter((l) => l.startsWith('{'))).toEqual([]);
     } finally {
       vi.useRealTimers();
       vi.restoreAllMocks();

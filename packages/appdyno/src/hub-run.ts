@@ -69,9 +69,6 @@ const MADE = /(\/[^\s'"]+\.html)\b/g;
 /** What the gate says by its words, as its exit code cannot. */
 const GATE = new Set(['compare', 'why']);
 
-/** A runner's progress comes as JSON for a machine, with a line in it for a person: only that line is shown. */
-const forPerson = (text: string) => text.replace(/^\{"runner":.*"line":"([^"]*)"\}$/gm, '$1');
-
 /** What a sentence needs of what a command printed, so that no one has to read it. */
 function countOf(name: string, said: string) {
   const tally = name === 'flows' ? /(\d+) passed, (\d+) flaky, (\d+) failed/.exec(said) : null;
@@ -125,7 +122,7 @@ export class HubRuns {
       const text = chunk.toString();
       run.said += text;
       run.file = [...text.matchAll(MADE)].at(-1)?.[1] ?? run.file;
-      say({ run: { name, text: forPerson(text) } });
+      say({ run: { name, text } });
     };
     child.stdout.on('data', heard);
     child.stderr.on('data', heard);

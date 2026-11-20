@@ -100,7 +100,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
 const faults = (err: string) =>
   err
     .split('\n')
-    .filter((l) => l && !l.startsWith('{"runner"'))
+    .filter((l) => l && !/^\S+: (starting the iOS runner|xcodebuild |the runner is )/.test(l))
     .join('\n');
 
 const cli = (serial: string, ...args: string[]) =>

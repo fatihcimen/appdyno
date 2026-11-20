@@ -111,18 +111,6 @@ describe('a run under way', () => {
     expect(await gate(`${line}ok          launch: 300 ms against 300 ms`, 0)).toBe('clear');
   });
 
-  it('shows a person the words in a runner progress, not its JSON', async () => {
-    const progress = JSON.stringify({
-      runner: 'U',
-      startingMs: 0,
-      line: 'starting the iOS runner',
-    });
-    const said = await ran(script(`console.log(${JSON.stringify(progress)})`), 'tools');
-    const text = textOf(said);
-    expect(text).toContain('starting the iOS runner');
-    expect(text).not.toContain('startingMs');
-  });
-
   it('counts what a sentence needs, so that a person need not read the log', async () => {
     const flows = await ran(
       script('console.log("3 passed, 1 flaky, 2 failed"); process.exit(1)'),
