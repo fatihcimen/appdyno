@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 1.3.7
+
+appdyno 1.3.7 reads an iPhone's `increase_contrast` as the phone has it, so a `restore` no longer turns off a contrast a person had on; it also says the iOS runner's start in plain lines and keeps a flight recorder's ring while a second session of its process opens.
+
 ### Fixed
 
 - On an iPhone, `set_device` read `increase_contrast` as `off` whatever the phone had, as devicectl gives that one switch as a bare true or false. A `restore` could so turn off a contrast a person had on. It now reads as the phone has it.

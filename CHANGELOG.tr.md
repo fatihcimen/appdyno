@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+## 1.3.7
+
+appdyno 1.3.7, bir iPhone'un `increase_contrast` değerini telefonda olduğu gibi okur; böylece bir `restore` artık bir kişinin açtığı kontrastı kapatmaz. Ayrıca iOS runner'ın başlangıcını düz satırlarla söyler ve sürecinin ikinci bir oturumu açılırken bir flight recorder'ın halkasını korur.
+
 ### Düzeltilenler
 
 - Bir iPhone'da `set_device`, telefonda ne olursa olsun `increase_contrast`'ı `off` okuyordu, çünkü devicectl bu tek anahtarı yalın bir true ya da false olarak verir. Bu yüzden bir `restore`, bir kişinin açtığı kontrastı kapatabiliyordu. Artık telefonda olduğu gibi okunur.
