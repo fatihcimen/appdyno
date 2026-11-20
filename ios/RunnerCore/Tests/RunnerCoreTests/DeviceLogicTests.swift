@@ -97,25 +97,35 @@ final class TextCheckTests: XCTestCase {
     }
 }
 
-/// A field that writes its digits as a phone number, rewriting itself `rewriteS` after each key it takes and dropping
-/// a key that comes meanwhile; it answers a read once its rewrite is done, as an app answers a snapshot on its main
-/// thread.
+/// A field that writes its digits as a phone number, rewriting itself `rewriteS` after each key it takes (a digit, or
+/// a delete where `deletes`) and dropping a key that comes meanwhile; it answers a read once its rewrite is done, as an
+/// app answers a snapshot on its main thread.
 private final class FormattingField {
+    static let delete = "\u{8}"
     var now = 0.0
-    private var digits = ""
+    private var digits: String
     private var busyUntil = 0.0
     private let rewriteS: Double
+    private let deletes: Bool
     private(set) var sent: [String] = []
 
-    init(rewriteS: Double) { self.rewriteS = rewriteS }
+    init(rewriteS: Double, holding digits: String = "", deletes: Bool = true) {
+        self.rewriteS = rewriteS
+        self.digits = digits
+        self.deletes = deletes
+    }
 
     func type(_ keys: String) {
         sent.append(keys)
-        for key in keys {
-            if now >= busyUntil, key.isNumber {
+        for key in keys where now >= busyUntil {
+            if key.isNumber {
                 digits.append(key)
-                busyUntil = now + rewriteS
+            } else if String(key) == Self.delete, deletes, !digits.isEmpty {
+                digits.removeLast()
+            } else {
+                continue
             }
+            busyUntil = now + rewriteS
         }
     }
 
@@ -234,6 +244,44 @@ final class TypeEachTests: XCTestCase {
         let field = FormattingField(rewriteS: 0.01)
         typeEach("123", into: field, over: { field.sent.count >= 1 })
         XCTAssertEqual(field.sent, ["1"])
+    }
+}
+
+final class DeleteEachTests: XCTestCase {
+    private func deleteEach(_ field: FormattingField, over: @escaping () -> Bool = { false }) -> Bool {
+        (try? RunnerCore.deleteEach(FormattingField.delete, waitS: 1.5, KeysProbe(
+            send: field.type, read: field.read, clock: { field.now }, pause: { field.now += $0 }, over: over))) ?? false
+    }
+
+    func testWhatSelectAllLeftInAFieldThatRewritesItselfGoesAKeyAtATime() {
+        // all at once, as the runner deleted what select-all left: the field took the first and dropped the rest
+        let atOnce = FormattingField(rewriteS: 0.1, holding: "532")
+        atOnce.type(String(repeating: FormattingField.delete, count: 4))
+        XCTAssertEqual(atOnce.read(), "(53)")
+        let field = FormattingField(rewriteS: 0.1, holding: "532")
+        XCTAssertTrue(deleteEach(field))
+        XCTAssertEqual(field.read(), "")
+        XCTAssertEqual(field.sent, Array(repeating: FormattingField.delete, count: 3))
+    }
+
+    func testAnEmptyFieldTakesNoDelete() {
+        let field = FormattingField(rewriteS: 0.1)
+        XCTAssertTrue(deleteEach(field))
+        XCTAssertEqual(field.sent, [])
+    }
+
+    func testADeleteTheFieldNeverShowsEndsItAtTheWait() {
+        let field = FormattingField(rewriteS: 0.1, holding: "532", deletes: false)
+        XCTAssertFalse(deleteEach(field))
+        XCTAssertEqual(field.sent, [FormattingField.delete])
+        XCTAssertGreaterThanOrEqual(field.now, 1.5)
+        XCTAssertEqual(field.read(), "(532)")
+    }
+
+    func testNothingMoreGoesOnceTheCallerNoLongerWaits() {
+        let field = FormattingField(rewriteS: 0.1, holding: "532")
+        XCTAssertFalse(deleteEach(field, over: { field.sent.count >= 1 }))
+        XCTAssertEqual(field.read(), "(53)")
     }
 }
 

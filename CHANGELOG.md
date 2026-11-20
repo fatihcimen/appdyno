@@ -19,6 +19,7 @@
 - On Android, `type_text` types plain ASCII as keys into an editor the app draws, as a Flutter rich-text page, where it waited 5 s and refused; other letters, and `replace`, are refused at once with `UNSUPPORTED`, saying why.
 - An Android agent whose UI automation connect ran out of time on a loaded device lets that connection go: every later call was refused for minutes with `AGENT_CONFLICT`, naming another automation server, while the holder was the agent itself. One it cannot let go is said with `AGENT_UNAVAILABLE`, and the agent ends, so the next call starts another.
 - An Android screen no longer lists the view that holds a Flutter app, nameless, for its focus while its keyboard is up.
+- Replacing the text of a field that formats what is typed, such as a phone number, through the iOS runner (a hosted CI Mac, a simulator whose helpers do not answer, or text a US keyboard cannot type) could leave digits of the old text in front of the new on a slow Mac and answer `verified: false`. What select-all leaves is now deleted one key at a time, each seen gone.
 
 ## 1.3.8
 

@@ -95,10 +95,7 @@ extension Device {
             let known = replace || before.isEmpty
             verified = secure ? nil : echoed(field, job: job, givesUp: known, holds: holds)
             if retypes(verified: verified, known: known, text: text), field.exists, !job.over, try clear(input) {
-                let keys = KeysProbe(send: { try self.type($0, into: input, perSecond: 15) },
-                                     read: { self.currentText(field) }, clock: { Date().timeIntervalSince1970 },
-                                     pause: { Thread.sleep(forTimeInterval: $0) }, over: { job.over })
-                try typeEach(text, waitS: Device.echoWaitS, keys)
+                try typeEach(text, waitS: Device.echoWaitS, keys(input, perSecond: 15))
                 verified = echoed(field, job: job, givesUp: false, holds: holds)
             }
         }
@@ -219,17 +216,25 @@ extension Device {
     /// Clears what the text replaces: all of it selected and deleted at once, as deleting a formatting field's
     /// characters one by one moves its cursor and scrambles what is typed after (live: a phone number typed out of
     /// order). The focus is made sure of before the selection and before the delete: a hosted Mac's field had let go of
-    /// it there, and XCUI's delete ended the runner. False where it did not come back.
+    /// it there, and XCUI's delete ended the runner. What the selection left, as a field that rewrote itself over it,
+    /// goes a key at a time, each seen taken (`deleteEach`). False where the focus did not come back.
     private func clear(_ input: FieldInput) throws -> Bool {
         guard try focused(input) else { return false }
         typeKey("a", .command, in: input.app)
         guard try focused(input) else { return false }
         try type(XCUIKeyboardKey.delete.rawValue, into: input, perSecond: 60)
         if let left = currentText(input.field), !left.isEmpty {
-            NSLog("appdyno runner: select all left %d characters, deleted one by one", left.count)
-            try type(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count), into: input, perSecond: 60)
+            NSLog("appdyno runner: select all left %d characters, deleted one at a time", left.count)
+            _ = try deleteEach(XCUIKeyboardKey.delete.rawValue, waitS: Device.echoWaitS, keys(input, perSecond: 60))
         }
         return true
+    }
+
+    /// The field's keys, sent at `perSecond`, and its text read back, for `typeEach` and `deleteEach`.
+    private func keys(_ input: FieldInput, perSecond: UInt64) -> KeysProbe {
+        KeysProbe(send: { try self.type($0, into: input, perSecond: perSecond) },
+                  read: { self.currentText(input.field) }, clock: { Date().timeIntervalSince1970 },
+                  pause: { Thread.sleep(forTimeInterval: $0) }, over: { input.job.over })
     }
 
     /// A field that just took the focus may not take key commands before its keyboard is up.

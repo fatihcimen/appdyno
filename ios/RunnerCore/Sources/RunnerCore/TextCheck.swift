@@ -85,6 +85,25 @@ public struct KeysProbe {
 }
 
 /**
+ * Deletes what a field holds with `key` a key at a time, each once the field shows the one before it taken (`read`
+ * changed from what it was), until it holds nothing or is gone. A field that formats what is typed drops a key that
+ * comes while it rewrites itself: twelve deletes at 60 a second left a hosted Mac's phone field three digits, which the
+ * number typed after then joined. False where a delete changed nothing within `waitS`, or the caller no longer waits.
+ */
+public func deleteEach(_ key: String, waitS: Double, _ keys: KeysProbe) throws -> Bool {
+    while let was = keys.read(), !was.isEmpty {
+        guard !keys.over() else { return false }
+        try keys.send(key)
+        let end = keys.clock() + waitS
+        while keys.read() == was {
+            if keys.clock() >= end || keys.over() { return false }
+            keys.pause(0.03)
+        }
+    }
+    return true
+}
+
+/**
  * Types `text` a key at a time, each once the field shows the key before it (`read` changed from what it was): a field
  * that formats what is typed drops a key that comes while it rewrites itself, and on a loaded Mac that rewrite
  * outlasted a key's interval at 15 a second. A key the field does not show within `waitS` ends the pacing, as such a
