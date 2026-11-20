@@ -4,9 +4,16 @@
 
 ## Yayımlanmamış
 
+## 1.3.8
+
+appdyno 1.3.8, bir simulator'da bulduğu daha eski bir iOS runner'ını değiştirir; başka bir appdyno sürecinin bıraktığı biri her dokunuşu reddediyordu. Ayrıca yavaş bir Mac'te bir uygulamanın başlamasını açılışın içinde bekler ve başka bir dilde çalışan bir process'in tuttuğu cihazı tutulmuş sayar.
+
 ### Düzeltilenler
 
 - Bir sunucu, bir cihazda bulduğu iOS runner'ını, başka bir canlı appdyno süreci onu kullanırken, o runner hangi build'den olursa olsun kullanmayı sürdürüyordu. `tree.get` `pkg` almadan önce derlenmiş biri, ana ekran uygulaması istendiğinde öndeki uygulamayı okuyordu; bu yüzden güç koruması dokunuşları `AGENT_VERSION_MISMATCH` ile ve runner'ı bir checkout'tan yeniden derleme ipucuyla reddediyordu, oysa npm'den yapılan bir kurulumun checkout'u yoktur. Runner artık hello'sunda bir `protocol.minor` söyler; bir sunucu kendisininkinden eski bir runner'ı, onu kim kullanırsa kullansın, kendiliğinden değiştirir ve devam eder; öteki süreç yerinde yenisini bulur ve nedeni ona söylenir. Sunucunun kendi başlattığı runner hâlâ eskiyse, nereden geldiğine göre onu yeniden kendisininki yapmanın yolunu söyler: bir checkout, onu gösteren değişken ya da durum klasörünün `ios-build`'i.
+- **iOS: yavaş bir Mac'te bir açılıştan sonraki ilk okumanın süresi dolabiliyordu, runner da sonra takılmış sayılıp yeniden başlatılıyordu.** Yeni başlamış bir süreç, runner onu okuyabilmeden önce erişilebilirliğini yükler; bu, GitHub'ın barındırdığı bir Mac'te 15 sn ile 30 sn'den fazla sürdü. `launch_app` iOS uygulamayı öne koyduğunda dönüyordu, bu yüzden bu bekleyiş sonraki okumaya ya da dokunuşa düşüyor, onun 15 sn'si doluyordu (`tree.get did not answer within 30000 ms`). Ekranı runner'ın okuduğu yerde, uygulamayı başlatan bir açılış artık runner onu okuduğunda döner, en çok 60 sn bekleyerek; Android'in açılışının ilk ekranı beklemesi gibi.
+- Çalışan bir process'in tuttuğu cihaz, kilit ya da sıra, başka bir dilde çalışan process tarafından artık bırakılmış sayılmıyor; örneğin Türkçe ayarlı bir terminalin yanındaki Mac uygulaması.
+- Bir ret, verilecek aracı, eylemi ve argümanı katalogdaki adlarıyla söyler: ölçüm yokken `compare_performance` `measure_performance`'ı, `read_screen` `views` `read_screen`'i, `check_screen` `visual` `check: visual_baseline`'ı gösterir; `transfer_files` ve `inspect_app` kendi eylemlerini ve `path`'i adlandırır. Yedi ret hâlâ 1.3.0 öncesinin adlarını kullanıyordu.
 
 ## 1.3.7
 

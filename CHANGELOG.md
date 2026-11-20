@@ -4,9 +4,16 @@
 
 ## Unreleased
 
+## 1.3.8
+
+appdyno 1.3.8 replaces an older iOS runner it finds on a simulator, where one left by another appdyno process refused every touch; it also waits out an app's start in its launch on a slow Mac, and keeps a device held by a process that runs in another language.
+
 ### Fixed
 
 - A server went on using the iOS runner it found on a device while another live appdyno process used it, whatever build that runner was. One built before `tree.get` took `pkg` read the app in front where the home screen app was asked for, so the power guard refused touches with `AGENT_VERSION_MISMATCH` and a hint to build the runner again from a checkout, which an install from npm does not have. The runner now says a `protocol.minor` in its hello, and a server replaces a runner older than its own by itself, whoever uses it, and goes on; the other process finds the new one in its place and is told why. A runner the server started itself that is still older says how to make it its own again, by where it came from: a checkout, the variable that names it, or the state folder's `ios-build`.
+- **iOS: the first read after a launch could run out of time on a slow Mac, and the runner was then restarted as stuck.** A process just started loads its accessibility before the runner can read it, which took 15 s to over 30 s on a GitHub-hosted Mac. `launch_app` returned as iOS put the app in front, so that wait fell to the next read or tap, whose 15 s ran out (`tree.get did not answer within 30000 ms`). Where the runner reads the screen, a launch that starts the app now returns once the runner has read it, waiting up to 60 s, as Android's launch waits for the first screen.
+- A device, a lock or a place in line held by a running process is no longer taken for abandoned when another process runs in a different language, as the Mac app beside a terminal set to Turkish.
+- A refusal names the tool, action and argument to give as the catalog has them: `compare_performance` with no runs points at `measure_performance`, `read_screen` `views` at `read_screen`, `check_screen` `visual` at `check: visual_baseline`, and `transfer_files` and `inspect_app` name their own actions and `path`. Seven refusals still used names from before 1.3.0.
 
 ## 1.3.7
 
