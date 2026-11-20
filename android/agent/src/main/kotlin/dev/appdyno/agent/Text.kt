@@ -59,7 +59,11 @@ class TextOutcome(val mode: String, val verified: Boolean?, val focusMs: Long)
 
 /** Which editable node a point means (pure, unit tested): boxes are left, top, right, bottom. */
 object EditablePick {
-    fun under(boxes: List<IntArray>, parents: List<Int>, editable: List<Boolean>, x: Int, y: Int): Int? {
+    /** The most times a holder's area may be its field's and still be that field's own: a text-input layout is 2 to 3. */
+    const val HOLDER_AREA = 8
+
+    /** `control`: the element takes a touch of its own (clickable). */
+    fun under(boxes: List<IntArray>, parents: List<Int>, editable: List<Boolean>, control: List<Boolean>, x: Int, y: Int): Int? {
         fun inside(i: Int) = boxes[i].let { x >= it[0] && x < it[2] && y >= it[1] && y < it[3] }
         fun area(i: Int) = boxes[i].let { (it[2] - it[0]).toLong() * (it[3] - it[1]) }
         fun under(i: Int, a: Int): Boolean {
@@ -72,11 +76,16 @@ object EditablePick {
         }
         val fields = editable.indices.filter { editable[it] }
         fields.filter { inside(it) }.minByOrNull { area(it) }?.let { return it }
-        // the smallest element under the point that holds fields: its only one, never a guess among several
+        // the smallest element under the point that holds fields: its only one, where that element is the field's own,
+        // never a guess among several. Not past a control the point is on, which the touch meant, nor up to a screen or a
+        // page that holds one field elsewhere (Saber's note, 44 times its title, whose text went into the title)
         for (c in boxes.indices.filter { inside(it) }.sortedBy { area(it) }) {
             val held = fields.filter { under(it, c) }
-            if (held.isEmpty()) continue
-            return held.singleOrNull()
+            if (held.isEmpty()) {
+                if (control[c]) return null
+                continue
+            }
+            return held.singleOrNull()?.takeIf { area(c) <= HOLDER_AREA * area(it) }
         }
         return null
     }
@@ -236,7 +245,8 @@ class TextInput(private val automation: Automation, private val input: Input, pr
 
     /**
      * The editable field the point means: the field under it, else the only field inside the smallest
-     * element under it that has any (a text-input layout around its field). None when that is ambiguous.
+     * element under it that has any (a text-input layout around its field). None when that is ambiguous, or the
+     * point is on another control or far from the field (EditablePick).
      */
     private fun editableAt(x: Float, y: Float): AccessibilityNodeInfo? {
         val root = automation.ua.rootInActiveWindow ?: return null
@@ -260,6 +270,7 @@ class TextInput(private val automation: Automation, private val input: Input, pr
             boxes.map { intArrayOf(it.left, it.top, it.right, it.bottom) },
             parents,
             nodes.map { it.isEditable && it.isVisibleToUser },
+            nodes.map { it.isClickable },
             x.toInt(),
             y.toInt(),
         )

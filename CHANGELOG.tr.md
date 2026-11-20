@@ -14,6 +14,7 @@
 - Hem bir metni hem de alanını adlandıran etiketle `type_text` alana yazar; önceden belirsiz diye reddediliyordu.
 - Çevrelerinde onları ayıracak bir şey olmayan aynı adlı öğeler, uygulamanın verdiği id'leri söyler; ekran listesinde ve birkaç eşleşmeyi sayan bir rette.
 - Etiketi kısaltılmış bir satır, zaten içerdiği metni ayrı bir satırda yeniden listelemez.
+- Android'de alan olmayan bir noktaya yazma, bir Flutter notunun sayfası gibi, artık ekranın tek alanına, başlığına yazılıp yazıldı denmiyor: alan dokunuşun olduğu yerde olmalı ya da dokunuş, bir text-input layout gibi, alanın kendi küçük kabının içinde olmalı; değilse `NO_FOCUS` ile reddedilir.
 
 ## 1.3.8
 
