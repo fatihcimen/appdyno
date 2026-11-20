@@ -21,7 +21,7 @@ import {
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { type RunnerTransport, IosRunnerLauncher } from './runner.js';
-import { BUILD_LINE, iosProducts } from './runner-build.js';
+import { BUILD_LINE, iosProducts, rebuildHint } from './runner-build.js';
 import { PHONE_CONTROLS } from './mirror-press.js';
 import { PhoneInspector } from './phone-inspector.js';
 import { PhoneLifecycle } from './phone-lifecycle.js';
@@ -90,6 +90,7 @@ function phoneTransport(
       await writeFile(xctestrun, phoneXctestrun(r.app, r.appId), { mode: 0o600 });
       return { xctestrun, sha256: r.key };
     },
+    rebuild: () => rebuildHint('device'),
     port: () => Promise.resolve(20_000 + Math.floor(Math.random() * 20_000)),
     open: async (port) =>
       (await wifiOnly(udid))

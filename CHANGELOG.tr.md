@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+### Düzeltilenler
+
+- Bir sunucu, bir cihazda bulduğu iOS runner'ını, başka bir canlı appdyno süreci onu kullanırken, o runner hangi build'den olursa olsun kullanmayı sürdürüyordu. `tree.get` `pkg` almadan önce derlenmiş biri, ana ekran uygulaması istendiğinde öndeki uygulamayı okuyordu; bu yüzden güç koruması dokunuşları `AGENT_VERSION_MISMATCH` ile ve runner'ı bir checkout'tan yeniden derleme ipucuyla reddediyordu, oysa npm'den yapılan bir kurulumun checkout'u yoktur. Runner artık hello'sunda bir `protocol.minor` söyler; bir sunucu kendisininkinden eski bir runner'ı, onu kim kullanırsa kullansın, kendiliğinden değiştirir ve devam eder; öteki süreç yerinde yenisini bulur ve nedeni ona söylenir. Sunucunun kendi başlattığı runner hâlâ eskiyse, nereden geldiğine göre onu yeniden kendisininki yapmanın yolunu söyler: bir checkout, onu gösteren değişken ya da durum klasörünün `ios-build`'i.
+
 ## 1.3.7
 
 appdyno 1.3.7, bir iPhone'un `increase_contrast` değerini telefonda olduğu gibi okur; böylece bir `restore` artık bir kişinin açtığı kontrastı kapatmaz. Ayrıca iOS runner'ın başlangıcını düz satırlarla söyler ve sürecinin ikinci bir oturumu açılırken bir flight recorder'ın halkasını korur.

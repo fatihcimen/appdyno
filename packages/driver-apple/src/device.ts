@@ -305,12 +305,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
   async systemTree(): Promise<Tree | undefined> {
     if (this.targetApp === HOME_SCREEN_APP) return undefined;
     const t = (await this.call('tree.get', { pkg: HOME_SCREEN_APP }, TIMEOUTS.read)).result;
-    // a runner built before it took a pkg reads the app in front, which is no look at the home screen app
+    // a runner built before it took a pkg read the app in front: one that old is replaced where it is met (`olderRunner`)
     if (t.windows[0]?.pkg !== HOME_SCREEN_APP)
       throw new DeviceError(
-        'AGENT_VERSION_MISMATCH',
+        'INTERNAL',
         `the runner read ${t.windows[0]?.pkg ?? 'no app'} where the home screen app was asked for`,
-        'build the iOS runner again from this checkout',
       );
     return t;
   }

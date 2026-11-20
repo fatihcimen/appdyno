@@ -9,9 +9,9 @@ public struct Hello {
     public let pid: Int, idleShimChecked: Bool
 
     public var wire: Wire {
-        ["agentVersion": agentVersion, "protocol": ["major": protocolMajor], "platform": "ios", "osVersion": osVersion,
-         "model": model, "screen": ["w": w, "h": h, "density": density, "rotation": rotation], "pid": pid,
-         "idleShimChecked": idleShimChecked]
+        ["agentVersion": agentVersion, "protocol": ["major": protocolMajor, "minor": protocolMinor], "platform": "ios",
+         "osVersion": osVersion, "model": model, "screen": ["w": w, "h": h, "density": density, "rotation": rotation],
+         "pid": pid, "idleShimChecked": idleShimChecked]
     }
 }
 

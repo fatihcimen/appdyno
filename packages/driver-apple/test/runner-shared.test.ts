@@ -15,12 +15,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
-import { deviceStateFile, processAlive, startOf, thisOwner, must } from '@appdyno/core';
+import { deviceStateFile, noting, processAlive, startOf, thisOwner, must } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '@appdyno/testing/fake-agent.js';
-import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
+import {
+  IosRunnerLauncher,
+  RUNNER_MINOR,
+  simulatorTransport,
+  type RunnerTransport,
+} from '../src/runner.js';
 import { fakeTimed, onFakeTime } from '@appdyno/testing/fake-time.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';
+
+/** What a runner of this host's sources says; one before 1.3.8 said no minor. */
+const CURRENT = { ...HELLO, protocol: { major: 2, minor: RUNNER_MINOR } };
+const BEFORE_MINOR = { ...HELLO, agentVersion: '0.6.0', protocol: { major: 2 }, pid: 4242 };
 
 describe('a runner of another build on a simulator', () => {
   let state: string;
@@ -39,14 +48,14 @@ describe('a runner of another build on a simulator', () => {
     writeFileSync(file, JSON.stringify(used ? [host] : []));
   };
 
-  const transport = () =>
+  const transport = (hello: object = CURRENT) =>
     ({
       build: () => Promise.resolve({ xctestrun: 'x', sha256: 'a'.repeat(64) }),
       port: vi.fn(() => {
         return Promise.reject(new Error('a new runner was asked for'));
       }),
       open: () => {
-        const { host } = fakeAgentStream();
+        const { host } = fakeAgentStream({ hello: () => ({ result: hello }) });
         return Promise.resolve({
           socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket,
         });
@@ -70,6 +79,31 @@ describe('a runner of another build on a simulator', () => {
     found.rpc.close();
     expect(found.started).toBe(false);
     expect(through.port).not.toHaveBeenCalled();
+  });
+
+  it("needs the minor this host's runner says, as RunnerCore's test holds its hello to the same fixture", () => {
+    const fixtures = new URL('../../protocol/fixtures/results.json', import.meta.url);
+    const results = JSON.parse(readFileSync(fixtures, 'utf8')) as {
+      'hello.ios': { result: { protocol: { minor?: number } } };
+    };
+    expect(results['hello.ios'].result.protocol.minor).toBe(RUNNER_MINOR);
+  });
+
+  it('is replaced under another live host when it is older than this host, and that host is told why', async () => {
+    left(true);
+    const through = transport(BEFORE_MINOR);
+    const { value: refused, notes } = await noting(() =>
+      new IosRunnerLauncher(UDID, through).connect().then(
+        () => undefined,
+        (e: unknown) => e as Error,
+      ),
+    );
+    expect(refused?.message).toBe('a new runner was asked for');
+    const why = `it was of protocol 2.0, where 2.${RUNNER_MINOR} is needed`;
+    expect(notes).toContain(`the agent on ${UDID} is replaced by this host's: ${why}`);
+    // the host that used it reads this, where it finds this host's in its place
+    const ended = JSON.parse(readFileSync(deviceStateFile('agent-ended', UDID), 'utf8')) as object;
+    expect(ended).toMatchObject({ pid: 4242, by: process.pid, why });
   });
 
   it('gives way when nobody else uses it', async () => {
@@ -111,6 +145,7 @@ describe('a runner of another build on a simulator', () => {
 });
 
 describe('a start that cannot come', () => {
+  const REBUILD = 'build it again, as its transport says';
   const PATH = process.env.PATH;
   let state: string;
   let other: ReturnType<typeof spawn>;
@@ -118,11 +153,13 @@ describe('a start that cannot come', () => {
   const through = (
     major: number,
     handlers: Parameters<typeof fakeAgentStream>[0] = {},
+    minor = RUNNER_MINOR,
   ): RunnerTransport => ({
     build: () => Promise.resolve({ xctestrun: '/products/x.xctestrun', sha256: 'a'.repeat(64) }),
+    rebuild: () => REBUILD,
     port: () => Promise.resolve(1),
     open: () => {
-      const hello = () => ({ result: { ...HELLO, protocol: { major } } });
+      const hello = () => ({ result: { ...CURRENT, protocol: { major, minor } } });
       const { host } = fakeAgentStream({ hello, ...handlers });
       return Promise.resolve({
         socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket,
@@ -155,10 +192,20 @@ describe('a start that cannot come', () => {
     await expect(new IosRunnerLauncher(UDID, through(1)).connect()).rejects.toMatchObject({
       code: 'AGENT_VERSION_MISMATCH',
       message: expect.stringContaining('runner protocol 1') as unknown,
-      hint: expect.stringContaining('/products/x.xctestrun') as unknown,
+      hint: REBUILD,
     });
     expect(Date.now() - started).toBeLessThan(4_000);
     expect(stopped).toHaveBeenCalledWith(expect.any(Number), 'SIGTERM');
+  });
+
+  it('ends when the runner it started is older than this host, and says how to make it its own again', async () => {
+    await expect(
+      new IosRunnerLauncher(UDID, through(2, {}, RUNNER_MINOR - 1)).connect(),
+    ).rejects.toMatchObject({
+      code: 'AGENT_VERSION_MISMATCH',
+      message: `the iOS runner this host started is of protocol 2.${RUNNER_MINOR - 1}, where 2.${RUNNER_MINOR} is needed`,
+      hint: REBUILD,
+    });
   });
 
   it('builds a runner in place of a fetched one that did not start, once', async () => {

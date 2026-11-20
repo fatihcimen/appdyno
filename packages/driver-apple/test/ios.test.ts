@@ -405,9 +405,18 @@ describe("a look at what the home screen app shows over an iPhone's app", () => 
     expect(calls).toEqual(['tree.get com.apple.springboard']);
   });
 
-  it('is refused where the runner read another app, as one built before it took the app to read', async () => {
+  it('is refused where the runner read another app, with no line that only a checkout could follow', async () => {
     const { d } = await phone('dev.app');
-    await expect(d.systemTree()).rejects.toMatchObject({ code: 'AGENT_VERSION_MISMATCH' });
+    // one built before it took the app to read is replaced where it is met: one that does it still is at fault
+    const refused = await d.systemTree().then(
+      () => undefined,
+      (e: unknown) => e as DeviceError,
+    );
+    expect(refused).toMatchObject({
+      code: 'INTERNAL',
+      message: 'the runner read dev.app where the home screen app was asked for',
+    });
+    expect(refused?.hint).toBeUndefined();
   });
 });
 

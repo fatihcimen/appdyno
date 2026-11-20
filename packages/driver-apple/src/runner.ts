@@ -4,7 +4,7 @@ import { closeSync, openSync } from 'node:fs';
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { connect, createServer, type Socket } from 'node:net';
 import { join } from 'node:path';
-import { DeviceError, type Hello } from '@appdyno/protocol';
+import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import {
   endPid,
@@ -23,7 +23,7 @@ import {
   type RpcClient,
 } from '@appdyno/core';
 import { childrenNamed, endLeftBehind, HUB } from './left-behind.js';
-import { runnerBuild } from './runner-build.js';
+import { rebuildHint, runnerBuild } from './runner-build.js';
 import { dropFetched } from './runner-fetch.js';
 import { launchLanguage } from './manage.js';
 import { heldLaunch } from './sim-held.js';
@@ -60,6 +60,17 @@ export function startPhase(log: string): string {
   return 'xcodebuild is preparing the device (installing the runner)';
 }
 const RUNNER_TEST = 'Runner/RunnerTests/testServe';
+
+/** The runner's `protocol.minor` this host relies on, RunnerCore's `protocolMinor`: 1, `tree.get`'s `pkg`. */
+export const RUNNER_MINOR = 1;
+
+/** Why a runner's hello is older than this host, if it is: one that says no minor is from before 1.3.8. */
+export function olderRunner(hello: Hello): string | undefined {
+  const minor = hello.protocol.minor ?? 0;
+  return minor < RUNNER_MINOR
+    ? `of protocol ${hello.protocol.major}.${minor}, where ${PROTOCOL.major}.${RUNNER_MINOR} is needed`
+    : undefined;
+}
 
 const State = z.object({
   port: z.number().int(),
@@ -103,6 +114,8 @@ export type RunnerTransport = {
   unfit?(xctestrun: string): Promise<boolean>;
   /** Ends the runner app a start that failed left on the device, its xcodebuild killed under it as it launched. */
   leftOver?(udid: string): Promise<void>;
+  /** How a person makes the runner `build` gave this host's own again, where it is of another protocol. */
+  rebuild?(): string;
 };
 
 /** The runner app as xcodebuild installs it to run its test. */
@@ -119,6 +132,7 @@ export const simulatorTransport: RunnerTransport = {
   down: async (udid) => ((await new Simctl().state(udid)) ?? '').startsWith('Shut'),
   // one killed as it launched stayed running in the simulator, its xcodebuild gone
   leftOver: (udid) => new Simctl().terminate(udid, RUNNER_APP),
+  rebuild: () => rebuildHint('simulator'),
   open: (port) =>
     new Promise((resolve, reject) => {
       const c = connect({ host: '127.0.0.1', port });
@@ -188,6 +202,7 @@ export class IosRunnerLauncher {
         build.sha256,
         (s, helloMs) => this.tryConnect(s, helloMs),
         (s) => s.pid === undefined || processAlive(s.pid),
+        olderRunner,
       );
     };
     // one start's time in all: a host that waited for another's has that much less for its own
@@ -323,8 +338,17 @@ export class IosRunnerLauncher {
         reached = now;
         say(reached);
       }
-      const c = await this.tryConnect(s).catch((e: unknown) =>
-        e instanceof Error ? e : new Error(String(e)),
+      const c = await this.tryConnect(s).then(
+        (a) => {
+          const old = olderRunner(a.hello);
+          if (!old) return a;
+          a.rpc.close();
+          return new DeviceError(
+            'AGENT_VERSION_MISMATCH',
+            `the iOS runner this host started is ${old}`,
+          );
+        },
+        (e: unknown) => (e instanceof Error ? e : new Error(String(e))),
       );
       if (!(c instanceof Error)) {
         await this.writeState(s);
@@ -339,12 +363,7 @@ export class IosRunnerLauncher {
         const ranS = Math.round((Date.now() - startedAt) / 1000);
         if (child.pid) await this.kill(child.pid);
         await this.transport.leftOver?.(this.udid).catch(() => undefined);
-        if (refused)
-          throw new DeviceError(
-            c.code,
-            c.message,
-            `build the runner again: ${build.xctestrun} is of another version of this host`,
-          );
+        if (refused) throw new DeviceError(c.code, c.message, this.transport.rebuild?.());
         throw new DeviceError(
           'AGENT_UNAVAILABLE',
           stopped !== undefined

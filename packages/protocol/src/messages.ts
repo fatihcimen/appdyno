@@ -70,7 +70,11 @@ export type Platform = (typeof PLATFORMS)[number];
 
 export const Hello = z.object({
   agentVersion: z.string(),
-  protocol: z.object({ major: z.number().int() }),
+  /**
+   * `minor`: what an agent took within its major that a host relies on, none for 0. The iOS runner's own: one below the
+   * host's is replaced, whoever uses it, as a newer one serves an older host and an older one does not serve a newer.
+   */
+  protocol: z.object({ major: z.number().int(), minor: z.number().int().optional() }),
   platform: z.enum(PLATFORMS),
   osVersion: z.string(),
   sdk: z.number().int().optional(),

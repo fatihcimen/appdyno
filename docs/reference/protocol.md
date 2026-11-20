@@ -35,8 +35,11 @@ The first request on a connection must be `hello` with the launch token the agen
 ```
 
 The result names the agent build, the protocol version (`major` must equal the host's), the platform, OS,
-model and screen (`w`, `h` in device pixels, `density`, `rotation`). A host only ever runs the agent of its own
-build, so an agent has no other versions to answer for.
+model and screen (`w`, `h` in device pixels, `density`, `rotation`). The iOS runner's `protocol` also has a `minor`:
+what it took within that major that a host relies on, 1 since `tree.get` took `pkg`, and none is 0. A host starts only
+the agent of its own build, and one of another build it finds is shared as below, unless that runner's `minor` is below
+the host's: such a runner is replaced, whoever uses it, as a newer runner serves an older host and an older one does
+not serve a newer.
 
 ## Deadlines and cancellation
 
@@ -155,7 +158,7 @@ do it again. Spotlight is Command-Space from the home screen; on a simulator, wh
   it turns them on (`_AXSApplicationAccessibilitySetEnabled`, `_AXSSetAutomationEnabled`) and, if it was the one to do so
   and no runner stays, off again when it leaves. `IgnoreAXServerEntitlements` was not needed.
 - **Hello**, from the same helper: model, OS version, screen and scale, in the same shape. `agentVersion` is `helper`,
-  until a runner starts and says its own: the first 16 characters of the digest of the sources it was built from, the name its build is kept under in the state folder's `ios-build`, or `checkout` for a checkout's own build. It is no release's number, so a release that changes nothing in the runner builds none again; a runner of another protocol is refused by its hello's `protocol`, and one of another build is replaced by the digest of its binary. The runner
+  until a runner starts and says its own: the first 16 characters of the digest of the sources it was built from, the name its build is kept under in the state folder's `ios-build`, or `checkout` for a checkout's own build. It is no release's number, so a release that changes nothing in the runner builds none again; a runner of another protocol is refused by its hello's `protocol`, one of another build is replaced by the digest of its binary, and one older than the host by its `protocol.minor`, whoever uses it. The runner
   starts on the first thing only it does: an alert, a system prompt, text entry, an image, an audit, or a read of a control
   found at different places. A look for a sheet over the app is none of these: with the app in front the helper says
   so at once, and a read of an app that is not in front is what brings the runner.
@@ -490,7 +493,9 @@ agent would take the device from each other for as long as both run, which is wh
 beside a client that has already moved on. So the agent stays, and the newer host uses it and is told, in the answer of the call that met it, with that agent's version and the pid that uses it, as its hello's `agentVersion` is that build's, until its last host
 has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. An agent that starts ends every other agent of ours that listens with no host connected and has run 60 s, the time a host gives a new agent to answer, as a host from another state folder leaves one; where the shell cannot read the table of sockets, it ends none. A host
 that cannot speak that agent's protocol is refused with the pid of the one that uses it. An iOS runner keeps to the same
-rule, and one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its
+rule, but for one whose hello's `minor` is below the host's, which is replaced whoever uses it, as one built before
+`tree.get` took `pkg` read the app in front where the home screen app was asked for, and the power guard sent no
+touch; the hosts that used it find the new one in its place, and the line that says so says why. And one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its
 state is written only once it answers, so two runners that two hosts started at once took the phone from each other and the one that lost heard
 nothing for 3 minutes. On an iPhone 13 Pro Max a client's first call then took 1 to 6.3 s over 16, hub first or client
 first. A runner writes `ios-<udid>.log` in the state folder, and a start keeps the last one's as `ios-<udid>.log.1`; a

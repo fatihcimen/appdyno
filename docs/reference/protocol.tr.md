@@ -35,8 +35,11 @@ Bir bağlantıdaki ilk istek, ajanın açılışta aldığı başlatma token'ın
 ```
 
 Sonuç ajanın build'ini, protokol sürümünü (`major` host'unkine eşit olmalıdır), platformu, işletim sistemini,
-modeli ve ekranı (cihaz pikseli cinsinden `w` ve `h`, `density`, `rotation`) bildirir. Bir host yalnızca kendi
-build'inin ajanını çalıştırır, bu yüzden bir ajanın hesaba katması gereken başka sürüm yoktur.
+modeli ve ekranı (cihaz pikseli cinsinden `w` ve `h`, `density`, `rotation`) bildirir. iOS runner'ının `protocol`'ünde
+ayrıca bir `minor` vardır: o major içinde aldığı ve bir host'un dayandığı şeyler; `tree.get` `pkg` aldığından beri 1'dir,
+hiç olmaması 0 demektir. Bir host yalnızca kendi build'inin ajanını başlatır; bulduğu başka bir build'in ajanı aşağıdaki
+gibi paylaşılır, ancak o runner'ın `minor`'ı host'unkinden küçükse değil: böyle bir runner, onu kim kullanırsa kullansın
+değiştirilir, çünkü daha yeni bir runner daha eski bir host'a hizmet eder, daha eski bir runner ise daha yenisine etmez.
 
 ## Süre sınırları ve iptal
 
@@ -155,7 +158,7 @@ yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir; simulator'da bu 3 s
   yardımcı bunları açar (`_AXSApplicationAccessibilitySetEnabled`, `_AXSSetAutomationEnabled`) ve açan kendisiyse
   ve hiçbir runner kalmıyorsa, ayrılırken yeniden kapatır. `IgnoreAXServerEntitlements` gerekmedi.
 - **Hello**, aynı yardımcıdan: model, işletim sistemi sürümü, ekran ve ölçek, aynı biçimde. `agentVersion`, bir runner
-  başlayıp kendi sürümünü söyleyene kadar `helper`'dır: runner'ın söylediği, derlendiği kaynakların özetinin ilk 16 karakteridir, yani derlemesinin durum klasöründeki `ios-build` altında saklandığı ad; bir checkout'un kendi derlemesinde ise `checkout`. Bir sürümün numarası değildir; böylece runner'da hiçbir şeyi değiştirmeyen bir sürüm onu yeniden derletmez. Başka bir protokolün runner'ı hello'sundaki `protocol` ile reddedilir, başka bir derlemenin runner'ı ise ikili dosyasının özetiyle değiştirilir. Runner,
+  başlayıp kendi sürümünü söyleyene kadar `helper`'dır: runner'ın söylediği, derlendiği kaynakların özetinin ilk 16 karakteridir, yani derlemesinin durum klasöründeki `ios-build` altında saklandığı ad; bir checkout'un kendi derlemesinde ise `checkout`. Bir sürümün numarası değildir; böylece runner'da hiçbir şeyi değiştirmeyen bir sürüm onu yeniden derletmez. Başka bir protokolün runner'ı hello'sundaki `protocol` ile reddedilir, başka bir derlemenin runner'ı ikili dosyasının özetiyle, host'tan daha eski olanı ise `protocol.minor`'ıyla, onu kim kullanırsa kullansın değiştirilir. Runner,
   yalnızca kendisinin yaptığı ilk işte başlar: bir uyarı, bir sistem sorusu, metin girişi, bir görüntü, bir denetim ya da farklı yerlerde
   bulunan bir kontrolün okunması. Uygulamanın üstünde bir sheet aramak bunların hiçbiri değildir: uygulama öndeyse yardımcı bunu
   hemen söyler; önde olmayan bir uygulamanın okunması ise runner'ı getiren şeydir.
@@ -490,7 +493,9 @@ iki build, ikisi çalıştığı sürece cihazı birbirinden alırdı; bir günc
 yanında açık bir hub. Bu yüzden ajan kalır, daha yeni host da onu kullanır ve bu kendisine, onunla karşılaşan çağrının yanıtında, o ajanın sürümü ve onu kullanan pid ile söylenir, çünkü hello'sundaki `agentVersion` o build'inkidir; bu, ajanın son host'u
 gidene kadar sürer; durum klasöründeki `agent-hosts/<serial>.json` onları listeler ve bir sürecin bitişi onu listeden çıkarır. Başlayan bir ajan, bağlı hiçbir host olmadan dinleyen ve 60 s çalışmış, yani bir host'un yeni bir ajana yanıt için verdiği süreyi doldurmuş diğer her ajanımızı sonlandırır, çünkü başka bir durum klasöründen gelen bir host geride bir tane bırakır; shell soket tablosunu okuyamadığında hiçbirini sonlandırmaz. O ajanın
 protokolünü konuşamayan bir host, onu kullananın pid'iyle reddedilir. Bir iOS runner'ı da aynı
-kurala uyar ve onu bir seferde tek bir host, durum klasöründeki `ios-<udid>.starting` ile başlatır: bir cihaz tek bir runner'a hizmet eder ve
+kurala uyar; yalnızca hello'sundaki `minor` host'unkinden küçük olan, onu kim kullanırsa kullansın değiştirilir, çünkü
+`tree.get` `pkg` almadan önce derlenmiş biri, ana ekran uygulaması istendiğinde öndeki uygulamayı okudu ve güç koruması
+hiçbir dokunuş göndermedi; onu kullanan host'lar yerinde yenisini bulur ve bunu söyleyen satır nedenini de söyler. Ayrıca onu bir seferde tek bir host, durum klasöründeki `ios-<udid>.starting` ile başlatır: bir cihaz tek bir runner'a hizmet eder ve
 runner'ın durumu ancak yanıt verdiğinde yazılır; bu yüzden iki host'un aynı anda başlattığı iki runner telefonu birbirinden aldı ve kaybeden
 3 dakika boyunca hiçbir şey duymadı. Bir iPhone 13 Pro Max'te bir istemcinin ilk çağrısı o zaman 16 denemede 1 ile 6,3 s arasında sürdü, önce hub ya da önce
 istemci. Bir runner durum klasörüne `ios-<udid>.log` yazar ve bir başlatma bir öncekininkini `ios-<udid>.log.1` olarak saklar; elindeki

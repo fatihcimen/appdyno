@@ -3,6 +3,9 @@ import os
 
 /// The wire's version: `PROTOCOL.major`.
 public let protocolMajor = 2
+/// What this runner took within that major that a host relies on, which a host replaces one below its own for:
+/// 1, `tree.get`'s `pkg`, as one without it read the app in front. Raised with each such addition, as `RUNNER_MINOR`.
+public let protocolMinor = 1
 
 /// The protocol's error codes, in wire order: the JSON-RPC code is -32000 minus the index.
 public let errorCodes = [

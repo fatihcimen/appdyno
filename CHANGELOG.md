@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- A server went on using the iOS runner it found on a device while another live appdyno process used it, whatever build that runner was. One built before `tree.get` took `pkg` read the app in front where the home screen app was asked for, so the power guard refused touches with `AGENT_VERSION_MISMATCH` and a hint to build the runner again from a checkout, which an install from npm does not have. The runner now says a `protocol.minor` in its hello, and a server replaces a runner older than its own by itself, whoever uses it, and goes on; the other process finds the new one in its place and is told why. A runner the server started itself that is still older says how to make it its own again, by where it came from: a checkout, the variable that names it, or the state folder's `ios-build`.
+
 ## 1.3.7
 
 appdyno 1.3.7 reads an iPhone's `increase_contrast` as the phone has it, so a `restore` no longer turns off a contrast a person had on; it also says the iOS runner's start in plain lines and keeps a flight recorder's ring while a second session of its process opens.

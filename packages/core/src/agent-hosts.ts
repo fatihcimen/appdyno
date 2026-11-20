@@ -70,12 +70,14 @@ function join(serial: string): Owner[] {
  * The agent already on a device, if this host is to use it; undefined: it is to start one. A device has one agent, and
  * hosts of one build meet on it. One of another build is replaced, but never under a live host: that host's next call
  * would replace the new one in turn, and two builds, as an update leaves side by side, would take the device from each
- * other for as long as both run. So it stays until its last host has gone, and speaks the same protocol or says so.
+ * other for as long as both run. So it stays until its last host has gone, and speaks the same protocol or says so,
+ * unless it is older than this host: what it does not know it answers otherwise, as one read the app for the home screen.
  *
  * One that does not answer is gone, and its caller starts another, which ends it: but under a live host only where
  * nothing listens or its process is dead. A hello that only ran out of time, as on a loaded Mac, gets one more go with
  * `TIMEOUTS.hello`, and an agent still silent then is left to the hosts that use it, whose own calls tell a stuck one.
- * `alive`: whether the agent's process is; none: it is taken as alive.
+ * `alive`: whether the agent's process is; none: it is taken as alive. `older`: why its hello is older than this host,
+ * if it is: that host takes this one's in turn, as a newer agent serves an older host.
  */
 export async function sharedAgent<State extends { sha256: string }>(
   serial: string,
@@ -83,6 +85,7 @@ export async function sharedAgent<State extends { sha256: string }>(
   sha256: string,
   reach: (state: State, helloMs?: number) => Promise<{ rpc: RpcClient; hello: Hello }>,
   alive: (state: State) => boolean | Promise<boolean> = () => true,
+  older?: (hello: Hello) => string | undefined,
 ) {
   const others = join(serial);
   const otherBuild = state?.sha256 !== sha256;
@@ -110,6 +113,17 @@ export async function sharedAgent<State extends { sha256: string }>(
         );
       return undefined;
     });
+  const old = agent && older?.(agent.hello);
+  if (agent && old) {
+    agent.rpc.close();
+    const why = `it was ${old}`;
+    // the hosts that used it read why, where they find this one's in its place
+    agentEnded(serial, agent.hello.pid, why);
+    const line = `the agent on ${serial} is replaced by this host's: ${why}`;
+    reportProgress(line);
+    noteInAnswer(line);
+    return undefined;
+  }
   // said in the answer: its hello names that build's version, which read as this one's
   if (agent && otherBuild)
     noteInAnswer(

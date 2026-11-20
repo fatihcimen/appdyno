@@ -56,22 +56,42 @@ export function checkoutBehind(
     : undefined;
 }
 
+const PRODUCTS_ENV = {
+  simulator: 'APPDYNO_IOS_PRODUCTS',
+  device: 'APPDYNO_IOS_DEVICE_PRODUCTS',
+} as const;
+
+const hasRunner = (kind: Kind, dir: string) => {
+  const sdk = kind === 'simulator' ? 'iphonesimulator' : 'iphoneos';
+  return (
+    existsSync(dir) && readdirSync(dir).some((f) => f.includes(sdk) && f.endsWith('.xctestrun'))
+  );
+};
+
+/** A development build of the runner, where there is one: the environment's, else a checkout's. */
+function devProducts(kind: Kind, ios: string | undefined) {
+  return [process.env[PRODUCTS_ENV[kind]], ios && join(ios, DERIVED[kind], 'Build/Products')].find(
+    (d): d is string => !!d && hasRunner(kind, d),
+  );
+}
+
+/** What makes the runner a host started its own again, where it is older than that host: by where it was taken from. */
+export function rebuildHint(kind: Kind, ios = inCheckout('ios')): string {
+  const dev = devProducts(kind, ios);
+  if (dev && dev === process.env[PRODUCTS_ENV[kind]])
+    return `${PRODUCTS_ENV[kind]} names an older build of it: build that again, or unset it`;
+  if (dev) return `build it again from this checkout: ${BUILD_LINE[kind]}`;
+  return `remove ${join(stateDir(), 'ios-build')} and retry: it is fetched or built again`;
+}
+
 /**
  * The runner's products for a simulator or a phone: a development build, else the release's own for a simulator, fetched
  * once, else built once from the packaged sources.
  */
 export async function iosProducts(kind: Kind, build = true): Promise<string | undefined> {
-  const env =
-    kind === 'simulator'
-      ? process.env.APPDYNO_IOS_PRODUCTS
-      : process.env.APPDYNO_IOS_DEVICE_PRODUCTS;
-  const sdk = kind === 'simulator' ? 'iphonesimulator' : 'iphoneos';
-  const has = (dir: string) =>
-    existsSync(dir) && readdirSync(dir).some((f) => f.includes(sdk) && f.endsWith('.xctestrun'));
+  const has = (dir: string) => hasRunner(kind, dir);
   const repo = inCheckout('ios');
-  const found = [env, repo && join(repo, DERIVED[kind], 'Build/Products')].find(
-    (d): d is string => !!d && has(d),
-  );
+  const found = devProducts(kind, repo);
   if (found) {
     // said, not refused nor built here: a person decides when to build
     const behind = checkoutBehind(kind, found, repo);

@@ -16,7 +16,7 @@
     "method": "hello",
     "result": {
       "agentVersion": "0.0.0",
-      "protocol": { "major": 2 },
+      "protocol": { "major": 2, "minor": 1 },
       "platform": "ios",
       "osVersion": "26.5",
       "model": "iPhone17,3",

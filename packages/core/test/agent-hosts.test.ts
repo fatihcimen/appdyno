@@ -66,6 +66,28 @@ describe('an agent found on a device', () => {
     ]);
   });
 
+  it('is replaced under a live host where it is older than this host, and that host is told why', async () => {
+    anotherHost();
+    const closed = vi.fn();
+    const old = { rpc: { close: closed } as unknown as RpcClient, hello: { pid: 77 } as never };
+    const { value: found, notes } = await noting(() =>
+      sharedAgent(
+        SERIAL,
+        { sha256: OTHER_BUILD },
+        THIS_BUILD,
+        () => Promise.resolve(old),
+        undefined,
+        () => 'of protocol 2.0, older than this host',
+      ),
+    );
+    expect(found).toBeUndefined();
+    expect(closed).toHaveBeenCalledOnce();
+    const why = 'it was of protocol 2.0, older than this host';
+    expect(notes).toEqual([`the agent on ${SERIAL} is replaced by this host's: ${why}`]);
+    const ended = deviceState('agent-ended', { parse: (x: unknown) => x as object });
+    expect(ended.read(SERIAL)).toEqual({ pid: 77, by: process.pid, why });
+  });
+
   it('goes once that host has gone', async () => {
     const child = anotherHost();
     await new Promise((gone) => {

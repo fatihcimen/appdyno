@@ -11,6 +11,7 @@ import {
   buildPhase,
   checkoutBehind,
   pruneIosBuilds,
+  rebuildHint,
   xcodebuildTelling,
 } from '../src/runner-build.js';
 
@@ -41,6 +42,25 @@ describe("a checkout's runner products", () => {
     at('RunnerCore/Sources/B.swift', 120);
     expect(checkoutBehind('device', products, ios)).toBe(BUILD_LINE.device);
     expect(BUILD_LINE.device).toContain('-derivedDataPath .derived-device');
+  });
+
+  it('say how the runner is made the host’s own again by where it was taken from, a checkout only where it was', () => {
+    const { ios, at } = checkout();
+    vi.stubEnv('APPDYNO_STATE_DIR', join(ios, 'state'));
+    vi.stubEnv('APPDYNO_IOS_DEVICE_PRODUCTS', '');
+    onTestFinished(() => void vi.unstubAllEnvs());
+    // a folder that holds no build, as a package's install is
+    expect(rebuildHint('device', join(ios, 'Runner'))).toBe(
+      `remove ${join(ios, 'state', 'ios-build')} and retry: it is fetched or built again`,
+    );
+    expect(rebuildHint('device', ios)).toBe(
+      `build it again from this checkout: ${BUILD_LINE.device}`,
+    );
+    at('mine/Runner_iphoneos27.1-arm64.xctestrun', 0);
+    vi.stubEnv('APPDYNO_IOS_DEVICE_PRODUCTS', join(ios, 'mine'));
+    expect(rebuildHint('device', ios)).toBe(
+      'APPDYNO_IOS_DEVICE_PRODUCTS names an older build of it: build that again, or unset it',
+    );
   });
 
   it('are none of this when they are not the checkout’s own', () => {
