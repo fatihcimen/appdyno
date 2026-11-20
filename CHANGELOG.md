@@ -9,6 +9,7 @@
 - A tool call writes in appdyno's state folder only in its folders for what tools make (`exports`, `measurements`, `reports`, `video`). Before, it could write who holds a device, the HTTP token, what appdyno puts back and a push service's key. Any other path there is refused `POLICY_DENIED`, whichever folder it is reached through.
 - A file a tool call names to read (a mock rule's `body=@file`, a HAR, media, `capture_network read`'s `har`) is read only from the folders a tool writes in. Before, a server started at the disk's root or in the home folder read any file of this Mac, and `capture_network read` read a HAR from any folder. No file of appdyno's own is read.
 - `appdyno test share --zip` and `appdyno test merge` leave out the links in a run's folder and say how many. Before, they copied what the links led to.
+- A flow run on the command line hides each value it took from the environment, as it does one from an env file. Before, it showed them in answers and reports.
 
 ## 1.3.8
 

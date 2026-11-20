@@ -56,12 +56,9 @@ export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep' | 'progress'> & {
   prepares?: boolean;
 };
 
-/** The values a run took from an env file, the empty ones aside: what a param gave is not the file's. */
+/** The values a run took from an env file or the environment, the empty ones aside: what a param gave is the caller's. */
 const filedValues = (values: Record<string, string>, o: ReplayOptions) =>
-  Object.keys(values).flatMap((name) => {
-    const v = o.params?.[name] === undefined ? o.fromFile?.[name] : undefined;
-    return v ? [v] : [];
-  });
+  Object.entries(values).flatMap(([name, v]) => (o.params?.[name] === undefined && v ? [v] : []));
 
 const lineOf = (r: RunResult['steps'][number]) =>
   `${r.phase ? `${r.phase} ` : ''}${r.n}. ${r.step}: ${r.skipped ? `skipped, ${r.skipped}` : r.settledMs !== undefined ? `settled in ${r.settledMs} ms` : `${r.ms} ms`}${r.settled === false ? ' (the screen may still be changing)' : ''}`;

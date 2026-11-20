@@ -218,6 +218,19 @@ assert id=result check=text equals="Gönderildi"
       expect(text).toContain('Merhaba');
     });
 
+    it("hides for good each value a command line's run took from its environment, as one from an env file", async () => {
+      device.screen = 'login';
+      const file = flowFile('app dev.app\nparam TOKEN\ntype "${TOKEN}" id=user\n');
+      // the screen greets by the value it was given
+      vi.stubEnv('TOKEN', SECRET);
+      const call = callerOf(context([], { env: process.env }));
+      await call('run_flow', { action: 'run', file });
+      expect(device.typed).toEqual([SECRET]);
+      const { text } = await call('read_screen', {});
+      expect(text).not.toContain(SECRET);
+      expect(text).toContain('Merhaba •••');
+    });
+
     it('takes values from an env file, under the call and over the environment', async () => {
       device.screen = 'form';
       const file = flowFile(
