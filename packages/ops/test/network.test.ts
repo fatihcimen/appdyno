@@ -5,7 +5,7 @@ import { must, type NetworkSource } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { harEntries } from '../src/network-har.js';
-import { DEFAULT_POLICY, redactLog } from '../src/policy.js';
+import { DEFAULT_POLICY, redactLog, type Policy } from '../src/policy.js';
 import { textOf } from '../src/tool.js';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { checkedOps } from '@appdyno/testing/calls.js';
@@ -93,20 +93,32 @@ describe('a proxy export', () => {
     await expect(harEntries(file('{"log":{"entries":[{"a"'))).resolves.toEqual([]);
   });
 
-  it('is read on any device, bounded, with credentials hidden', async () => {
+  it('is read on any device, bounded, with credentials hidden, from where a tool reads alone', async () => {
     const device = new FakeDevice();
-    const ctx = new ServerContext(
-      DEFAULT_POLICY,
-      [
-        {
-          list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
-          handles: () => true,
-          open: () => device,
-        },
-      ],
-      { app: 'dev.app' },
-    );
-    const op = must(checkedOps(ctx).capture_network, 'capture_network');
+    const capture = (policy: Policy) =>
+      must(
+        checkedOps(
+          new ServerContext(
+            policy,
+            [
+              {
+                list: () =>
+                  Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
+                handles: () => true,
+                open: () => device,
+              },
+            ],
+            { app: 'dev.app' },
+          ),
+        ).capture_network,
+        'capture_network',
+      );
+    // a HAR outside the folders a tool reads, as a person's own export in a folder of theirs, is not read
+    const outside = capture(DEFAULT_POLICY);
+    await expect(
+      outside.handler(outside.input.parse({ action: 'read', har: har([]) })),
+    ).rejects.toMatchObject({ code: 'POLICY_DENIED' });
+    const op = capture({ ...DEFAULT_POLICY, writeDirs: [dir] });
     const list = Array.from({ length: 10 }, (_, i) => ({
       ...entry('2026-01-01T00:00:00Z'),
       request: { method: 'GET', url: `https://a.test/${i}?token=abc` },

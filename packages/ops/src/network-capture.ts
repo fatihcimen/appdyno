@@ -12,7 +12,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import { harEntries } from './network-har.js';
-import { checkSentTo, ruleLine, rulesOf, throttleOf } from './network-rules.js';
+import { checkRules, checkSentTo, ruleLine, rulesOf, throttleOf } from './network-rules.js';
 import type { Policy } from './policy.js';
 import { Handle } from './schemas.js';
 import type { Session } from './session.js';
@@ -177,7 +177,7 @@ export async function setRules(
   add = false,
 ) {
   // refused before anything starts, where a line is no rule or sends requests where it may not
-  rulesOf(lines);
+  checkRules(policy, lines);
   checkSentTo(policy, lines);
   const given = lines.map(ruleLine);
   const { capture, started } = await probeCapture(s, app, 'a rule');

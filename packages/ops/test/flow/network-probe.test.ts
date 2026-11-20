@@ -1,7 +1,7 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NetworkDetail, NetworkEntry } from '@appdyno/core';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { DEFAULT_POLICY, ServerContext } from '../../src/index.js';
 import { captures } from '../../src/network-capture.js';
@@ -196,6 +196,27 @@ describe('the network probe through its tool and a flow', () => {
     await call('capture_network', { action: 'start', via: 'probe' });
     const out = await refusal(call('capture_network', { action: 'read', save: '/tmp/x.har' }));
     expect(out.code).toBe('POLICY_DENIED');
+  });
+
+  it('answers with no file a tool may not read: none of the state folder, none from a server at the root', async () => {
+    writeFileSync(join(dir, 'items.json'), '[]');
+    mkdirSync(join(dir, 'state'), { recursive: true });
+    writeFileSync(join(dir, 'state', 'http-token'), 'token');
+    const call = callerOf(context());
+    const rule = (file: string) =>
+      refusal(call('capture_network', { action: 'mock', rules: [`api.test/x body=@${file}`] }));
+    const own = await rule(join(dir, 'state', 'http-token'));
+    expect([own.code, own.message]).toEqual([
+      'POLICY_DENIED',
+      expect.stringContaining("is in appdyno's own state folder"),
+    ]);
+    vi.spyOn(process, 'cwd').mockReturnValue('/');
+    const root = await rule(join(dir, 'items.json'));
+    expect([root.code, root.message]).toEqual([
+      'POLICY_DENIED',
+      expect.stringContaining('is outside the folders this server reads and writes in'),
+    ]);
+    expect(probe.started).toEqual([]);
   });
 
   it('sets, adds to, lists and clears rules, starting a capture where none runs', async () => {

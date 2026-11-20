@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { connect } from 'node:net';
 import { must, reportProgress, type NetworkAnswer, type NetworkPath } from '@appdyno/core';
 import { STATUS } from '@appdyno/flows';
@@ -30,6 +29,7 @@ import {
   ToolError,
   type ToolResult,
 } from './tool.js';
+import { readInside } from './writes.js';
 
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
@@ -192,8 +192,8 @@ export function networkOps(ctx: ServerContext) {
         }
         // read
         if (har) {
-          if (!existsSync(har)) throw new ToolError(`no such file: ${har}`, 'NOT_FOUND');
-          const entries = await harEntries(har, now?.since);
+          // a client names the file, and what it holds comes back in the answer
+          const entries = await harEntries(readInside(ctx.policy, har), now?.since);
           return answer(s, undefined, { entries }, asked, har);
         }
         if (!now)

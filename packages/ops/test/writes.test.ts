@@ -56,7 +56,7 @@ describe('a file a tool writes where its caller says', () => {
       const to = join(out, name === 'file' ? `a.${ext}` : name === 'to' ? 'a.yaml' : 'sub');
       const r = await call(tool as 'take_screenshot', { ...args, [name]: to });
       expect(r.text, said).toMatch(
-        /^POLICY_DENIED: .* is outside the folders this server writes to/,
+        /^POLICY_DENIED: .* is outside the folders this server reads and writes in/,
       );
       expect(r.text, said).toContain('--allow-write');
     }
@@ -111,7 +111,7 @@ describe('a file a tool writes where its caller says', () => {
     for (const writeDirs of [[out], ['/'], [state]])
       for (const to of own)
         expect(() => inside({ writeDirs }, to), `${String(writeDirs)} ${to}`).toThrow(
-          /is in appdyno's own state folder, where a tool writes only in exports, .*, video$/,
+          /is in appdyno's own state folder, where a tool reads and writes only in exports, .*, video$/,
         );
     expect(inside({ writeDirs: ['/'] }, join(state, 'video', 'a.mp4'))).toContain(
       '/state/video/a.mp4',

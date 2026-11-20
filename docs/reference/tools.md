@@ -424,9 +424,11 @@ On Android an install the device refuses says why and what a person can do: an a
 
 `manage_app install` with `files` installs one Android app's APK with its `.dm` files (dex metadata, which carry a Baseline Profile) or split APKs together, in one session, as `adb install-multiple` does, and answers the phone's prompts as for one file. Before anything reaches the device it refuses files of different apps, and a `.dm` with no APK of its name among them (`app.dm` goes with `app.apk`), which the device would drop. Where the device installs the app and warns, as of a `.dm` made for another range of API, the answer quotes the warning; Android 17 refuses such a `.dm`, and the refusal says so. An iOS app is one `.app` or `.ipa`: several files are refused `UNSUPPORTED`.
 
-### Where a tool writes
+### Where a tool reads and writes
 
-A tool writes a file where its caller says only inside the folder the server runs in, unless that is the disk's root or the home folder, a folder given with `--allow-write`, or a folder of appdyno's state folder for what tools make: `exports`, `measurements`, `reports` and `video`. The rest of the state folder is appdyno's own, as its devices, its token and what it puts back: a path there is refused `POLICY_DENIED` by whichever folder it is reached, one `--allow-write` gives included. The tools are `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` and `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` and `to`. A path elsewhere is refused `POLICY_DENIED`. This holds a tool call a client makes; a path typed on a command line is written where it says.
+A tool writes a file where its caller says only inside the folder the server runs in, unless that is the disk's root or the home folder, a folder given with `--allow-write`, or a folder of appdyno's state folder for what tools make: `exports`, `measurements`, `reports` and `video`. The rest of the state folder is appdyno's own, as its devices, its token and what it puts back: a path there is refused `POLICY_DENIED` by whichever folder it is reached, one `--allow-write` gives included. The tools are `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` and `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` and `to`. A path elsewhere is refused `POLICY_DENIED`. This holds a tool call a client makes; a path typed on a command line is written where it says, but in appdyno's own files.
+
+A file a tool reads where its caller says is read from the same folders, its links followed, and from nowhere else, whatever folder the server runs in: `capture_network` `read`'s `har`, `mock`'s `body=@file` and the HAR its `from` names, and `transfer_files` `media`. A file elsewhere is refused `POLICY_DENIED`, and so is one of appdyno's own in the state folder. A command line, `appdyno test` among them, reads where its paths say, as it writes.
 
 Listed secrets are hidden in text only: a screenshot, a `watchMs` strip and a video show the screen as it was, and their answers say so where secrets are listed.
 
@@ -575,7 +577,7 @@ A `read` of all requests is folded: failed and refused requests first, each whol
 
 ### Mock rules
 
-`mock` sets rules: `host/path` with `*`, or `regex=` for the path, `method=`, `query=`; then `status=`, `type=`, `header=`, `body=` (`body=@file` inside the server's folder), or `fail=offline|timeout|reset`, or `to=` a host on this Mac or its own network (any other needs `--allow-urls`; a bare `localhost` is `http://127.0.0.1`), with `delayMs=`, `times=` and `off`. Rules given replace the list, `add` adds to it, `[]` clears, none lists them with what each took.
+`mock` sets rules: `host/path` with `*`, or `regex=` for the path, `method=`, `query=`; then `status=`, `type=`, `header=`, `body=` (`body=@file` where a tool reads, [above](#where-a-tool-reads-and-writes)), or `fail=offline|timeout|reset`, or `to=` a host on this Mac or its own network (any other needs `--allow-urls`; a bare `localhost` is `http://127.0.0.1`), with `delayMs=`, `times=` and `off`. Rules given replace the list, `add` adds to it, `[]` clears, none lists them with what each took.
 
 ### Throttle
 
@@ -695,7 +697,7 @@ On an iPhone `devicectl device process sendMemoryWarning` sends it to the app's 
 
 ### Photos and videos
 
-`transfer_files` `media` adds a photo or a video, or a folder's photos and videos, inside the server's folder, to the device's library.
+`transfer_files` `media` adds a photo or a video, or a folder's photos and videos, where a tool reads ([above](#where-a-tool-reads-and-writes)), to the device's library.
 
 A simulator takes them by `simctl addmedia`, and the answer counts what Photos then holds; its Photos has no delete, so nothing takes them out. Each file goes by a call of its own, as `simctl addmedia` given several imports those it can and then ends on an exception that names none. A file Photos cannot import is refused `INVALID_ARGUMENT` by its name, with how many of the others went in, what may help (an H.264 video in an `.mp4` or a `.mov`, a `.png` or `.jpg` photo) and simctl's line under it; for a folder, the line is simctl's for the last file it refused.
 

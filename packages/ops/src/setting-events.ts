@@ -96,9 +96,9 @@ const EVENTS: Record<OneShot, (a: Asked) => Promise<string>> = {
     s.acted();
     return and('the device was shaken', said);
   },
-  media: async ({ s, value }) => {
+  media: async ({ policy, s, value }) => {
     if (!s.device.addMedia) throw lacks('photos or videos into its library');
-    const files = mediaFiles(value);
+    const files = mediaFiles(policy, value);
     const said = await s.device.addMedia(files);
     s.acted();
     const n = files.length;

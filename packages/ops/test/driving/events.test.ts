@@ -1,8 +1,9 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
+import type { Policy } from '../../src/index.js';
 import { connect } from './shared.js';
 
 /** A device that takes each event, and what it was given. */
@@ -87,7 +88,7 @@ describe('the one-shot events of device_setting', () => {
 
     it("adds a folder's photos and videos inside the server's folder, and no file a link leads out to", async () => {
       const { d, got } = taking();
-      const { call } = await connect(d);
+      const { call } = await connect(d, { policy: { writeDirs: [] } });
       const r = await call('transfer_files', { action: 'media', path: 'shots' });
       expect(r.text).toBe("added 2 files to the device's photos; the library holds 2");
       const [[, files]] = got as [[string, string[]]];
@@ -101,15 +102,44 @@ describe('the one-shot events of device_setting', () => {
         holder: () => undefined,
         takeOut: () => Promise.resolve({ removed: [], left: [] }),
       };
-      const { call } = await connect(Object.assign(d, { addedMedia }));
+      const { call } = await connect(Object.assign(d, { addedMedia }), {
+        policy: { writeDirs: [] },
+      });
       expect((await call('transfer_files', { action: 'media', path: 'shots' })).text).toBe(
         "added 2 files to the device's photos; the library holds 2; taken out when this session ends, or by restore",
       );
     });
 
+    it('reads where a tool writes: nothing elsewhere from a server at the root or in the home folder, nothing of the state folder but what tools made', async () => {
+      vi.stubEnv('APPDYNO_STATE_DIR', join(root, 'state'));
+      for (const f of ['push', 'video']) mkdirSync(join(root, 'state', f), { recursive: true });
+      writeFileSync(join(root, 'state', 'push', 'key.png'), 'x');
+      writeFileSync(join(root, 'state', 'video', 'made.png'), 'x');
+      const media = async (path: string, policy: Partial<Policy> = { writeDirs: [] }) =>
+        (
+          await (
+            await connect(taking().d, { policy })
+          ).call('transfer_files', { action: 'media', path })
+        ).text;
+      for (const cwd of ['/', homedir()]) {
+        vi.spyOn(process, 'cwd').mockReturnValue(cwd);
+        expect(await media(join(root, 'secret.png'))).toMatch(
+          /^POLICY_DENIED: .*secret\.png is outside the folders this server reads and writes in/,
+        );
+      }
+      // a folder the server was started with is one it reads, and so is what tools made in the state folder
+      expect(await media(join(root, 'secret.png'), { writeDirs: [root] })).toMatch(/^added 1 file/);
+      expect(await media(join(root, 'state', 'video', 'made.png'))).toMatch(/^added 1 file/);
+      // and the rest of the state folder is never read, whatever folder holds it
+      expect(await media(join(root, 'state', 'push', 'key.png'), { writeDirs: ['/'] })).toMatch(
+        /^POLICY_DENIED: .*key\.png is in appdyno's own state folder/,
+      );
+      vi.unstubAllEnvs();
+    });
+
     it("refuses what is outside the server's folder, missing, no photo or video, or a folder with none", async () => {
       const { d, got } = taking();
-      const { call } = await connect(d);
+      const { call } = await connect(d, { policy: { writeDirs: [] } });
       const out = await call('transfer_files', { action: 'media', path: join(root, 'secret.png') });
       expect(out.data.code).toBe('POLICY_DENIED');
       expect(
@@ -123,7 +153,7 @@ describe('the one-shot events of device_setting', () => {
       ).toMatch(/^INVALID_ARGUMENT: .*shots\/notes\.txt is not a photo or video file$/);
       mkdirSync(join(root, 'project/empty'));
       expect((await call('transfer_files', { action: 'media', path: 'empty' })).text).toMatch(
-        /^INVALID_ARGUMENT: .*empty holds no photo or video inside this server's folder$/,
+        /^INVALID_ARGUMENT: .*empty holds no photo or video in the folders this server reads$/,
       );
       expect((await call('transfer_files', { action: 'media' })).data.code).toBe(
         'INVALID_ARGUMENT',

@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, parse, relative, resolve } from 'node:path';
 import { stateDir } from '@appdyno/core';
@@ -76,7 +76,7 @@ export function inside(policy: Folders, path: string, itself = false) {
     within(p, state) && !OUTPUT_FOLDERS.some((f) => state && within(p, join(state, f)));
   if (own(to, stateDir()) || own(real(to), real(stateDir())))
     throw new ToolError(
-      `${to} is in appdyno's own state folder, where a tool writes only in ${OUTPUT_FOLDERS.join(', ')}`,
+      `${to} is in appdyno's own state folder, where a tool reads and writes only in ${OUTPUT_FOLDERS.join(', ')}`,
       'POLICY_DENIED',
     );
   const roots = writeFolders(policy);
@@ -86,11 +86,23 @@ export function inside(policy: Folders, path: string, itself = false) {
   };
   if (!roots.some((root) => under(to, root) && under(real(to), real(root))))
     throw new ToolError(
-      `${to} is outside the folders this server writes to`,
+      `${to} is outside the folders this server reads and writes in`,
       'POLICY_DENIED',
       `give a path inside ${foldersOf(policy, [join(stateDir(), `{${OUTPUT_FOLDERS.join(',')}}`)]).join(' or ')}; ${byPerson('by starting it with --allow-write and that folder (APPDYNO_ALLOW_WRITE)')}`,
     );
   return to;
+}
+
+/**
+ * The real path of a file or folder a tool reads where its caller says: in the folders it writes in, as `inside` has
+ * them, links followed. A client names the path, and what is read goes to a device, an app or an answer: no other file
+ * of this Mac, and none of appdyno's own.
+ */
+export function readInside(policy: Folders, name: string) {
+  const given = resolve(name);
+  if (!existsSync(given)) throw new ToolError(`${given}: no such file or folder`, 'NOT_FOUND');
+  inside(policy, given, true);
+  return realpathSync(given);
 }
 
 /** A file and its folders: what is there stays unless `overwrite`. */

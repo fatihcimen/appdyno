@@ -7,6 +7,7 @@
 ### Düzeltilenler
 
 - Bir araç çağrısı appdyno'nun durum klasörüne yalnızca araçların yaptıkları için ayrılmış klasörlerde (`exports`, `measurements`, `reports`, `video`) yazar; önceden bir cihazı kimin tuttuğunu, HTTP token'ını, appdyno'nun geri koyduklarını ve bir push servisinin anahtarını yazabiliyordu. Oradaki başka bir yol, hangi klasörden ulaşılırsa ulaşılsın, `POLICY_DENIED` ile reddedilir.
+- Bir araç çağrısının okumak için adlandırdığı bir dosya (bir mock kuralının `body=@file`'ı, bir HAR, medya, `capture_network read`'in `har`'ı) yalnızca bir aracın yazdığı klasörlerden okunur; önceden diskin kökünde ya da ev klasöründe başlatılan bir sunucu bu Mac'in herhangi bir dosyasını, `capture_network read` ise herhangi bir klasördeki bir HAR'ı okuyordu. appdyno'nun kendi dosyalarından hiçbiri okunmaz.
 
 ## 1.3.8
 

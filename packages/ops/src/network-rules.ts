@@ -1,9 +1,10 @@
 import { realpathSync, statSync } from 'node:fs';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import type { NetworkEntry, NetworkRule, NetworkThrottle } from '@appdyno/core';
 import { FlowError, mockRule, parseFlow, stepLine, type FlowStep } from '@appdyno/flows';
 import { byPerson, type Policy } from './policy.js';
 import { ToolError } from './tool.js';
+import { readInside } from './writes.js';
 
 export const MAX_RULES = 50;
 
@@ -34,12 +35,8 @@ export function ruleSwitched(line: string, on: boolean) {
   return stepLine({ ...st, args: on ? args : { ...args, off: true } }).replace(/^mock /, '');
 }
 
-/**
- * A file a rule answers with, or one rules are made of, inside the folder this server runs in once its links are followed, as `media` has it:
- * a client names the path, and what it reads goes to an app and from there into a capture.
- */
-export function fileInside(name: string) {
-  const root = realpathSync(process.cwd());
+/** A file by the name it was given, its links followed: refused where it is not there, or is no file. */
+export function placed(name: string) {
   const given = resolve(name);
   let real: string;
   try {
@@ -47,15 +44,17 @@ export function fileInside(name: string) {
   } catch {
     throw new ToolError(`${given}: no such file`, 'NOT_FOUND');
   }
-  const r = relative(root, real);
-  if (r.startsWith('..') || isAbsolute(r))
-    throw new ToolError(
-      `${given} is outside the folder this server runs in`,
-      'POLICY_DENIED',
-      `give a path inside ${root}`,
-    );
   if (!statSync(real).isFile()) throw new ToolError(`${given} is not a file`, 'INVALID_ARGUMENT');
   return real;
+}
+
+/**
+ * A file a rule answers with, or one rules are read from, where a tool reads (`readInside`): a client names the path,
+ * and what it reads goes to an app, and from there into a capture.
+ */
+export function fileInside(policy: Policy, name: string) {
+  readInside(policy, name);
+  return placed(name);
 }
 
 /** A host on this Mac or its own network: where a rule may send a request with no one's leave. */
@@ -79,14 +78,26 @@ export function checkSentTo(policy: Policy, lines: string[]) {
   }
 }
 
-/** The rules of those lines as the probe reads them, each file it answers with placed. */
+/**
+ * The rules of those lines as the probe reads them, each file it answers with placed: as a capture holds them, each
+ * file read where a tool may when it was set (`checkRules`).
+ */
 export function rulesOf(lines: string[]): NetworkRule[] {
   if (lines.length > MAX_RULES)
     throw new ToolError(`${lines.length} rules: at most ${MAX_RULES}`, 'INVALID_ARGUMENT');
   return lines.map((line) => {
     const rule = mockRule(ruleStep(line));
-    return rule.bodyFile ? { ...rule, bodyFile: fileInside(rule.bodyFile) } : rule;
+    return rule.bodyFile ? { ...rule, bodyFile: placed(rule.bodyFile) } : rule;
   });
+}
+
+/** Refuses lines that are no rules, or that answer with a file a tool may not read where its caller says. */
+export function checkRules(policy: Policy, lines: string[]) {
+  rulesOf(lines);
+  for (const line of lines) {
+    const file = mockRule(ruleStep(line)).bodyFile;
+    if (file) readInside(policy, file);
+  }
 }
 
 /** Each rule's line with what it took of the requests seen. */

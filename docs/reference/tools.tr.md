@@ -424,9 +424,11 @@ Android'de cihazın reddettiği bir kurulum nedenini ve bir kişinin ne yapabile
 
 `files` ile `manage_app install`, bir Android uygulamasının APK'sını `.dm` dosyalarıyla (Baseline Profile taşıyan dex metadata) ya da split APK'larıyla birlikte, `adb install-multiple` gibi tek bir session'da kurar ve telefonun sorularını tek bir dosyada olduğu gibi yanıtlar. Cihaza bir şey ulaşmadan önce farklı uygulamaların dosyalarını ve aralarında kendi adında bir APK olmayan bir `.dm`'yi (`app.dm`, `app.apk` ile gider) reddeder; cihaz onu atardı. Cihaz uygulamayı kurup bir uyarı verdiğinde, başka bir API aralığı için yapılmış bir `.dm`'de olduğu gibi, yanıt uyarıyı aktarır; Android 17 böyle bir `.dm`'yi reddeder ve ret bunu söyler. Bir iOS uygulaması tek bir `.app` ya da `.ipa`'dır: birden çok dosya `UNSUPPORTED` olarak reddedilir.
 
-### Bir araç nereye yazar
+### Bir araç nereden okur, nereye yazar
 
-Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün (diskin kökü ya da ev klasörü değilse), `--allow-write` ile verilen bir klasörün ya da appdyno'nun durum klasöründe araçların yaptıkları için ayrılmış bir klasörün içinde dosya yazar: `exports`, `measurements`, `reports` ve `video`. Durum klasörünün geri kalanı appdyno'nun kendisinindir, cihazları, token'ı ve geri koyduğu şeyler gibi: oradaki bir yol, hangi klasörden ulaşılırsa ulaşılsın, `--allow-write`'ın verdiği bir klasörden de olsa, `POLICY_DENIED` ile reddedilir. Araçlar şunlardır: `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` ve `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` ve `to`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Bu, bir istemcinin yaptığı araç çağrısı için geçerlidir; komut satırına yazılan bir yol söylediği yere yazılır.
+Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün (diskin kökü ya da ev klasörü değilse), `--allow-write` ile verilen bir klasörün ya da appdyno'nun durum klasöründe araçların yaptıkları için ayrılmış bir klasörün içinde dosya yazar: `exports`, `measurements`, `reports` ve `video`. Durum klasörünün geri kalanı appdyno'nun kendisinindir, cihazları, token'ı ve geri koyduğu şeyler gibi: oradaki bir yol, hangi klasörden ulaşılırsa ulaşılsın, `--allow-write`'ın verdiği bir klasörden de olsa, `POLICY_DENIED` ile reddedilir. Araçlar şunlardır: `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` ve `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` ve `to`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Bu, bir istemcinin yaptığı araç çağrısı için geçerlidir; komut satırına yazılan bir yol, appdyno'nun kendi dosyaları dışında, söylediği yere yazılır.
+
+Bir aracın, çağıranın söylediği yerden okuduğu bir dosya, sunucu hangi klasörde çalışırsa çalışsın, bağlantıları izlenerek aynı klasörlerden okunur, başka hiçbir yerden okunmaz: `capture_network` `read`'in `har`'ı, `mock`'un `body=@file`'ı ve `from`'unun adlandırdığı HAR, ve `transfer_files` `media`. Başka bir yerdeki dosya `POLICY_DENIED` ile reddedilir; durum klasöründe appdyno'nun kendisine ait olan bir dosya da. Bir komut satırı, `appdyno test` de, yazdığı gibi yollarının söylediği yerden okur.
 
 Listelenen sırlar yalnızca metinde gizlenir: bir ekran görüntüsü, bir `watchMs` şeridi ve bir video ekranı olduğu gibi gösterir; sır listelenmişse yanıtları bunu söyler.
 
@@ -575,7 +577,7 @@ Bütün isteklerin bir `read` çağrısı katlanmış gelir: önce başarısız 
 
 ### Mock kuralları
 
-`mock` kuralları koyar: `*` ile `host/path` ya da yol için `regex=`, `method=`, `query=`; ardından `status=`, `type=`, `header=`, `body=` (sunucunun klasörü içinde `body=@file`) ya da `fail=offline|timeout|reset` ya da bu Mac'te veya onun kendi ağında bir host'a `to=` (başkası için `--allow-urls` gerekir; yalın bir `localhost`, `http://127.0.0.1` demektir); `delayMs=`, `times=` ve `off` ile birlikte. Verilen kurallar listenin yerini alır, `add` listeye ekler, `[]` temizler, hiçbiri verilmezse her birinin aldıklarıyla listelenir.
+`mock` kuralları koyar: `*` ile `host/path` ya da yol için `regex=`, `method=`, `query=`; ardından `status=`, `type=`, `header=`, `body=` (bir aracın okuduğu yerde, [yukarıda](#bir-araç-nereden-okur-nereye-yazar), `body=@file`) ya da `fail=offline|timeout|reset` ya da bu Mac'te veya onun kendi ağında bir host'a `to=` (başkası için `--allow-urls` gerekir; yalın bir `localhost`, `http://127.0.0.1` demektir); `delayMs=`, `times=` ve `off` ile birlikte. Verilen kurallar listenin yerini alır, `add` listeye ekler, `[]` temizler, hiçbiri verilmezse her birinin aldıklarıyla listelenir.
 
 ### Yavaşlatma
 
@@ -695,7 +697,7 @@ Bir iPhone'da `devicectl device process sendMemoryWarning` onu uygulamanın sür
 
 ### Fotoğraflar ve videolar
 
-`transfer_files` `media`, sunucunun klasöründeki bir fotoğrafı ya da videoyu, ya da bir klasörün fotoğraf ve videolarını cihazın kitaplığına ekler.
+`transfer_files` `media`, bir aracın okuduğu yerdeki ([yukarıda](#bir-araç-nereden-okur-nereye-yazar)) bir fotoğrafı ya da videoyu, ya da bir klasörün fotoğraf ve videolarını cihazın kitaplığına ekler.
 
 Bir simulator onları `simctl addmedia` ile alır ve yanıt Fotoğraflar'ın sonra kaç öğe tuttuğunu sayar; Fotoğraflar'ında silme yoktur, bu yüzden hiçbir şey onları çıkarmaz. Her dosya kendi çağrısıyla gider, çünkü birkaç dosya verilen `simctl addmedia` alabildiklerini içe aktarır, sonra hiçbirini adıyla söylemeyen bir istisnayla biter. Fotoğraflar'ın içe aktaramadığı bir dosya adıyla `INVALID_ARGUMENT` olarak reddedilir; yanıt ötekilerden kaçının eklendiğini, neyin işe yarayabileceğini (bir `.mp4` ya da `.mov` içinde H.264 video, `.png` ya da `.jpg` fotoğraf) ve altında simctl'in satırını verir; bir klasörde bu satır, simctl'in reddettiği son dosya için verdiği satırdır.
 

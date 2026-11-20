@@ -4,7 +4,7 @@ import type { NetworkDetail, NetworkEntry } from '@appdyno/core';
 import { stepLine } from '@appdyno/flows';
 import { defined } from './flow/shared.js';
 import { fits, HAR_DIR, type Filter } from './network-answer.js';
-import { fileInside, MAX_RULES } from './network-rules.js';
+import { fileInside, MAX_RULES, placed } from './network-rules.js';
 import type { Policy } from './policy.js';
 import { ToolError } from './tool.js';
 import { writeInside } from './writes.js';
@@ -131,10 +131,13 @@ type HarFile = {
 };
 
 /** A HAR by the name a client gave: by a bare name it is where `save` puts one by a bare name. */
-export function harFile(name: string) {
+const harName = (name: string) => {
   const saved = join(HAR_DIR, name);
-  return fileInside(!existsSync(resolve(name)) && existsSync(resolve(saved)) ? saved : name);
-}
+  return !existsSync(resolve(name)) && existsSync(resolve(saved)) ? saved : name;
+};
+
+/** That HAR's file, its links followed, as a flow's step names one a call read already. */
+export const harFile = (name: string) => placed(harName(name));
 
 /**
  * A rule for each answer of a HAR file, the ones asked for where a part of an address, a method or a status narrows
@@ -147,7 +150,7 @@ export function rulesFromHar(
   asked: Filter,
   clean: (text: string) => string,
 ): Made {
-  const file = harFile(name);
+  const file = fileInside(policy, harName(name));
   if (statSync(file).size > MAX_HAR_BYTES)
     throw new ToolError(
       `${file} is over ${MAX_HAR_BYTES / 1024 / 1024} MB: save the part to replay`,

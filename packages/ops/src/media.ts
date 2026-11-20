@@ -1,7 +1,9 @@
-import { readdirSync, realpathSync, statSync } from 'node:fs';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { readdirSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { AddedMedia, Owner } from '@appdyno/core';
+import type { Policy } from './policy.js';
 import { ToolError } from './tool.js';
+import { readInside } from './writes.js';
 
 /** What changed on the device since it was added: not this tool's to delete. */
 const leftWords = (left: string[]) =>
@@ -41,52 +43,41 @@ export async function mediaRestored(
 /** What a photo library takes, by the file's extension: pictures and videos. */
 const MEDIA = /\.(jpe?g|png|heic|heif|gif|webp|bmp|tiff?|mp4|mov|m4v|3gp|webm|mkv)$/i;
 
-const realOf = (path: string) => {
+/** A folder's file where a tool reads, if it is one: one a link leads elsewhere from, or that is gone, is none. */
+const readable = (policy: Policy, file: string) => {
   try {
-    return realpathSync(path);
-  } catch {
-    return undefined;
+    return readInside(policy, file);
+  } catch (e) {
+    if (e instanceof ToolError) return undefined;
+    throw e;
   }
 };
 
 /**
- * The photos and videos `value` names, a file or a folder's own files, each inside the folder this server runs in once
- * its links are followed: a client names the path, and no other folder of this Mac, the state folder's secrets least,
- * goes to a device.
+ * The photos and videos `value` names, a file or a folder's own files, each where a tool reads (`readInside`): a client
+ * names the path, and no other folder of this Mac, the state folder's secrets least, goes to a device.
  */
-export function mediaFiles(value: string | undefined) {
+export function mediaFiles(policy: Policy, value: string | undefined) {
   if (!value)
     throw new ToolError(
-      "media needs path: a photo or a video, or a folder of them, inside this server's folder",
+      'media needs path: a photo or a video, or a folder of them, in the folders this server reads',
       'INVALID_ARGUMENT',
     );
-  const root = realpathSync(process.cwd());
-  const inside = (p: string | undefined) => {
-    const r = p === undefined ? '..' : relative(root, p);
-    return !r.startsWith('..') && !isAbsolute(r);
-  };
   const given = resolve(value);
-  const real = realOf(given);
-  if (!real) throw new ToolError(`${given}: no such file or folder`, 'NOT_FOUND');
-  if (!inside(real))
-    throw new ToolError(
-      `${given} is outside the folder this server runs in`,
-      'POLICY_DENIED',
-      `give a path inside ${root}`,
-    );
+  const real = readInside(policy, given);
   const found = statSync(real).isDirectory()
     ? readdirSync(real)
         .sort()
-        .map((f) => realOf(join(real, f)))
+        .map((f) => readable(policy, join(given, f)))
     : [real];
   const media = found.filter(
-    (f): f is string => f !== undefined && inside(f) && MEDIA.test(f) && statSync(f).isFile(),
+    (f): f is string => f !== undefined && MEDIA.test(f) && statSync(f).isFile(),
   );
   if (media.length === 0)
     throw new ToolError(
       found.length === 1 && found[0] === real
         ? `${given} is not a photo or video file`
-        : `${given} holds no photo or video inside this server's folder`,
+        : `${given} holds no photo or video in the folders this server reads`,
       'INVALID_ARGUMENT',
     );
   return media;
