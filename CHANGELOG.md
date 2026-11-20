@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 1.3.9
+
+appdyno 1.3.9 keeps tool calls out of its own state files and keeps their reads in the folders they write in; on Android it no longer types into a field the touch is not on, nor stays stuck after a slow UI automation connect; and it reads a Flutter switch, a like-named control and a field named by its label as they are.
+
 ### Fixed
 
 - A tool call writes in appdyno's state folder only in its folders for what tools make (`exports`, `measurements`, `reports`, `video`). Before, it could write who holds a device, the HTTP token, what appdyno puts back and a push service's key. Any other path there is refused `POLICY_DENIED`, whichever folder it is reached through.

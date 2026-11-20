@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+## 1.3.9
+
+appdyno 1.3.9, araç çağrılarını kendi durum dosyalarından uzak tutar ve okumalarını yazdıkları klasörlerle sınırlar; Android'de dokunuşun üzerinde olmadığı bir alana artık yazmaz ve yavaş bir UI automation bağlantısından sonra takılı kalmaz; bir Flutter anahtarını, aynı adlı bir denetimi ve etiketiyle adlanan bir alanı oldukları gibi okur.
+
 ### Düzeltilenler
 
 - Bir araç çağrısı appdyno'nun durum klasörüne yalnızca araçların yaptıkları için ayrılmış klasörlerde (`exports`, `measurements`, `reports`, `video`) yazar; önceden bir cihazı kimin tuttuğunu, HTTP token'ını, appdyno'nun geri koyduklarını ve bir push servisinin anahtarını yazabiliyordu. Oradaki başka bir yol, hangi klasörden ulaşılırsa ulaşılsın, `POLICY_DENIED` ile reddedilir.
