@@ -42,6 +42,7 @@ export class FakeProbe implements NetworkSource {
  */
 export function probeSetup() {
   const at = { dir: '', device: new FakeDevice(), probe: new FakeProbe() };
+  let stopped = 0;
   const helpers = flowHelpers(
     () => at.device,
     () => at.dir,
@@ -60,9 +61,12 @@ export function probeSetup() {
     at.device = new FakeDevice();
     at.probe = new FakeProbe();
     Object.assign(at.device, { network: at.probe });
-    vi.useFakeTimers();
+    // never before where the last test's clock stopped: an action tells a capture from the one before by when it began,
+    // and a test whose clock ran on past this Mac's had its capture begin at the very moment the next one's did
+    vi.useFakeTimers({ now: Math.max(Date.now(), stopped + 1) });
   });
   afterEach(() => {
+    stopped = Date.now();
     vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
