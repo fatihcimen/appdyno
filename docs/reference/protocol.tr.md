@@ -504,6 +504,10 @@ için yeniden başlatıldı. Ajan bağlantısız geçen 30 dakikadan sonra
 kapanır. stderr'de `AGENT_CONFLICT` ile çıkış kodu 3: başka bir UI automation istemcisi cihazı tutuyor
 (bir cihazda tam olarak bir tane vardır). Ajan bunu 4 s denedikten sonra söyler, çünkü sistem UI automation'ı öldürülmüş bir sahip için
 tutar: bir emulator'da süreci gittikten 1,3 s sonra hâlâ tutuluyordu, 2,3 s'de boştu; düz bir `kill`'den sonra ise hemen boştu.
+Başka bir nedenle başarısız olan bir açılış, yüklü bir cihazda 5 s'sini aşan bir bağlanma gibi, açtığı bağlantıyı
+bırakır; sistem onu yine de almıştı: tutulsaydı, o ajanın sonraki her açılışı `AGENT_CONFLICT` ile reddedilirdi ve
+cihazı ajanın kendisi tutardı. Ajanın bırakamadığı bir bağlantı `AGENT_UNAVAILABLE` ile söylenir ve ajan cevap verince
+sona erer: sistem onu süreçle birlikte bırakır, sonraki çağrı da başka bir ajan başlatır.
 
 Bu durum klasörünün hiçbir şey bilmediği bize ait bir ajan bir kez değiştirilir, çünkü temizlenmiş bir önbellek geride bir tane bırakır; ancak
 `/proc/net/unix` ona bağlı bir host gösteriyorsa değiştirilmez: bu, kendine ait bir durum klasörü olan bir host'tur ve başlatma

@@ -26,6 +26,11 @@ class Automation private constructor(private val looper: Looper) {
     @Volatile
     private var current: UiAutomation? = null
 
+    /** The raw connection under `current`, which lets it go where `current` cannot. */
+    private var conn: Any? = null
+
+    private val unreleased = Unreleased<Pair<UiAutomation, Any>> { (ua, conn) -> letGo(ua, conn) }
+
     /**
      * The connection, opened again on first use after release(): while it is open accessibility is on in
      * every app, which costs an app's main thread (a cold start about 13 % longer, measured), so it is held
@@ -116,23 +121,51 @@ class Automation private constructor(private val looper: Looper) {
         // in a window does
         val turn = if (keepTurn) rotation() else beforeTurn
         beforeTurn = null
-        try {
-            UiAutomation::class.java.getDeclaredMethod("disconnect").apply { isAccessible = true }.invoke(ua)
-        } catch (e: Throwable) {
-            System.err.println("UI automation did not disconnect: $e")
-        }
+        conn?.let { unreleased.keep(ua to it) }
         if (turn != null) sh("sh", "-c", SettingsScript.restoreTurn(ROTATION.zip(turn)))
+    }
+
+    /** Lets go of a connection: true once the system holds nothing of it. */
+    private fun letGo(ua: UiAutomation, conn: Any): Boolean {
+        val failed = try {
+            UiAutomation::class.java.getDeclaredMethod("disconnect").apply { isAccessible = true }.invoke(ua)
+            return true
+        } catch (e: Throwable) {
+            e
+        }
+        // an older release's UiAutomation that never connected refuses its disconnect, where its raw connection, which
+        // the system registered all the same, lets go; one that says it is disconnected already holds nothing
+        return try {
+            conn.javaClass.getMethod("disconnect").invoke(conn)
+            true
+        } catch (e: InvocationTargetException) {
+            (e.targetException is IllegalStateException).also { if (!it) System.err.println("UI automation did not disconnect: $failed, ${e.targetException}") }
+        } catch (e: Throwable) {
+            System.err.println("UI automation did not disconnect: $failed, $e")
+            false
+        }
     }
 
     private fun open(): UiAutomation {
         val start = SystemClock.uptimeMillis()
         val connClass = Class.forName("android.app.UiAutomationConnection")
         val iface = Class.forName("android.app.IUiAutomationConnection")
-        val ua = pastConflict(RELEASE_WAIT_MS, RELEASE_PAUSE_MS, SystemClock::uptimeMillis, Thread::sleep) {
-            // one that was refused does not connect again
-            val conn = connClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
-            construct(looper, conn, iface).also(::connect)
+        val (ua, raw) = try {
+            pastConflict(RELEASE_WAIT_MS, RELEASE_PAUSE_MS, SystemClock::uptimeMillis, Thread::sleep) {
+                // one that was refused does not connect again
+                val conn = connClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+                unreleased.open(construct(looper, conn, iface) to conn) { it.also { (ua, _) -> ready(ua, start) } }
+            }
+        } catch (e: AgentFailure) {
+            throw unreleased.told(e)
         }
+        conn = raw
+        return ua
+    }
+
+    /** Connects `ua` and makes it ready to read the screen. */
+    private fun ready(ua: UiAutomation, start: Long) {
+        connect(ua)
         val info = ua.serviceInfo ?: AccessibilityServiceInfo()
         // only the events the settle reads: an app sends only the event types some service asked for,
         // so every other kind (hover, touch, text, focus, announcements) costs its main thread nothing
@@ -160,7 +193,6 @@ class Automation private constructor(private val looper: Looper) {
             Thread.sleep(20)
         }
         lastOpenMs = SystemClock.uptimeMillis() - start
-        return ua
     }
 
     /**

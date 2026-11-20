@@ -181,7 +181,11 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                 val text = resultJson(id, reply.result)
                 answer.give { if (reply.binary != null) binaryThenJson(id, reply.binary, text) else json(text) }
             } catch (t: Throwable) {
-                answer.give { json(errorJson(id, failureOf(t))) }
+                val failure = failureOf(t)
+                answer.give { json(errorJson(id, failure)) }
+                // an agent that cannot serve again, as the system holds UI automation for its own connection (Unreleased),
+                // ends once it has said so: the system lets go of what it holds with the process
+                if (failure.code == "AGENT_UNAVAILABLE") exitProcess(3)
             } finally {
                 jobs.remove(job)
             }

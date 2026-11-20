@@ -504,6 +504,10 @@ connection closed, or it was restarted as stuck. The agent exits after 30 minute
 connection. Exit code 3 with `AGENT_CONFLICT` on stderr: another UI automation client holds the device
 (a device has exactly one). The agent says so after trying for 4 s, as the system keeps UI automation for a holder that was
 killed: held 1.3 s after its process had gone, free at 2.3 s, on an emulator, while after a plain `kill` it was free at once.
+An open that fails otherwise, as a connect that ran past its 5 s on a loaded device, lets go of the connection it made,
+which the system had taken all the same: kept, it had every later open of that agent refused with `AGENT_CONFLICT`,
+the device held by the agent itself. One the agent cannot let go is said with `AGENT_UNAVAILABLE`, and the agent ends
+once it has answered: the system lets it go with the process, and the next call starts another.
 
 An agent of ours that this state folder knows nothing of is replaced once, as a cleared cache leaves one behind, unless
 `/proc/net/unix` shows a host connected to it: that is a host with a state folder of its own, and the start is refused
