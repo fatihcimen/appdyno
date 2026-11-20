@@ -28,6 +28,7 @@ import {
   type SystemView,
 } from '@appdyno/core';
 import { Adb, amStartError, assertPkg, assertSerial, shq, wholeAnswer } from './adb.js';
+import { keepOffTheMac } from './clipboard.js';
 import { androidCrashes, androidCrashing, androidRunning, stopIfHeld } from './crashes.js';
 import { androidLogs } from './logs.js';
 import { auditAndroid } from './audit.js';
@@ -188,6 +189,11 @@ export class AndroidDevice extends RpcDevice implements Device {
     ).call('stream.status', {}, { timeoutMs: TIMEOUTS.read });
     const { density } = must(this.helloInfo, "the agent's hello").screen;
     return { w: result.w, h: result.h, density, rotation: result.rotation };
+  }
+
+  /** An emulator's clipboard may be this Mac's: a call that would use it is refused first (`keepOffTheMac`). */
+  protected override beforeCall(method: Method, params: unknown) {
+    return keepOffTheMac(this.serial, method, params);
   }
 
   protected override connectionLost(e: unknown, had: RpcClient | undefined) {

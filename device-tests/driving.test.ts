@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { macSyncsPasteboard } from '../packages/driver-apple/src/sim-clipboard.js';
+import { clipboardShared } from '../packages/driver-android/src/clipboard.js';
 import { checkedOps } from '@appdyno/testing/calls.js';
 import {
   NO_DIRECT,
@@ -63,7 +64,7 @@ function shared(
     back: Record<string, unknown>;
     /** Whether the device waits for a change itself: a simulator does only where its read helper cannot read. */
     waits: boolean;
-    /** Whether its clipboard reaches this Mac's, a person's, as a simulator's does while Simulator.app syncs. */
+    /** Whether its clipboard reaches this Mac's, a person's, as a simulator's or an emulator's may. */
     synced?: () => Promise<boolean>;
     /** A phone's runner cannot reach the clipboard: iOS would ask the user. */
   },
@@ -225,7 +226,7 @@ function shared(
   });
 
   it('reads the clipboard it set, then types without asking the user about it', async (ctx) => {
-    // while Simulator.app syncs, the simulator's clipboard may hold the Mac's text, and a write would replace it
+    // while the Mac's is synced there, the clipboard may hold the Mac's text, and a write would replace it
     if (await names.synced?.()) return ctx.skip();
     await open('form');
     // on a phone it is a person's
@@ -301,6 +302,7 @@ describe.skipIf(!android)('driving on Android', () => {
     delayed: { start: 'Load', shows: 'Result 1' },
     back: { tool: 'press_key', key: 'back' },
     waits: true,
+    synced: () => clipboardShared(android),
   });
 
   it('counts two fingers in a plan', async () => {

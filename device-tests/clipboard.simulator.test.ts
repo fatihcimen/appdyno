@@ -12,15 +12,15 @@ import { RpcDevice, Simctl, simulatorProvider } from './workspace.js';
 import { opsOn } from './helpers.js';
 
 /**
- * Our own simulator's clipboard (APPDYNO_IOS_UDID, never a default) while the Simulator.app on this Mac syncs
- * pasteboards, as it does by default: each way this tool writes or reads it is refused, saying how to turn the sync off,
+ * Our own simulator's clipboard (APPDYNO_IOS_UDID, never a default) while this Mac syncs pasteboards, as Simulator.app
+ * and Device Hub do by default: each way this tool writes or reads it is refused, saying how to stop the sync,
  * and the Mac's clipboard, read by its change count alone, and the setting are as they were. Nothing is written or read
  * even if a refusal failed: `simctl pbcopy` and `pbpaste` are held here behind the same refusal, their own places in it
  * a unit test's, the runner reads nothing, and the copy keys go with nothing selected.
  */
 const udid = process.env.APPDYNO_IOS_UDID ?? '';
 const APP = 'com.apple.Preferences';
-const REFUSED = /turn off Edit › Automatically Sync Pasteboard in Simulator/;
+const REFUSED = / to use a simulator's clipboard/;
 const flow = (name: string, step: string) => {
   const file = join(mkdtempSync(join(tmpdir(), 'appdyno-clipboard-')), `${name}.flow`);
   writeFileSync(file, [`app ${APP}`, step, ''].join('\n'));
@@ -52,7 +52,7 @@ const setting = () => {
   }
 };
 
-describe.skipIf(!udid)("a simulator's clipboard while Simulator.app syncs it", () => {
+describe.skipIf(!udid)("a simulator's clipboard while this Mac syncs it", () => {
   let o: ReturnType<typeof opsOn>;
   const pbcopy = vi.fn(async () => {
     await refuseWhereSynced('write');

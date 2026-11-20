@@ -194,6 +194,7 @@ export abstract class RpcDevice extends DeviceActions {
     timeoutMs: number,
     closes = this.closes,
   ) {
+    await this.beforeCall(method, params);
     let rpc: RpcClient | undefined;
     try {
       if (closes !== this.closes) throw closedHere();
@@ -253,6 +254,11 @@ export abstract class RpcDevice extends DeviceActions {
   }
 
   protected beforeRetry(_lost: unknown): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /** What a platform checks of a call before it goes, and may refuse: nothing here. */
+  protected beforeCall(_method: Method, _params: unknown): Promise<void> {
     return Promise.resolve();
   }
 

@@ -4,6 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PROTOCOL } from '@appdyno/protocol';
+import { clipboardShared } from '../packages/driver-android/src/clipboard.js';
 import { agentMayGo } from './one-agent.js';
 import {
   Adb,
@@ -570,7 +571,9 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(full.data.subarray(1, 4).toString('ascii')).toBe('PNG');
   });
 
-  it('round-trips Turkish text through the clipboard', async () => {
+  it('round-trips Turkish text through the clipboard', async (ctx) => {
+    // an emulator with a window on this Mac shares the Mac's
+    if (await clipboardShared(serial)) return ctx.skip();
     await d.setClipboard('Kargo şubesi: Üsküdar');
     expect(await d.getClipboard()).toBe('Kargo şubesi: Üsküdar');
   });

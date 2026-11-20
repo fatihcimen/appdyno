@@ -30,6 +30,8 @@ Measurements are stored on the local disk, under the state directory or the `--m
 
 A client of the server can do on a device what a person holding it can: read the screen, tap, swipe and type, open links, launch and stop apps, set the clipboard, location and orientation, take screenshots, and read logs and crash records of an app. The Android agent runs as the shell user. Anything shown on the screen is visible to the client, so assume the model sees it.
 
+This Mac's clipboard is a person's, and the server never reads or writes it. A simulator's clipboard is synced with it while Simulator.app syncs pasteboards, as it does by default, while Xcode 27's Device Hub runs, or while `devicectl device pasteboard sync-with-host` runs; an emulator with a window can share its own with it. While that may be so, a read or a write of that device's clipboard, and a key that copies or pastes, are refused `UNSUPPORTED`, saying how to stop the sharing. On an emulator, typed text never goes by its clipboard. See [the clipboard on a simulator](docs/reference/tools.md#an-iphone) and [on an emulator](docs/reference/tools.md#starting-a-simulator-or-emulator).
+
 What an app shows is text the model reads, so an app can try to tell the model what to do: see [Prompt injection](#prompt-injection).
 
 Limits you set:

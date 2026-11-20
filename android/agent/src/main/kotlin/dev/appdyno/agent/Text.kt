@@ -164,7 +164,7 @@ class Clipboard {
 /**
  * Typing without a keyboard app: wait until an editable field has input focus (a slow phone focuses a
  * field well after the tap), set its text, read it back; a field that ignores the set gets the text
- * pasted, and plain ASCII still left over is typed as key events.
+ * pasted, but on an emulator, and plain ASCII still left over is typed as key events.
  */
 class TextInput(private val automation: Automation, private val input: Input, private val clipboard: Clipboard) {
     /**
@@ -252,9 +252,11 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         ) {
             return done("setText", verdict)
         }
-        // paste: the field's own input path (formatters, filters) sees the text
-        clipboard.set(if (replace) target else text)
-        if (attempt("paste") {
+        // paste: the field's own input path (formatters, filters) sees the text. Never on an emulator: its clipboard is
+        // the computer's too, a person's, and a password would land there
+        val pastes = !Platform.clipboardReachesHost
+        if (pastes) clipboard.set(if (replace) target else text)
+        if (pastes && attempt("paste") {
                 if (replace) select(field, 0, (field.text ?: "").length) else select(field, (field.text ?: "").length, (field.text ?: "").length)
                 field.performAction(AccessibilityNodeInfo.ACTION_PASTE)
             }
@@ -274,7 +276,8 @@ class TextInput(private val automation: Automation, private val input: Input, pr
             }
         }
         Log.i(TAG, "typing ${target.length} chars into a field: $path-> not taken")
-        throw AgentFailure("INTERNAL", "the field did not take the text", "read the screen; the field may be read-only")
+        val why = if (pastes) "" else ", and on an emulator no text goes by a paste, as its clipboard is the computer's too"
+        throw AgentFailure("INTERNAL", "the field did not take the text$why", "read the screen; the field may be read-only")
     }
 
     /** An input method window is on screen (the keyboard is up). */

@@ -355,14 +355,14 @@ export class Simctl {
   install(udid: string, appPath: string) {
     return this.exec(['install', assertUdid(udid), appPath], 300_000);
   }
-  /** The simulator's clipboard, read from the Mac: refused where Simulator.app puts the Mac's own there. */
+  /** The simulator's clipboard, read from the Mac: refused where the Mac's own is synced there (`syncsToMac`). */
   async pbpaste(udid: string) {
     const id = assertUdid(udid);
     await refuseWhereSynced('read');
     return this.exec(['pbpaste', id]);
   }
 
-  /** Puts `text` on the simulator's clipboard, from the Mac: refused where Simulator.app would put it on the Mac's. */
+  /** Puts `text` on the simulator's clipboard, from the Mac: refused where it would be synced to the Mac's. */
   async pbcopy(udid: string, text: string) {
     const id = assertUdid(udid);
     await refuseWhereSynced('write');

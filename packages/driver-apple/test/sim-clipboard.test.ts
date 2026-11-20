@@ -16,10 +16,24 @@ vi.mock('node:child_process', async (original) => ({
 }));
 
 const UDID = '11111111-2222-3333-4444-555555555555';
+// as `ps -o args=` lists them
 const SIMULATOR =
   '/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/Contents/MacOS/Simulator';
-const OTHERS =
-  '/usr/sbin/cfprefsd\n/usr/libexec/Simulator\n/Applications/Notes.app/Contents/MacOS/Notes';
+const XCODE_27 = '/Applications/Xcode-27.2.0.app/Contents';
+const DEVICE_HUB = `${XCODE_27}/Applications/DeviceHub.app/Contents/MacOS/DeviceHub`;
+const TRAMPOLINE = `${XCODE_27}/Applications/DeviceHub.app/Contents/MacOS/DevicesTrampoline`;
+const DEVICES_MENU = '/Library/Developer/Applications/DevicesMenu.app/Contents/MacOS/DevicesMenu';
+const SYNC_WITH_HOST = `${XCODE_27}/Developer/usr/bin/devicectl device pasteboard sync-with-host --device ${UDID}`;
+const OTHERS = [
+  '/usr/sbin/cfprefsd agent',
+  '/usr/libexec/Simulator',
+  '/Applications/Notes.app/Contents/MacOS/Notes',
+  `${XCODE_27}/Developer/usr/bin/devicectl device info displays --device ${UDID}`,
+  '/Library/Developer/PrivateFrameworks/CoreSimulator.framework/Versions/A/XPCServices/SimLaunchHost.arm64.xpc/Contents/MacOS/SimLaunchHost.arm64',
+].join('\n');
+/** What syncs, by name, as this Mac has it. */
+const syncing = (processes: string, setting: string | undefined) =>
+  syncsToMac(processes, setting).map((s) => s.who);
 
 /** This Mac as the fakes have it: its processes, and what `defaults` reads of the sync, none where it fails. */
 function mac(processes: string, setting: string | undefined) {
@@ -36,7 +50,7 @@ const REFUSED = {
   message: expect.stringContaining('turn off Edit › Automatically Sync Pasteboard') as unknown,
 };
 
-describe("Simulator.app's pasteboard sync", () => {
+describe("a simulator's pasteboard sync with the Mac", () => {
   beforeEach(() => {
     vi.mocked(spawn).mockReset();
     vi.mocked(run).mockReset();
@@ -46,11 +60,55 @@ describe("Simulator.app's pasteboard sync", () => {
     vi.mocked(run).mock.calls.some(([, args]) => (args as string[] | undefined)?.includes(command));
 
   it('is live while Simulator.app runs with it on, or with nothing written', () => {
-    expect(syncsToMac(`${OTHERS}\n${SIMULATOR}\n`, '1\n')).toBe(true);
-    expect(syncsToMac(`${SIMULATOR}  \n${OTHERS}`, undefined)).toBe(true);
-    expect(syncsToMac(SIMULATOR, '0\n')).toBe(false);
-    expect(syncsToMac(SIMULATOR, 'NO')).toBe(false);
-    expect(syncsToMac(OTHERS, '1')).toBe(false);
+    expect(syncing(`${OTHERS}\n${SIMULATOR}\n`, '1\n')).toEqual(['Simulator']);
+    expect(syncing(`${SIMULATOR}  \n${OTHERS}`, undefined)).toEqual(['Simulator']);
+    expect(syncing(`${SIMULATOR} -CurrentDeviceUDID ${UDID}`, 'yes')).toEqual(['Simulator']);
+    expect(syncing(SIMULATOR, '0\n')).toEqual([]);
+    expect(syncing(SIMULATOR, 'NO')).toEqual([]);
+    expect(syncing(OTHERS, '1')).toEqual([]);
+  });
+
+  it("is live while Xcode 27's Device Hub runs, with no Simulator.app, whatever Simulator's switch says", () => {
+    // Simulator's switch was all the guard read, and Xcode 27 ships no Simulator.app: this read as no sync
+    expect(syncing(`${OTHERS}\n${DEVICE_HUB}`, '0')).toEqual(['Device Hub']);
+    expect(syncing(`${OTHERS}\n${DEVICE_HUB}`, undefined)).toEqual(['Device Hub']);
+    expect(syncing(TRAMPOLINE, '0')).toEqual(['Device Hub']);
+    expect(syncing(DEVICES_MENU, '0')).toEqual(['Device Hub']);
+    expect(syncing(`${SIMULATOR}\n${DEVICE_HUB}`, '0')).toEqual(['Device Hub']);
+    expect(syncing(`${SIMULATOR}\n${DEVICE_HUB}`, '1')).toEqual(['Simulator', 'Device Hub']);
+    expect(
+      syncing(`${XCODE_27}/Applications/Instruments.app/Contents/MacOS/Instruments`, '1'),
+    ).toEqual([]);
+  });
+
+  it("is live while devicectl syncs a device's pasteboard with the host", () => {
+    expect(syncing(`${OTHERS}\n${SYNC_WITH_HOST}`, '0')).toEqual(['devicectl']);
+    expect(syncing(`xcrun devicectl device pasteboard sync-with-host -d ${UDID}`, '0')).toEqual([
+      'devicectl',
+    ]);
+  });
+
+  it('refuses each use of the pasteboard while Device Hub runs, saying to quit it, before simctl runs', async () => {
+    mac(`${OTHERS}\n${DEVICE_HUB}`, '0');
+    await expect(new Simctl().pbcopy(UDID, 'pano')).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+      message:
+        "Device Hub's pasteboard sync would put this text on your Mac's clipboard: quit Device Hub and its menu bar extra to use a simulator's clipboard",
+    });
+    await expect(new Simctl().pbpaste(UDID)).rejects.toMatchObject({
+      message: expect.stringMatching(
+        /^Device Hub's pasteboard sync puts your Mac's clipboard/,
+      ) as unknown,
+    });
+    expect(spawn).not.toHaveBeenCalled();
+    expect(ran('pbpaste')).toBe(false);
+    mac(`${SIMULATOR}\n${DEVICE_HUB}\n${SYNC_WITH_HOST}`, undefined);
+    await expect(new Simctl().pbpaste(UDID)).rejects.toMatchObject({
+      message: expect.stringMatching(
+        /^Simulator's and Device Hub's and devicectl's pasteboard sync .*: turn off Edit › Automatically Sync Pasteboard in Simulator and quit Device Hub and its menu bar extra and stop `devicectl device pasteboard sync-with-host` to use/,
+      ) as unknown,
+    });
+    expect(ran('pbpaste')).toBe(false);
   });
 
   it('refuses a simulator clipboard before simctl runs', async () => {
@@ -121,6 +179,12 @@ describe("Simulator.app's pasteboard sync", () => {
       await expect(
         acts.act({ kind: 'key', key, modifiers: ['command'] }, {}),
       ).rejects.toMatchObject({ ...REFUSED, message: expect.stringContaining(words) as unknown });
+    mac(DEVICE_HUB, '0');
+    await expect(
+      acts.act({ kind: 'key', key: 'v', modifiers: ['command'] }, {}),
+    ).rejects.toMatchObject({
+      message: expect.stringMatching(/^Device Hub's .*a paste would put it/) as unknown,
+    });
     expect(send).not.toHaveBeenCalled();
     expect(byRunner).not.toHaveBeenCalled();
     expect(pasteboardKey({ kind: 'key', key: 'v', modifiers: ['command'] })).toBe('paste');

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { macSyncsPasteboard } from '../packages/driver-apple/src/sim-clipboard.js';
+import { clipboardShared } from '../packages/driver-android/src/clipboard.js';
 import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
@@ -20,7 +21,7 @@ const ok = <A extends Answer>(r: A) => {
   return r;
 };
 
-/** `synced`: whether a copy there would reach this Mac's clipboard, a person's, as a simulator's does while Simulator.app syncs. */
+/** `synced`: whether a copy there would reach this Mac's clipboard, a person's, as a simulator's or an emulator's may. */
 function keysOf(get: () => Call, synced = () => Promise.resolve(false)) {
   const call: Call = (n, a) => get()(n, a);
   const form = async () => {
@@ -126,7 +127,10 @@ describe.skipIf(!ANDROID)('keys on Android', () => {
     o = opsOn(androidProvider(new Adb()), ANDROID, APP);
   });
   afterAll(() => o.ctx.close());
-  keysOf(() => o.call);
+  keysOf(
+    () => o.call,
+    () => clipboardShared(ANDROID),
+  );
   it('leaves a field by an arrow, and the next key lands in the next field', async () => {
     await o.call('manage_app', { action: 'stop' });
     ok(await o.call('launch_app'));
