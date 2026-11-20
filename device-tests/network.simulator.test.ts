@@ -367,7 +367,7 @@ describe.skipIf(!udid)('the network probe on a simulator', () => {
       action: 'mock',
       rules: [`${a.at}/x body=@/etc/hosts`],
     });
-    expect(outside.text).toMatch(/outside the folder this server runs in/);
+    expect(outside.text).toMatch(/outside the folders this server reads and writes in/);
     const none = await call('capture_network', { action: 'mock', rules: [`${a.at}/x`] });
     expect(none.text).toMatch(/say what it does/);
     const far = await call('capture_network', {
