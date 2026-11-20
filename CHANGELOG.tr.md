@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+### Düzeltilenler
+
+- Bir iPhone'da `set_device`, telefonda ne olursa olsun `increase_contrast`'ı `off` okuyordu, çünkü devicectl bu tek anahtarı yalın bir true ya da false olarak verir. Bu yüzden bir `restore`, bir kişinin açtığı kontrastı kapatabiliyordu. Artık telefonda olduğu gibi okunur.
+
 ## 1.3.6
 
 appdyno 1.3.6, bir flow'un olduğu gibi tuttuğu bir sırrı bir test çalıştırmasının yazdığı ve yanıtladığı her şeyde gizler.

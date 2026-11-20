@@ -256,7 +256,7 @@ export class PhoneSettings implements DeviceSettings {
       userInterfaceStyle?: string;
       textSize?: string;
       reduceMotion?: { enabled?: boolean };
-      increaseContrast?: { enabled?: boolean };
+      increaseContrast?: boolean | { enabled?: boolean }; // devicectl gives this one bare
       reduceTransparency?: { enabled?: boolean };
     };
     if (name === 'dark_mode') return a.userInterfaceStyle ?? '';
@@ -266,7 +266,8 @@ export class PhoneSettings implements DeviceSettings {
       increase_contrast: a.increaseContrast,
       reduce_transparency: a.reduceTransparency,
     };
-    return flags[name as keyof typeof flags]?.enabled ? 'on' : 'off';
+    const flag = flags[name as keyof typeof flags];
+    return (typeof flag === 'boolean' ? flag : flag?.enabled) ? 'on' : 'off';
   }
 
   async set(name: SettingName, value: string, app?: string): Promise<string | undefined> {

@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- On an iPhone, `set_device` read `increase_contrast` as `off` whatever the phone had, as devicectl gives that one switch as a bare true or false. A `restore` could so turn off a contrast a person had on. It now reads as the phone has it.
+
 ## 1.3.6
 
 appdyno 1.3.6 hides a secret that a flow holds as it is in all a test run writes and answers.
