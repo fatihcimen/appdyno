@@ -18,6 +18,7 @@
 - Android'de Chrome'da ikinci bir `type_text` dokunduğu alana yazar; Chrome yeni odağı geç bildirdiği için metin daha önce yazılan alana giriyor ve yazıldı deniyordu.
 - Android'de `type_text`, uygulamanın çizdiği bir düzenleyiciye, bir Flutter zengin metin sayfası gibi, düz ASCII metni tuş olarak yazar; önce 5 s bekleyip reddediyordu. Başka harfler ve `replace`, nedeni söylenerek hemen `UNSUPPORTED` ile reddedilir.
 - Yüklü bir cihazda UI automation bağlantısı süresini aşan bir Android ajanı o bağlantıyı bırakır: sonraki her çağrı dakikalarca başka bir otomasyon sunucusunu göstererek `AGENT_CONFLICT` ile reddediliyordu, oysa cihazı tutan ajanın kendisiydi. Bırakamadığı bir bağlantı `AGENT_UNAVAILABLE` ile söylenir ve ajan sona erer; sonraki çağrı başka bir ajan başlatır.
+- Bir Android ekranı, klavyesi açıkken bir Flutter uygulamasını tutan görünümü artık adsız olarak odağı için listelemiyor.
 
 ## 1.3.8
 

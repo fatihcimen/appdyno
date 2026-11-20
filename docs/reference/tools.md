@@ -256,7 +256,7 @@ When a target is under the on-screen keyboard, where a touch would type a letter
 
 ### The on-screen keyboard
 
-The on-screen keyboard is one element, `@keyboard keyboard`, on iOS as on Android, and none of its keys, bars or predictions is listed: `type_text` types, `press_key` `enter` presses its return key, `press_key` `hide_keyboard` closes it, and a touch on it is refused. A field's tap that opened it says so in one line of the diff.
+The on-screen keyboard is one element, `@keyboard keyboard`, on iOS as on Android, and none of its keys, bars or predictions is listed: `type_text` types, `press_key` `enter` presses its return key, `press_key` `hide_keyboard` closes it, and a touch on it is refused. A field's tap that opened it says so in one line of the diff. An element with no words that is listed for its focus alone is where the focus is; a view that holds what is listed, as a Flutter app's view while its keyboard is up, is not listed for it.
 
 `type_text` with no target on iOS, where no field holds the focus and no keyboard is up, is refused with `NO_FOCUS` before a key is sent: iOS takes keys with nothing focused, and the first can focus a field the rest then land in. The iOS runner refuses `press_key` `delete` and `tab` so too, where XCTest's own typing ended it.
 

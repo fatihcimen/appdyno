@@ -206,6 +206,30 @@ describe('screen diff', () => {
 });
 
 describe('wire tree to screen', () => {
+  it('lists no view that holds what is listed for its focus alone, as a Flutter app with the keyboard up', () => {
+    // Saber's note in its text mode: the app's view has the focus, and its page has it too
+    const focused = 1 | 4 | 8 | 16;
+    const tree = wireTree([
+      { c: 'android.widget.FrameLayout', b: [0, 0, 1080, 2400], f: focused },
+      {
+        p: 1,
+        c: 'android.view.View',
+        d: 'Type something here…',
+        b: [0, 367, 1080, 1134],
+        f: focused,
+      },
+      { p: 1, c: 'android.widget.Button', d: 'Pages', b: [828, 147, 954, 273], f: 1 | 2 | 4 | 16 },
+    ]);
+    const lines = (t: typeof tree) =>
+      buildScreen(t, { port: plainScreen }).list.map(
+        (e) => `${e.role} ${e.label} ${e.flags.join(',')}`,
+      );
+    expect(lines(tree)).toEqual(['text Type something here… focused', 'button Pages clickable']);
+    // one that holds nothing listed is where the focus is
+    const alone = wireTree([{ c: 'android.view.View', b: [0, 367, 1080, 1134], f: focused }]);
+    expect(lines(alone)).toEqual(['view  focused']);
+  });
+
   it('names an empty field by its placeholder and keeps flags', () => {
     const tree = wireTree([
       {

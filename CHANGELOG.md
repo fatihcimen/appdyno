@@ -18,6 +18,7 @@
 - On Android, a second `type_text` in Chrome goes into the field it touches, where Chrome's late word of the new focus had the text go into the field typed before, answered as typed.
 - On Android, `type_text` types plain ASCII as keys into an editor the app draws, as a Flutter rich-text page, where it waited 5 s and refused; other letters, and `replace`, are refused at once with `UNSUPPORTED`, saying why.
 - An Android agent whose UI automation connect ran out of time on a loaded device lets that connection go: every later call was refused for minutes with `AGENT_CONFLICT`, naming another automation server, while the holder was the agent itself. One it cannot let go is said with `AGENT_UNAVAILABLE`, and the agent ends, so the next call starts another.
+- An Android screen no longer lists the view that holds a Flutter app, nameless, for its focus while its keyboard is up.
 
 ## 1.3.8
 

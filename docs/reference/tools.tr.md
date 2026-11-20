@@ -256,7 +256,7 @@ Bir hedef ekran klavyesinin altındaysa, yani dokunuş bir harf yazacaksa, ya da
 
 ### Ekran klavyesi
 
-Ekran klavyesi, Android'de olduğu gibi iOS'ta da tek bir öğedir, `@keyboard keyboard`; tuşlarının, çubuklarının ve önerilerinin hiçbiri listelenmez: `type_text` yazar, `press_key` `enter` onun return tuşuna basar, `press_key` `hide_keyboard` onu kapatır ve ona bir dokunuş reddedilir. Onu açan bir alan dokunuşu bunu farkın tek bir satırında söyler.
+Ekran klavyesi, Android'de olduğu gibi iOS'ta da tek bir öğedir, `@keyboard keyboard`; tuşlarının, çubuklarının ve önerilerinin hiçbiri listelenmez: `type_text` yazar, `press_key` `enter` onun return tuşuna basar, `press_key` `hide_keyboard` onu kapatır ve ona bir dokunuş reddedilir. Onu açan bir alan dokunuşu bunu farkın tek bir satırında söyler. Sözcüğü olmadan yalnızca odağı için listelenen bir öğe odağın olduğu yerdir; listelenenleri tutan bir görünüm, klavyesi açıkken bir Flutter uygulamasının görünümü gibi, bunun için listelenmez.
 
 iOS'ta hedefsiz bir `type_text`, hiçbir alan odakta değilken ve klavye açık değilken, bir tuş gönderilmeden `NO_FOCUS` ile reddedilir: iOS odakta hiçbir şey yokken de tuş alır ve ilk tuş, kalanların içine düştüğü bir alanı odaklayabilir. iOS runner'ı `press_key` `delete` ve `tab`'ı da böyle reddeder; XCTest'in kendi yazması orada onu sonlandırıyordu.
 

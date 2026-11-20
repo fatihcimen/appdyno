@@ -283,8 +283,13 @@ export function screenElements(
     const field = i.role === 'textField';
     // what a web view shows: its coordinates hold, its text is the page's
     const web = [i.index, ...ancestors(i.index)].some((a) => isWebView(at(a).type));
-    // XCUI says every element of a web view has the focus: there it is a field's, where typing goes
-    const focused = i.el.focused && (!web || i.el.editable);
+    // XCUI says every element of a web view has the focus: there it is a field's, where typing goes. A view with no
+    // words of its own that holds what is listed, as a Flutter app's view with the keyboard up, is not listed for its focus
+    const holds = () =>
+      descendants(i.index).some(
+        (d) => (d.role !== undefined && d.role !== 'image') || !!ownName(d.el),
+      );
+    const focused = i.el.focused && (!web || i.el.editable) && (control || !!label || !holds());
     if (!all && !control && !label && !idOnly && !focused && !i.el.checked) continue;
     const x = Math.round(i.r.x + i.r.w / 2);
     const y = Math.round(i.r.y + i.r.h / 2);
