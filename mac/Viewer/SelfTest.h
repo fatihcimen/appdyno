@@ -46,6 +46,8 @@ void MVCheckMood(void);
 void MVCheckPerfPane(void);
 void MVCheckFlow(void);
 void MVCheckShell(void);
+/// A device window's bar: each item's view with its size as it is made, and a name that comes later with its room.
+void MVCheckBar(void);
 void MVCheckPlaces(void);
 void MVCheckConnect(void);
 /// The hub's sections of devices, their Start, and the sheet that makes one.

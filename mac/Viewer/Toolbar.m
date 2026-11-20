@@ -3,7 +3,7 @@
 #import "Window.h"
 
 // narrow enough that what the capsule says while a measure runs folds no control away at the window's opening size
-static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
+static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150, kTitleNarrowest = 40;
 
 @implementation MVToolbar {
   NSArray<NSArray<NSString *> *> *_groups;
@@ -12,6 +12,7 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
   NSMutableDictionary<NSString *, NSButton *> *_buttons;
   NSMutableDictionary<NSString *, MVInk *> *_inks;
   NSTextField *_name, *_about;
+  NSLayoutConstraint *_titleWide;
   __weak NSToolbar *_made;
   BOOL _switchHidden;
 }
@@ -89,7 +90,10 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
   lines.orientation = NSUserInterfaceLayoutOrientationVertical;
   lines.alignment = NSLayoutAttributeLeading;
   lines.spacing = 0;
-  [lines.widthAnchor constraintLessThanOrEqualToConstant:kTitleWidest].active = YES;
+  // the bar measures it as it is made, with no name yet: of no width it is taken for a view without sizes, each run; and
+  // labels that give way would be held to that least width, so the width is said, as wide as the words up to the widest
+  _titleWide = [lines.widthAnchor constraintEqualToConstant:kTitleNarrowest];
+  _titleWide.active = YES;
   NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:@"title"];
   item.view = lines;
   item.bordered = NO;
@@ -109,6 +113,8 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
   _name.stringValue = name;
   _about.stringValue = about ?: @"";
   _about.hidden = !about.length;
+  CGFloat needs = MAX(_name.intrinsicContentSize.width, _about.hidden ? 0 : _about.intrinsicContentSize.width);
+  _titleWide.constant = MIN(kTitleWidest, MAX(kTitleNarrowest, ceil(needs)));
 }
 
 /// A place has no use for the Inspector's switch. Before macOS 15 an item cannot hide, and it opens a pane that says so.
