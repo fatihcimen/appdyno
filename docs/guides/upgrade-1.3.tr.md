@@ -85,7 +85,7 @@ const screen = await device.tool('read_screen', { raw: true });
 ## Bir betiğin karşılaşabileceği öteki değişiklikler
 
 - Süresi dolan bir bekleme `TIMEOUT` ile değil `CHECK_FAILED` ile başarısız olur ve `timeoutMs` değerini söyler: 5000 varsayılanı yoktur.
-- Bir araç, çağrısının söylediği yere bir dosyayı yalnızca sunucunun çalıştığı klasörün, durum klasörünün ya da `--allow-write` ile verilen bir klasörün içine yazar; başka bir yerde `POLICY_DENIED` ile reddedilir.
+- Bir araç, çağrısının söylediği yere bir dosyayı yalnızca sunucunun çalıştığı klasörün, durum klasöründe araçların yaptıkları için ayrılmış klasörlerin ya da `--allow-write` ile verilen bir klasörün içine yazar; başka bir yerde `POLICY_DENIED` ile reddedilir.
 - `manage_app build_and_run`, sunucu `--allow-build` ile başlatılmadıysa her seferinde kişiye sorar.
 - `manage_app uninstall`, `clear`, `grant` ve `revoke`, `transfer_files push` ve `set_device keychain` önce kişiye sorar.
 - `--toolsets` yalnızca adı verilen araç gruplarını listeler, örneğin `core,network,perf`: bkz. [Yalnızca bazı araçları listelemek](../reference/tools.tr.md#yalnızca-bazı-araçları-listelemek).

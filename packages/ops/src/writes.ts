@@ -35,12 +35,27 @@ function projectFolder() {
 
 type Folders = Pick<Policy, 'writeDirs'>;
 
-/** The folders a tool call may write in: the project's, the state folder, and those the server was started with. */
-export const writeFolders = (policy: Folders) => [
+/**
+ * The state folder's folders for what tools make, as a call may name them: the rest of it is appdyno's own, as its
+ * devices, its token and what it put back.
+ */
+export const OUTPUT_FOLDERS = ['exports', 'measurements', 'reports', 'video'];
+
+const foldersOf = (policy: Folders, state: string[]) => [
   ...[projectFolder()].filter((f) => f !== undefined),
-  stateDir(),
+  ...state,
   ...(policy.writeDirs ?? []).map((d) => resolve(d)),
 ];
+
+/**
+ * The folders a tool call may write in: the project's, the state folder's for what tools make, and those the server
+ * was started with.
+ */
+export const writeFolders = (policy: Folders) =>
+  foldersOf(
+    policy,
+    OUTPUT_FOLDERS.map((f) => join(stateDir(), f)),
+  );
 
 /**
  * The path of a file or folder a client asked to have written, inside the folders this server writes in, and no other:
@@ -50,6 +65,20 @@ export const writeFolders = (policy: Folders) => [
  */
 export function inside(policy: Folders, path: string, itself = false) {
   const to = resolve(path);
+  // a model that wrote the rest of the state folder would forge a device, a token or what appdyno puts back, whichever
+  // folder it came by; a Mac's disk takes a name in any case, so the names are compared in one
+  const within = (p: string | undefined, root: string | undefined) => {
+    const r =
+      p !== undefined && root !== undefined ? relative(root.toLowerCase(), p.toLowerCase()) : '..';
+    return !r.startsWith('..') && !isAbsolute(r);
+  };
+  const own = (p: string | undefined, state: string | undefined) =>
+    within(p, state) && !OUTPUT_FOLDERS.some((f) => state && within(p, join(state, f)));
+  if (own(to, stateDir()) || own(real(to), real(stateDir())))
+    throw new ToolError(
+      `${to} is in appdyno's own state folder, where a tool writes only in ${OUTPUT_FOLDERS.join(', ')}`,
+      'POLICY_DENIED',
+    );
   const roots = writeFolders(policy);
   const under = (p: string | undefined, root: string | undefined) => {
     const r = p !== undefined && root !== undefined ? relative(root, p) : '..';
@@ -59,7 +88,7 @@ export function inside(policy: Folders, path: string, itself = false) {
     throw new ToolError(
       `${to} is outside the folders this server writes to`,
       'POLICY_DENIED',
-      `give a path inside ${roots.join(' or ')}; ${byPerson('by starting it with --allow-write and that folder (APPDYNO_ALLOW_WRITE)')}`,
+      `give a path inside ${foldersOf(policy, [join(stateDir(), `{${OUTPUT_FOLDERS.join(',')}}`)]).join(' or ')}; ${byPerson('by starting it with --allow-write and that folder (APPDYNO_ALLOW_WRITE)')}`,
     );
   return to;
 }

@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { DEFAULT_POLICY, opsFor, ServerContext, writeDirsOf } from '../src/index.js';
-import { inside, writeFolders } from '../src/writes.js';
+import { inside, OUTPUT_FOLDERS, writeFolders } from '../src/writes.js';
 import { connect } from './driving/shared.js';
 
 /** Each tool that writes where its caller says, with the argument that says where. */
@@ -63,11 +63,14 @@ describe('a file a tool writes where its caller says', () => {
     expect(readdirSync(out)).toEqual([]);
   });
 
-  it('is written in the project folder, the state folder and a folder the server was started with', () => {
+  it("is written in the project folder, the state folder's folders for what tools make and a folder the server was started with", () => {
     const policy = { writeDirs: writeDirsOf([out], {}) };
     expect(inside(policy, join(out, 'a.png'))).toBe(join(out, 'a.png'));
     expect(inside(DEFAULT_POLICY, 'a.png')).toBe(join(process.cwd(), 'a.png'));
-    expect(inside(DEFAULT_POLICY, join(out, '..', 'state', 'a.png'))).toContain('/state/a.png');
+    for (const folder of OUTPUT_FOLDERS)
+      expect(inside(DEFAULT_POLICY, join(out, '..', 'state', folder, 'a.png'))).toContain(
+        `/state/${folder}/a.png`,
+      );
     expect(() => inside(DEFAULT_POLICY, join(out, 'a.png'))).toThrow(/outside/);
     // the folder itself is no file in it, and a link that leads out is out
     expect(() => inside(policy, out)).toThrow(/outside/);
@@ -83,10 +86,51 @@ describe('a file a tool writes where its caller says', () => {
     ]);
   });
 
+  it("is refused in the rest of the state folder, by any name or link to it, whatever folder holds it: it is appdyno's own", () => {
+    const state = join(out, '..', 'state');
+    mkdirSync(join(state, 'handoff'), { recursive: true });
+    // a link in a folder it writes in, to the state folder, and one in a folder for what tools make
+    symlinkSync(state, join(out, 'state'));
+    mkdirSync(join(state, 'video'));
+    mkdirSync(join(state, 'claims'));
+    symlinkSync(join(state, 'claims'), join(state, 'video', 'claims'));
+    const own = [
+      join(state, 'http-token'),
+      join(state, 'conditions', 'emulator-5554.json'),
+      join(state, 'claims', 'emulator-5554.json'),
+      join(state, 'push', 'fcm.json'),
+      join(state, 'handoff', 'emulator-5554.json.done'),
+      join(state, 'handoff'),
+      join(state, 'HANDOFF', 'emulator-5554.json'),
+      join(state, 'Claims', 'emulator-5554.json'),
+      join(state, 'videos.png'),
+      join(out, 'state', 'claims', 'emulator-5554.json'),
+      join(state, 'video', 'claims', 'emulator-5554.json'),
+    ];
+    // a server started with --allow-write on the disk's root or on the state folder holds it too
+    for (const writeDirs of [[out], ['/'], [state]])
+      for (const to of own)
+        expect(() => inside({ writeDirs }, to), `${String(writeDirs)} ${to}`).toThrow(
+          /is in appdyno's own state folder, where a tool writes only in exports, .*, video$/,
+        );
+    expect(inside({ writeDirs: ['/'] }, join(state, 'video', 'a.mp4'))).toContain(
+      '/state/video/a.mp4',
+    );
+  });
+
+  it('refuses a call that names a file of the state folder, and writes nothing there', async () => {
+    const { call } = await connect(new FakeDevice(), { policy: { writeDirs: [] } });
+    const r = await call('take_screenshot', { file: join(out, '..', 'state', 'push', 'a.png') });
+    expect(r.text).toMatch(/^POLICY_DENIED: .* is in appdyno's own state folder/);
+    expect(existsSync(join(out, '..', 'state', 'push'))).toBe(false);
+  });
+
   it('takes a server started at the root of the disk or in the home folder as one with no project', () => {
     for (const cwd of ['/', homedir()]) {
       vi.spyOn(process, 'cwd').mockReturnValue(cwd);
-      expect(writeFolders(DEFAULT_POLICY)).toEqual([join(out, '..', 'state')]);
+      expect(writeFolders(DEFAULT_POLICY)).toEqual(
+        OUTPUT_FOLDERS.map((f) => join(out, '..', 'state', f)),
+      );
       expect(() => inside(DEFAULT_POLICY, join(homedir(), '.zshrc'))).toThrow(/outside/);
     }
   });

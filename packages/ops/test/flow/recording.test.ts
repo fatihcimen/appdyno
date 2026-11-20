@@ -542,14 +542,17 @@ assert id=result check=text equals="Gönderildi"
 
     it('saves at stop to the file it is given, and keeps a recording whose file is refused', async () => {
       const call = callerOf(context());
-      const file = join(dir, 'state', 'tapped.flow');
+      const file = join(dir, 'state', 'exports', 'tapped.flow');
       await call('run_flow', { action: 'record' });
       const home = await call('read_screen');
       await call('tap_screen', { ref: refOf(home.text, 'Form') });
       // a path refused before the stop: the recording goes on
       expect(
-        (await refusal(call('run_flow', { action: 'stop', file: join(dir, 'state', 'a.txt') })))
-          .code,
+        (
+          await refusal(
+            call('run_flow', { action: 'stop', file: join(dir, 'state', 'exports', 'a.txt') }),
+          )
+        ).code,
       ).toBe('INVALID_ARGUMENT');
       const stop = await call('run_flow', { action: 'stop', file });
       expect(stop.text).toMatch(new RegExp(`^stopped, and saved 1 steps to ${file}\n`));
@@ -562,7 +565,12 @@ assert id=result check=text equals="Gönderildi"
         /exists: overwrite true replaces it; the recording stopped, and its 1 steps are kept: run_flow save writes them$/,
       );
       expect(
-        (await call('run_flow', { action: 'save', file: join(dir, 'state', 'again.flow') })).text,
+        (
+          await call('run_flow', {
+            action: 'save',
+            file: join(dir, 'state', 'exports', 'again.flow'),
+          })
+        ).text,
       ).toMatch(/^saved 1 steps/);
     });
 
@@ -691,9 +699,9 @@ assert id=result check=text equals="Gönderildi"
       );
       expect(outside.code).toBe('POLICY_DENIED');
       expect(existsSync(join(dir, 'a.flow'))).toBe(false);
-      symlinkSync(dir, join(dir, 'state', 'out'));
+      symlinkSync(dir, join(dir, 'state', 'exports', 'out'));
       const linked = await refusal(
-        call('run_flow', { action: 'save', file: join(dir, 'state', 'out', 'a.flow') }),
+        call('run_flow', { action: 'save', file: join(dir, 'state', 'exports', 'out', 'a.flow') }),
       );
       expect(linked.code).toBe('POLICY_DENIED');
       expect(existsSync(join(dir, 'a.flow'))).toBe(false);

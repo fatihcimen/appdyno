@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { must, stateDir } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
@@ -211,7 +211,8 @@ export const TASKS: Task[] = [
   {
     name: 'record a flow, replay it',
     run: async () => {
-      const file = join(mkdtempSync(join(stateDir(), 'efficiency-')), 'form.flow');
+      mkdirSync(join(stateDir(), 'exports'), { recursive: true });
+      const file = join(mkdtempSync(join(stateDir(), 'exports', 'efficiency-')), 'form.flow');
       const r = await reader(new FakeDevice(), 'dev.app');
       await r.say('run_flow', { action: 'record' });
       await r.open();

@@ -38,11 +38,11 @@ describe('flows', () => {
       expect(e.message).toContain('step 2');
     });
 
-    it('writes the YAML inside the state or project folder, and refuses a path elsewhere', async () => {
+    it("writes the YAML inside the state folder's for what tools make or the project folder, and refuses a path elsewhere", async () => {
       const call = callerOf(new ServerContext(DEFAULT_POLICY, []));
       const file = join(dir, 'ok.flow');
       writeFileSync(file, 'app dev.app\nlaunch\ntap id=x\n');
-      const to = join(dir, 'state', 'flows', 'list.yaml');
+      const to = join(dir, 'state', 'exports', 'flows', 'list.yaml');
       const out = await call('run_flow', { action: 'export', file, to });
       expect(out.data.file).toBe(to);
       expect(out.text).toBe(`${readFileSync(to, 'utf8')}\nwritten to ${to}`);
@@ -56,13 +56,17 @@ describe('flows', () => {
       );
       expect(outside.code).toBe('POLICY_DENIED');
       expect(existsSync(join(dir, 'list.yaml'))).toBe(false);
-      symlinkSync(dir, join(dir, 'state', 'out'));
+      symlinkSync(dir, join(dir, 'state', 'exports', 'out'));
       const linked = await refusal(
-        call('run_flow', { action: 'export', file, to: join(dir, 'state', 'out', 'list.yaml') }),
+        call('run_flow', {
+          action: 'export',
+          file,
+          to: join(dir, 'state', 'exports', 'out', 'list.yaml'),
+        }),
       );
       expect(linked.code).toBe('POLICY_DENIED');
       const named = refusal(
-        call('run_flow', { action: 'export', file, to: join(dir, 'state', 'a') }),
+        call('run_flow', { action: 'export', file, to: join(dir, 'state', 'exports', 'a') }),
       );
       expect((await named).message).toContain('.yaml');
     });

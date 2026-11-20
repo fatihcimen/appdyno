@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+### Düzeltilenler
+
+- Bir araç çağrısı appdyno'nun durum klasörüne yalnızca araçların yaptıkları için ayrılmış klasörlerde (`exports`, `measurements`, `reports`, `video`) yazar; önceden bir cihazı kimin tuttuğunu, HTTP token'ını, appdyno'nun geri koyduklarını ve bir push servisinin anahtarını yazabiliyordu. Oradaki başka bir yol, hangi klasörden ulaşılırsa ulaşılsın, `POLICY_DENIED` ile reddedilir.
+
 ## 1.3.8
 
 appdyno 1.3.8, bir simulator'da bulduğu daha eski bir iOS runner'ını değiştirir; başka bir appdyno sürecinin bıraktığı biri her dokunuşu reddediyordu. Ayrıca yavaş bir Mac'te bir uygulamanın başlamasını açılışın içinde bekler ve başka bir dilde çalışan bir process'in tuttuğu cihazı tutulmuş sayar.

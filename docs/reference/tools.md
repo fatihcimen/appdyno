@@ -426,7 +426,7 @@ On Android an install the device refuses says why and what a person can do: an a
 
 ### Where a tool writes
 
-A tool writes a file where its caller says only inside the folder the server runs in, unless that is the disk's root or the home folder, appdyno's state folder, or a folder given with `--allow-write`: `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` and `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` and `to`. A path elsewhere is refused `POLICY_DENIED`. This holds a tool call a client makes; a path typed on a command line is written where it says.
+A tool writes a file where its caller says only inside the folder the server runs in, unless that is the disk's root or the home folder, a folder given with `--allow-write`, or a folder of appdyno's state folder for what tools make: `exports`, `measurements`, `reports` and `video`. The rest of the state folder is appdyno's own, as its devices, its token and what it puts back: a path there is refused `POLICY_DENIED` by whichever folder it is reached, one `--allow-write` gives included. The tools are `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` and `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` and `to`. A path elsewhere is refused `POLICY_DENIED`. This holds a tool call a client makes; a path typed on a command line is written where it says.
 
 Listed secrets are hidden in text only: a screenshot, a `watchMs` strip and a video show the screen as it was, and their answers say so where secrets are listed.
 

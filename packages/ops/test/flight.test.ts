@@ -421,7 +421,7 @@ describe('the flight recorder', () => {
     // the first stop ended the recorder alone, said nothing of the report, and a second wrote it
     const d = new FlightDevice();
     const { call } = connect(d, 20);
-    const dir = join(state, 'report');
+    const dir = join(state, 'reports', 'asked');
     await call('record_session', { kind: 'report', action: 'start', dir });
     await call('record_session', { kind: 'flight', action: 'start' });
     const off = call('record_session', { kind: 'report', action: 'stop' });

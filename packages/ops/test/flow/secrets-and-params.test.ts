@@ -204,7 +204,7 @@ tap id=greeting
       await call('tap_screen', { selector: { text: 'Form' } });
       await call('type_text', { text: 'Grace', selector: { id: 'name' } });
       await call('run_flow', { action: 'stop' });
-      const file = join(dir, 'state', 'named.flow');
+      const file = join(dir, 'state', 'exports', 'named.flow');
       const none = await refusal(
         call('run_flow', { action: 'save', file, params: ['OTHER=Hopper'] }),
       );

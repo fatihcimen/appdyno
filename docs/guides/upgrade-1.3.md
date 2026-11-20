@@ -85,7 +85,7 @@ where 1.2 had `device.tool('tap', ...)` and `device.tool('screen', ...)`. The na
 ## Other changes a script may meet
 
 - A wait that runs out fails with `CHECK_FAILED`, not `TIMEOUT`, and names its `timeoutMs`: there is no default of 5000.
-- A tool writes a file where its call says only inside the folder the server runs in, the state folder, or one given with `--allow-write`; elsewhere it is refused `POLICY_DENIED`.
+- A tool writes a file where its call says only inside the folder the server runs in, the state folder's folders for what tools make, or one given with `--allow-write`; elsewhere it is refused `POLICY_DENIED`.
 - `manage_app build_and_run` asks the person each time, unless the server was started with `--allow-build`.
 - `manage_app uninstall`, `clear`, `grant` and `revoke`, `transfer_files push` and `set_device keychain` ask the person first.
 - `--toolsets` lists only the groups of tools named, as `core,network,perf`: see [Listing only some tools](../reference/tools.md#listing-only-some-tools).

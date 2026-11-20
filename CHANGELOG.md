@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- A tool call writes in appdyno's state folder only in its folders for what tools make (`exports`, `measurements`, `reports`, `video`). Before, it could write who holds a device, the HTTP token, what appdyno puts back and a push service's key. Any other path there is refused `POLICY_DENIED`, whichever folder it is reached through.
+
 ## 1.3.8
 
 appdyno 1.3.8 replaces an older iOS runner it finds on a simulator, where one left by another appdyno process refused every touch; it also waits out an app's start in its launch on a slow Mac, and keeps a device held by a process that runs in another language.

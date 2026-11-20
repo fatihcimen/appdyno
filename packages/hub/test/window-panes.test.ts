@@ -626,7 +626,7 @@ describe("a window's Network pane", () => {
         '"a.test/login" method=POST status=200 type=application/json body="{\\"token\\":\\"•••\\",\\"ok\\":true}"',
       );
     // an answer too long for a line is a file the rule reads, in the folder this window's server runs in
-    vi.spyOn(process, 'cwd').mockReturnValue(realpathSync(mkdtempSync(join(state, 'project-'))));
+    vi.spyOn(process, 'cwd').mockReturnValue(realpathSync(mkdtempSync(join(tmpdir(), 'project-'))));
     pane.onWindow({ op: 'control', name: 'networkMockFrom', id: 1 });
     await expect
       .poll(() => said(t)?.rule)

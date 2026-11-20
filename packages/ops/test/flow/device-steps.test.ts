@@ -163,7 +163,7 @@ describe('screenshot, visual and setting steps', () => {
     await call('check_screen', {
       check: 'visual_baseline',
       name: 'home',
-      dir: join(dir, 'state', 'b'),
+      dir: join(dir, 'state', 'exports', 'b'),
     });
     expect(looks()).toBeGreaterThan(4);
   });
@@ -224,7 +224,7 @@ describe('screenshot, visual and setting steps', () => {
   it('records a setting, a comparison and a picture kept in a file as their steps, a look as none', async () => {
     settingsOf({ dark_mode: 'off' });
     const call = callerOf(context());
-    const baselines = join(dir, 'state', 'b');
+    const baselines = join(dir, 'state', 'exports', 'b');
     const { text } = await recorded(call, async () => {
       await call('set_device', { name: 'dark_mode', value: 'on' });
       await call('set_device', { name: 'dark_mode' });
@@ -237,7 +237,9 @@ describe('screenshot, visual and setting steps', () => {
         tolerance: 0.5,
         masks: [{ text: 'Ana sayfa' }, { x: -10, y: 2000, w: 1080, h: 400 }],
       });
-      await call('take_screenshot', { file: join(dir, 'state', 'shots', 'Home page.png') });
+      await call('take_screenshot', {
+        file: join(dir, 'state', 'exports', 'shots', 'Home page.png'),
+      });
       await call('take_screenshot');
       await call('set_device', { name: 'restore', value: 'all' });
     });

@@ -426,7 +426,7 @@ Android'de cihazın reddettiği bir kurulum nedenini ve bir kişinin ne yapabile
 
 ### Bir araç nereye yazar
 
-Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün (diskin kökü ya da ev klasörü değilse), appdyno'nun durum klasörünün ya da `--allow-write` ile verilen bir klasörün içinde dosya yazar: `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` ve `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` ve `to`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Bu, bir istemcinin yaptığı araç çağrısı için geçerlidir; komut satırına yazılan bir yol söylediği yere yazılır.
+Bir araç, çağıranın söylediği yere yalnızca sunucunun çalıştığı klasörün (diskin kökü ya da ev klasörü değilse), `--allow-write` ile verilen bir klasörün ya da appdyno'nun durum klasöründe araçların yaptıkları için ayrılmış bir klasörün içinde dosya yazar: `exports`, `measurements`, `reports` ve `video`. Durum klasörünün geri kalanı appdyno'nun kendisinindir, cihazları, token'ı ve geri koyduğu şeyler gibi: oradaki bir yol, hangi klasörden ulaşılırsa ulaşılsın, `--allow-write`'ın verdiği bir klasörden de olsa, `POLICY_DENIED` ile reddedilir. Araçlar şunlardır: `take_screenshot` `file`, `check_screen` `dir`, `record_session` `file` ve `dir`, `transfer_files` `pull` `path`, `capture_network` `save`, `run_flow` `file` ve `to`. Başka bir yerdeki yol `POLICY_DENIED` ile reddedilir. Bu, bir istemcinin yaptığı araç çağrısı için geçerlidir; komut satırına yazılan bir yol söylediği yere yazılır.
 
 Listelenen sırlar yalnızca metinde gizlenir: bir ekran görüntüsü, bir `watchMs` şeridi ve bir video ekranı olduğu gibi gösterir; sır listelenmişse yanıtları bunu söyler.
 

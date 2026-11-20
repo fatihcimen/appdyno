@@ -163,7 +163,7 @@ describe('a picture of the screen', () => {
     const shot = await d.screenshot({ format: 'jpeg', quality: 60 });
     expect(shot).toMatchObject({ format: 'jpeg', width: 460, height: 1024 });
     expect([...shot.data]).toEqual([1, 2, 3]);
-    const to = join(state(), 'shots', 'one.jpg');
+    const to = join(state(), 'exports', 'shots', 'one.jpg');
     const saved = await d.screenshot({ path: to });
     expect(saved).toEqual({ format: 'jpeg', width: 460, height: 1024, path: to });
     expect([...readFileSync(to)]).toEqual([1, 2, 3]);

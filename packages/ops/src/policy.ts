@@ -25,7 +25,7 @@ export type Policy = {
   allowPower?: 'virtual' | 'all';
   /** `manage_app build_and_run` runs a project's own build on this Mac with no question asked: `--allow-build`. */
   allowBuild?: boolean;
-  /** Folders a tool call may write in beside the project's and the state folder: `--allow-write`. */
+  /** Folders a tool call may write in beside the project's and the state folder's for what tools make: `--allow-write`. */
   writeDirs?: string[];
 };
 
