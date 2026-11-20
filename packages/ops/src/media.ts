@@ -57,7 +57,7 @@ const realOf = (path: string) => {
 export function mediaFiles(value: string | undefined) {
   if (!value)
     throw new ToolError(
-      "media needs value: a photo or a video, or a folder of them, inside this server's folder",
+      "media needs path: a photo or a video, or a folder of them, inside this server's folder",
       'INVALID_ARGUMENT',
     );
   const root = realpathSync(process.cwd());

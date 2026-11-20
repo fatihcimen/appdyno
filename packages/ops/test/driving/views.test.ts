@@ -26,7 +26,7 @@ describe('the native views of a screen', () => {
   it('are refused where the device gives none, with what reads the screen there', async () => {
     const { call } = await connect(new FakeDevice());
     expect((await call('read_screen', { views: true })).text).toBe(
-      'UNSUPPORTED: this device gives no native view hierarchy\nhint: screen without views reads its accessibility tree',
+      'UNSUPPORTED: this device gives no native view hierarchy\nhint: read_screen without views reads its accessibility tree',
     );
   });
 

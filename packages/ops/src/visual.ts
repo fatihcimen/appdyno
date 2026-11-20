@@ -71,7 +71,10 @@ export function visualOps(ctx: ServerContext) {
           return reply(t, { done: t, file });
         }
         if (!existsSync(file))
-          throw new ToolError(`no baseline ${file}: save one with action baseline`, 'NOT_FOUND');
+          throw new ToolError(
+            `no baseline ${file}: save one with check visual_baseline`,
+            'NOT_FOUND',
+          );
         const baseline = decodePng(readFileSync(file));
         if (!baseline)
           throw new ToolError(`${file} is a kind of PNG this tool cannot read`, 'UNSUPPORTED');
@@ -129,7 +132,7 @@ export function visualOps(ctx: ServerContext) {
         throw new ToolError(
           `${percent} percent of pixels differ from ${file}, tolerance ${tolerance}: diff ${diffFile}, now ${actualFile}`,
           'CHECK_FAILED',
-          `open ${diffFile}: what differs is red, masks blue; if the change is meant, save it with action baseline`,
+          `open ${diffFile}: what differs is red, masks blue; if the change is meant, save it with check visual_baseline`,
         );
       },
     }),

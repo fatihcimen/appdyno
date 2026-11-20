@@ -222,7 +222,7 @@ export function webOps(ctx: ServerContext) {
         }
         if (action === 'click') {
           if (!selector)
-            throw new ToolError('click needs selector: a CSS selector', 'INVALID_ARGUMENT');
+            throw new ToolError('web_click needs selector: a CSS selector', 'INVALID_ARGUMENT');
           // waited for as a selector on the screen is: a web view just shown lists its page while it is still
           // about:blank (iOS 27.2), and a click at once found nothing on it
           const click = async () =>
@@ -242,7 +242,7 @@ export function webOps(ctx: ServerContext) {
           const t = `clicked ${hit.tag} ${quoted(clean(hit.text))}`;
           return reply(t, { done: t, page: on.id });
         }
-        if (!js) throw new ToolError('eval needs js', 'INVALID_ARGUMENT');
+        if (!js) throw new ToolError('web_eval needs js', 'INVALID_ARGUMENT');
         const value = await web.evaluate(on, js);
         s.acted();
         const t = clean(value === undefined ? 'undefined' : JSON.stringify(value)).slice(

@@ -17,7 +17,7 @@ export async function readViews(s: Session, clean: (t: string) => string, raw: b
     throw new ToolError(
       'this device gives no native view hierarchy',
       'UNSUPPORTED',
-      'screen without views reads its accessibility tree',
+      'read_screen without views reads its accessibility tree',
     );
   // the screen first, as its read wakes a dark one and opens a lock that asks for nothing: under a lock an activity
   // draws no view, which read as "no view is drawn". A lock behind a credential is said; the views need no other read

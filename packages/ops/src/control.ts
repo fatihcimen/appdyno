@@ -17,7 +17,7 @@ import { inside } from './writes.js';
 
 /** App data can hold secrets, and a copy must not land among a person's files: a new or empty folder, for this user alone. */
 function emptyFolder(policy: Policy, path: string | undefined) {
-  if (!path) throw new ToolError('download_data needs path', 'INVALID_ARGUMENT');
+  if (!path) throw new ToolError('pull needs path', 'INVALID_ARGUMENT');
   const to = inside(policy, path);
   if (existsSync(to) && (!statSync(to).isDirectory() || readdirSync(to).length > 0))
     throw new ToolError(`${to} must be a new or empty folder`, 'INVALID_ARGUMENT');
@@ -26,7 +26,7 @@ function emptyFolder(policy: Policy, path: string | undefined) {
 }
 
 function dataFolder(path: string | undefined) {
-  if (!path) throw new ToolError('replace_data needs path', 'INVALID_ARGUMENT');
+  if (!path) throw new ToolError('push needs path', 'INVALID_ARGUMENT');
   const from = resolve(path);
   if (!existsSync(from) || !statSync(from).isDirectory())
     throw new ToolError(`${from} is not a folder`, 'INVALID_ARGUMENT');

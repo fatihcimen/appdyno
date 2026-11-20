@@ -37,7 +37,7 @@ export function inspectorOps(ctx: ServerContext) {
             elements,
           });
         }
-        if (!name) throw new ToolError('press needs name', 'INVALID_ARGUMENT');
+        if (!name) throw new ToolError('ax_press needs name', 'INVALID_ARGUMENT');
         const pressed = await inspector.press(name);
         s.acted();
         const t = `pressed ${onLine(pressed.caption)}`;

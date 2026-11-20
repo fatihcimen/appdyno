@@ -282,7 +282,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         throw new ToolError(
           others.length > 0
             ? `no runs of device class ${String(deviceClass)}: they are under ${[...new Set(others.map((k) => k.deviceClass))].join(', ')}`
-            : 'no measured runs: run a perf_ operation first',
+            : 'no measured runs: measure_performance keeps them, by its scenario',
           'NOT_FOUND',
         );
       }

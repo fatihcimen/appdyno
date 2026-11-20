@@ -1,3 +1,4 @@
+import { encodePng } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { FakeDevice } from '@appdyno/testing/fake-device.js';
 import { connect } from './driving/shared.js';
@@ -35,6 +36,26 @@ describe('a tool of several parts', () => {
       expect(r.text).toContain(`Unrecognized key: "${stray}"`);
     },
   );
+
+  it('names the tool, the action and the argument to give next as the list of tools has them', async () => {
+    const d = new FakeDevice();
+    const png = encodePng({ width: 2, height: 2, channels: 3, data: new Uint8Array(12) });
+    d.screenshot = () =>
+      Promise.resolve({ meta: { w: 2, h: 2, format: 'png', bytes: png.length }, data: png });
+    const { call } = await connect(d);
+    expect((await call('compare_performance', {})).text).toBe(
+      'NOT_FOUND: no measured runs: measure_performance keeps them, by its scenario',
+    );
+    expect((await call('check_screen', { check: 'visual', name: 'home' })).text).toMatch(
+      /^NOT_FOUND: no baseline .*home\.png: save one with check visual_baseline$/,
+    );
+    expect((await call('transfer_files', { action: 'pull', path: '' })).text).toBe(
+      'INVALID_ARGUMENT: pull needs path',
+    );
+    expect((await call('transfer_files', { action: 'push', path: '' })).text).toMatch(
+      /^INVALID_ARGUMENT: push needs path/,
+    );
+  });
 
   it('names an argument as its caller wrote it, where its part calls it otherwise', async () => {
     const { call } = await connect(new FakeDevice());
