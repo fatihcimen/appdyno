@@ -4,6 +4,10 @@
 
 ## Yayımlanmamış
 
+## 1.3.10
+
+appdyno 1.3.10, bir simulator'ın ve bir emulator'ın panosunu bu Mac'inkinden uzak tutar: bir simulator'ın panosunu Mac'inkiyle eşleyen Xcode 27'nin Device Hub'ı artık Simulator.app gibi sayılır; panosunu paylaşabilen pencereli bir emulator da öyle ele alınır.
+
 ### Düzeltilenler
 
 - Xcode 27'nin Device Hub'ı ya da menü çubuğu öğesi veya `devicectl device pasteboard sync-with-host` çalışırken bir simulator'ın panosuna dokunulmaz, çünkü her biri onu bu Mac'inkiyle eşitliyor sayılır: onu okumak, ona yazmak, Command-C, Command-X ve Command-V ve bir pencereden gelen, tuşu olmayan harfler, neyin kapatılacağı söylenerek `UNSUPPORTED` ile reddedilir. Önceden yalnızca Simulator.app sayılıyordu ve Xcode 27 onu içermiyor; bu yüzden `set_device` `clipboard` Mac'in panosunu ele verebilir ya da değiştirebilirdi.

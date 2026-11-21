@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 1.3.10
+
+appdyno 1.3.10 keeps a simulator's and an emulator's clipboard off this Mac's: Xcode 27's Device Hub, which syncs a simulator's pasteboard with the Mac's, now counts as Simulator.app did, and an emulator with a window, which can share its clipboard, is treated so too.
+
 ### Fixed
 
 - A simulator's clipboard is left alone while Xcode 27's Device Hub or its menu bar extra runs, or `devicectl device pasteboard sync-with-host`, each taken as syncing it with this Mac's: a read of it, a write to it, Command-C, Command-X and Command-V, and letters with no key from a window are refused `UNSUPPORTED`, saying what to quit. Before, only Simulator.app counted, and Xcode 27 ships none, so `set_device` `clipboard` could hand out the Mac's clipboard or replace it.
