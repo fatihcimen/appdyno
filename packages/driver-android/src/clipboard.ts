@@ -17,10 +17,17 @@ const HEADLESS = /qemu-system-\w+-headless(\s|$)/m;
 export const sharedWithMac = (processes: string) =>
   WINDOWED.test(processes) || !HEADLESS.test(processes);
 
-/** Whether this device's clipboard may be this Mac's now: an emulator's, by `sharedWithMac`; a phone's never is. */
+/**
+ * Whether this device's clipboard may be this Mac's now: an emulator's, by `sharedWithMac` of each process's executable
+ * and its arguments, as either may name it; a phone's never is.
+ */
 export async function clipboardShared(serial: string) {
   if (!serial.startsWith('emulator-')) return false;
-  return sharedWithMac((await run('ps', ['-axww', '-o', 'args='])).stdout);
+  const lists = await Promise.all([
+    run('ps', ['-axo', 'comm=']),
+    run('ps', ['-axww', '-o', 'args=']),
+  ]);
+  return sharedWithMac(lists.map((r) => r.stdout).join('\n'));
 }
 
 const TYPE_IT = 'type the text into its field instead';
@@ -57,6 +64,6 @@ export async function keepOffTheMac(serial: string, method: Method, params: unkn
   throw new DeviceError(
     'UNSUPPORTED',
     `an emulator with a window shares its clipboard with this Mac's, so ${what}: one started with -no-window shares none`,
-    `${hint}, or start the emulator with -no-window (APPDYNO_EMULATOR_ARGS=-no-window)`,
+    `${hint}, or start the emulator with -no-window (APPDYNO_EMULATOR_ARGS="-no-window -no-snapshot-save -no-boot-anim")`,
   );
 }

@@ -19,7 +19,7 @@ const SYNCERS: { runs: RegExp; who: string; stop: string; switchable?: true }[] 
   {
     // Xcode 27's, in Simulator.app's place: its trampoline, the app it starts, or its menu bar extra. Its Edit › Use
     // Shared Clipboard is kept in its sandbox's container, which macOS keeps from other apps behind a person's yes
-    runs: /\/(DeviceHub|DevicesMenu)\.app\/Contents\/MacOS\//m,
+    runs: /\/(DeviceHub|DevicesMenu\w*)\.app\/Contents\/MacOS\//m,
     who: 'Device Hub',
     stop: 'quit Device Hub and its menu bar extra',
   },
@@ -39,16 +39,17 @@ export const syncsToMac = (processes: string, setting: string | undefined) =>
     (s) => s.runs.test(processes) && !(s.switchable && OFF.test(setting?.trim() ?? '')),
   );
 
-/** `syncsToMac` on this Mac now. */
+/** `syncsToMac` on this Mac now, by each process's executable and by its arguments, as either may name it. */
 async function syncingNow() {
-  const [processes, setting] = await Promise.all([
+  const [paths, args, setting] = await Promise.all([
+    run('ps', ['-axo', 'comm=']).then((r) => r.stdout),
     run('ps', ['-axww', '-o', 'args=']).then((r) => r.stdout),
     run('defaults', ['read', 'com.apple.iphonesimulator', 'PasteboardAutomaticSync']).then(
       (r) => r.stdout,
       () => undefined,
     ),
   ]);
-  return syncsToMac(processes, setting);
+  return syncsToMac(`${paths}\n${args}`, setting);
 }
 
 /** Whether anything syncs a simulator's pasteboard with this Mac's now. */

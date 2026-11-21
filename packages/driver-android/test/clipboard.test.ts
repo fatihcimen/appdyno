@@ -66,7 +66,8 @@ describe("an emulator's clipboard and the Mac's", () => {
     await expect(d.key('v', {}, ['command'])).rejects.toMatchObject(refused(/a paste would put/));
     await expect(d.key('c', {}, ['control'])).rejects.toMatchObject(refused(/what it copies/));
     await expect(d.key('x', {}, ['command'])).rejects.toMatchObject(refused(/what it copies/));
-    expect(listed()).toBe(5);
+    // each by executable and by arguments
+    expect(listed()).toBe(10);
   });
 
   it('lets them reach a headless emulator and a phone, and lists nothing for anything else', async () => {
@@ -80,6 +81,6 @@ describe("an emulator's clipboard and the Mac's", () => {
       'reached the device',
     );
     await expect(device('emulator-5554').key('v')).rejects.toThrow('reached the device');
-    expect(listed()).toBe(1);
+    expect(listed()).toBe(2);
   });
 });

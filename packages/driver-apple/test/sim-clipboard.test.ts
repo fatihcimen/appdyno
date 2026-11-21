@@ -74,6 +74,9 @@ describe("a simulator's pasteboard sync with the Mac", () => {
     expect(syncing(`${OTHERS}\n${DEVICE_HUB}`, undefined)).toEqual(['Device Hub']);
     expect(syncing(TRAMPOLINE, '0')).toEqual(['Device Hub']);
     expect(syncing(DEVICES_MENU, '0')).toEqual(['Device Hub']);
+    expect(syncing(DEVICES_MENU.replaceAll('DevicesMenu', 'DevicesMenuBarExtra'), '0')).toEqual([
+      'Device Hub',
+    ]);
     expect(syncing(`${SIMULATOR}\n${DEVICE_HUB}`, '0')).toEqual(['Device Hub']);
     expect(syncing(`${SIMULATOR}\n${DEVICE_HUB}`, '1')).toEqual(['Simulator', 'Device Hub']);
     expect(
@@ -86,6 +89,17 @@ describe("a simulator's pasteboard sync with the Mac", () => {
     expect(syncing(`xcrun devicectl device pasteboard sync-with-host -d ${UDID}`, '0')).toEqual([
       'devicectl',
     ]);
+  });
+
+  it('finds Device Hub by its executable where its arguments do not name it', async () => {
+    vi.mocked(run).mockImplementation(((cmd: string, args: string[]) =>
+      cmd === 'ps'
+        ? Promise.resolve({ stdout: args.includes('comm=') ? DEVICE_HUB : 'DeviceHub', stderr: '' })
+        : Promise.reject(new Error('does not exist'))) as unknown as typeof run);
+    await expect(new Simctl().pbpaste(UDID)).rejects.toMatchObject({
+      message: expect.stringMatching(/^Device Hub's pasteboard sync/) as unknown,
+    });
+    expect(ran('pbpaste')).toBe(false);
   });
 
   it('refuses each use of the pasteboard while Device Hub runs, saying to quit it, before simctl runs', async () => {
