@@ -71,17 +71,10 @@ object Platform {
 
     fun asInterface(stubClass: String, binder: IBinder): Any = Class.forName(stubClass).getDeclaredMethod("asInterface", IBinder::class.java).invoke(null, binder)!!
 
-    /**
-     * Whether the system syncs its clipboard with the host's, as an emulator's does: its clipboard service does so where
-     * `ro.boot.qemu` is set, `ro.kernel.qemu` on older releases. Taken as so where neither can be read.
-     */
-    val clipboardReachesHost: Boolean by lazy {
-        runCatching {
-            val get = Class.forName("android.os.SystemProperties")
-                .getMethod("getBoolean", String::class.java, Boolean::class.javaPrimitiveType)
-            listOf("ro.boot.qemu", "ro.kernel.qemu").any { get.invoke(null, it, false) as Boolean }
-        }.getOrDefault(true)
-    }
+    /** Whether a boolean system property is set, as the system reads one. */
+    fun propertySet(name: String): Boolean = Class.forName("android.os.SystemProperties")
+        .getMethod("getBoolean", String::class.java, Boolean::class.javaPrimitiveType)
+        .invoke(null, name, false) as Boolean
 
     private val power by lazy { asInterface("android.os.IPowerManager\$Stub", service("power")) }
 

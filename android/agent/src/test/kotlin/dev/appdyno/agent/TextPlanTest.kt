@@ -14,6 +14,15 @@ class TextPlanTest {
     }
 
     @Test
+    fun pastesNowhereTheClipboardIsTheComputersToo() {
+        assertTrue(TextPlan.pastes { false })
+        assertFalse(TextPlan.pastes { it == "ro.boot.qemu" })
+        assertFalse(TextPlan.pastes { it == "ro.kernel.qemu" })
+        // a property that cannot be read is taken as an emulator's
+        assertFalse(TextPlan.pastes { throw IllegalStateException("hidden") })
+    }
+
+    @Test
     fun turkishIsNotAscii() {
         assertTrue(TextPlan.isAscii("Hello 123"))
         assertFalse(TextPlan.isAscii("İstanbul"))

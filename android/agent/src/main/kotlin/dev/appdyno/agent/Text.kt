@@ -27,6 +27,13 @@ object TextPlan {
     /** A field limited to fewer characters than the text (`maxTextLength` -1: no limit) takes it key by key. */
     fun keysOnly(maxTextLength: Int, text: String) = maxTextLength in 1 until text.length
 
+    /**
+     * Whether text may go by a paste, by `isSet` of a system property: never on an emulator, whose clipboard service
+     * syncs the clipboard with the computer's, a person's, where `ro.boot.qemu` is set (`ro.kernel.qemu` on older
+     * releases), nor where they cannot be read.
+     */
+    fun pastes(isSet: (String) -> Boolean) = runCatching { listOf("ro.boot.qemu", "ro.kernel.qemu").none(isSet) }.getOrDefault(false)
+
     /** Enter goes after the text when asked, but never after a read-back that says the field holds other text: a search or a form would act on it. */
     fun submits(asked: Boolean, verified: Boolean?) = asked && verified != false
 }
@@ -167,6 +174,8 @@ class Clipboard {
  * pasted, but on an emulator, and plain ASCII still left over is typed as key events.
  */
 class TextInput(private val automation: Automation, private val input: Input, private val clipboard: Clipboard) {
+    private val pastes by lazy { TextPlan.pastes(Platform::propertySet) }
+
     /**
      * `at`: the point to tap first, and type into the field it focuses. When no field takes the focus from the tap (a
      * container such as a Material text-input layout whose middle is not its text field, a tap lost while the screen
@@ -252,9 +261,8 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         ) {
             return done("setText", verdict)
         }
-        // paste: the field's own input path (formatters, filters) sees the text. Never on an emulator: its clipboard is
-        // the computer's too, a person's, and a password would land there
-        val pastes = !Platform.clipboardReachesHost
+        // paste: the field's own input path (formatters, filters) sees the text. Never on an emulator (`TextPlan.pastes`):
+        // its clipboard is the computer's too, a person's, and a password would land there
         if (pastes) clipboard.set(if (replace) target else text)
         if (pastes && attempt("paste") {
                 if (replace) select(field, 0, (field.text ?: "").length) else select(field, (field.text ?: "").length, (field.text ?: "").length)
